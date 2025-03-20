@@ -87,15 +87,15 @@ export function Sidebar({
 
                 let group: string;
                 if (diffInDays === 0) {
-                    group = "Today";
+                    group = "今天";
                 } else if (diffInDays === 1) {
-                    group = "Yesterday";
+                    group = "昨天";
                 } else if (diffInDays <= 7) {
-                    group = "Previous 7 Days";
+                    group = "过去 7 天";
                 } else if (diffInDays <= 30) {
-                    group = "Previous 30 Days";
+                    group = "过去 30 天";
                 } else {
-                    group = "Older";
+                    group = "更早";
                 }
 
                 if (!groupedChats[group]) {
@@ -144,7 +144,7 @@ export function Sidebar({
                                     className="dark:invert 2xl:block"
                                 />
                             )}
-                            <span>New chat</span>
+                            <span>新建聊天</span>
                         </div>
                         <Pencil2Icon className="w-4 h-4" />
                     </div>

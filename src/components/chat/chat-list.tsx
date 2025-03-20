@@ -50,7 +50,7 @@ export default function ChatList({ messages, isLoading }: ChatListProps) {
                         className="object-contain dark:invert"
                     />
                     <p className="text-center text-xl text-muted-foreground">
-                        How can I help you today?
+                        祝你早安, 午安, 晚安。
                     </p>
                 </div>
             </div>
