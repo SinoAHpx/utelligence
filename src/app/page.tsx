@@ -1,13 +1,22 @@
 "use client";
 
-import React from "react";
-import { Pencil1Icon } from "@radix-ui/react-icons";
+import React, { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import ChatPage from "@/components/chat/chat-page";
 import FileUpload from "@/components/file-upload";
 
 export default function Home() {
+    const searchParams = useSearchParams();
     const [chatId, setChatId] = React.useState<string>("");
     const [uploadedFile, setUploadedFile] = React.useState<File | null>(null);
+
+    // Get chatId from URL parameters when navigating from chat history
+    useEffect(() => {
+        const urlChatId = searchParams.get("chatId");
+        if (urlChatId) {
+            setChatId(urlChatId);
+        }
+    }, [searchParams]);
 
     const handleFileChange = (file: File) => {
         setUploadedFile(file);
@@ -15,23 +24,10 @@ export default function Home() {
         console.log("File uploaded:", file.name);
     };
 
-    const handleNewChat = () => {
-        setChatId("");
-    };
-
     return (
         <main className="flex h-[calc(100dvh)] w-full overflow-hidden bg-gray-100 dark:bg-gray-900 p-4">
             {/* Left Column */}
             <div className="flex flex-col w-[45%] h-full rounded-lg shadow-md bg-white dark:bg-gray-800 overflow-hidden">
-                <div className="flex justify-center items-center py-4 border-b border-gray-200 dark:border-gray-700">
-                    <button
-                        onClick={handleNewChat}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                    >
-                        <Pencil1Icon className="w-4 h-4" />
-                        <span>新建聊天</span>
-                    </button>
-                </div>
                 <div className="flex-1">
                     <ChatPage chatId={chatId} setChatId={setChatId} />
                 </div>
