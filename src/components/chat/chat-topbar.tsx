@@ -7,6 +7,7 @@ import {
     ChevronDownIcon,
     InfoCircledIcon,
     Pencil1Icon,
+    ChatBubbleIcon,
 } from "@radix-ui/react-icons";
 import { Message } from "ai/react";
 import Link from "next/link";
@@ -85,6 +86,7 @@ export default function ChatTopbar({
     useEffect(() => {
         fetchData();
         getTokenLimit(basePath).then((limit) => setTokenLimit(limit));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hasMounted]);
 
     if (!hasMounted) {
@@ -101,17 +103,19 @@ export default function ChatTopbar({
         setChatOptions({ ...chatOptions, selectedModel: model });
     };
 
-    const chatName = chatId ? `对话 ${chatId.substring(0, 8)}` : "新对话";
+    // 获取对话标题：使用第一条用户消息作为标题
+    const firstUserMessage = messages.find((msg) => msg.role === "user");
+    const chatTitle = firstUserMessage
+        ? firstUserMessage.content.substring(0, 30) +
+          (firstUserMessage.content.length > 30 ? "..." : "")
+        : chatId
+        ? `对话 ${chatId.substring(0, 8)}`
+        : "新对话";
 
     return (
         <div className="w-full flex px-4 py-4 items-center justify-between border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-4">
-                <Link
-                    href="/chats"
-                    className="text-blue-600 hover:underline font-medium"
-                >
-                    {chatName}
-                </Link>
+                <span className="font-medium text-lg">{chatTitle}</span>
 
                 <DropdownMenu>
                     <DropdownMenuTrigger className="flex items-center px-3 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -178,6 +182,14 @@ export default function ChatTopbar({
                         </span>
                     )}
                 </div>
+
+                <Link
+                    href="/chats"
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                    <ChatBubbleIcon className="w-4 h-4" />
+                    <span>对话列表</span>
+                </Link>
 
                 <button
                     onClick={handleNewChat}
