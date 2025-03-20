@@ -7,30 +7,30 @@ import "./globals.css";
 export const runtime = "edge"; // 'nodejs' (default) | 'edge'
 
 export const metadata: Metadata = {
-  title: "vLLM UI",
-  description: "vLLM chatbot web interface",
+    title: "vLLM UI",
+    description: "vLLM chatbot web interface",
 };
 
 export const viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: 1,
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: 1,
 };
 
 export default function RootLayout({
-  children,
+    children,
 }: Readonly<{
-  children: React.ReactNode;
+    children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en">
-      <body>
-        <ThemeProvider attribute="class" defaultTheme="dark">
-          {children}
-          <Toaster />
-        </ThemeProvider>
-      </body>
-    </html>
-  );
+    return (
+        <html lang="en" suppressHydrationWarning>
+            <body>
+                <ThemeProvider attribute="class" defaultTheme="dark">
+                    {children}
+                    <Toaster />
+                </ThemeProvider>
+            </body>
+        </html>
+    );
 }

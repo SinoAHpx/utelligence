@@ -5,11 +5,16 @@ import React from "react";
 import { PaperPlaneIcon, StopIcon } from "@radix-ui/react-icons";
 import { ChatRequestOptions } from "ai";
 import llama3Tokenizer from "llama3-tokenizer-js";
-import TextareaAutosize from "react-textarea-autosize";
+import dynamic from "next/dynamic";
 
 import { basePath, useHasMounted } from "@/lib/utils";
 import { getTokenLimit } from "@/lib/token-counter";
 import { Button } from "../ui/button";
+
+// Dynamically import TextareaAutosize with SSR disabled
+const TextareaAutosize = dynamic(() => import("react-textarea-autosize"), {
+    ssr: false,
+});
 
 interface ChatBottombarProps {
     selectedModel: string | undefined;
@@ -59,7 +64,7 @@ export default function ChatBottombar({
 
     return (
         <div>
-            <div className="stretch flex flex-row gap-3 last:mb-2 md:last:mb-6 mx-2 md:mx-4 md:mx-auto md:max-w-2xl xl:max-w-3xl">
+            <div className="stretch flex flex-row gap-3 last:mb-2 md:last:mb-6 mx-2 md:mx-auto md:max-w-2xl xl:max-w-3xl">
                 {/* <div className="p-2 pb-1 flex justify-between w-full items-center "> */}
                 <div key="input" className="w-full relative mb-1 items-center">
                     <form
