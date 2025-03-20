@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 
 import Image from "next/image";
 
-import OllamaLogo from "../../../public/ucass_logo.png";
+import UCASSLogo from "../../../public/ucass_logo.png";
 import CodeDisplayBlock from "../code-display-block";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -38,7 +38,7 @@ export default function ChatList({ messages, isLoading }: ChatListProps) {
             <div className="w-full h-full flex justify-center items-center">
                 <div className="flex flex-col gap-4 items-center">
                     <Image
-                        src={OllamaLogo}
+                        src={UCASSLogo}
                         alt="AI"
                         width={450}
                         height={400}
@@ -78,7 +78,7 @@ export default function ChatList({ messages, isLoading }: ChatListProps) {
                                                 <div className="dark:invert h-full w-full bg-black" />
                                             ) : (
                                                 <Image
-                                                    src={OllamaLogo}
+                                                    src={UCASSLogo}
                                                     alt="AI"
                                                     className="object-contain dark:invert aspect-square h-full w-full"
                                                 />
