@@ -2,17 +2,10 @@
 
 import React, { useEffect } from "react";
 
-import {
-    CheckCircledIcon,
-    CrossCircledIcon,
-    DotFilledIcon,
-    HamburgerMenuIcon,
-    InfoCircledIcon,
-} from "@radix-ui/react-icons";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { Message } from "ai/react";
 import { toast } from "sonner";
 
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
     Tooltip,
     TooltipContent,
@@ -21,7 +14,6 @@ import {
 } from "@/components/ui/tooltip";
 import { encodeChat, getTokenLimit } from "@/lib/token-counter";
 import { basePath, useHasMounted } from "@/lib/utils";
-import { Sidebar } from "../sidebar";
 import { ChatOptions } from "./chat-options";
 
 interface ChatTopbarProps {
@@ -77,106 +69,38 @@ export default function ChatTopbar({
     }, [hasMounted]);
 
     if (!hasMounted) {
-        return (
-            <div className="md:w-full flex px-4 py-6 items-center gap-1 md:justify-center">
-                <DotFilledIcon className="w-4 h-4 text-blue-500" />
-                <span className="text-xs">启动中..</span>
-            </div>
-        );
+        return null;
     }
 
     const chatTokens = messages.length > 0 ? encodeChat(messages) : 0;
 
     return (
-        <div className="md:w-full flex px-4 py-4 items-center justify-between md:justify-center">
-            <Sheet>
-                <SheetTrigger>
-                    <div className="flex items-center gap-2">
-                        <HamburgerMenuIcon className="md:hidden w-5 h-5" />
-                    </div>
-                </SheetTrigger>
-                <SheetContent side="left">
-                    <div>
-                        <Sidebar
-                            chatId={chatId || ""}
-                            setChatId={setChatId}
-                            isCollapsed={false}
-                            isMobile={false}
-                            chatOptions={chatOptions}
-                            setChatOptions={setChatOptions}
-                        />
-                    </div>
-                </SheetContent>
-            </Sheet>
-
-            <div className="flex justify-center md:justify-between gap-4 w-full">
-                <div className="gap-1 flex items-center">
-                    {currentModel !== undefined && (
-                        <>
-                            {isLoading ? (
-                                <DotFilledIcon className="w-4 h-4 text-blue-500" />
-                            ) : (
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger>
-                                            <span className="cursor-help">
-                                                <CheckCircledIcon className="w-4 h-4 text-green-500" />
-                                            </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent
-                                            sideOffset={4}
-                                            className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-2 rounded-sm text-xs"
-                                        >
-                                            <p className="font-bold">
-                                                当前模型
-                                            </p>
-                                            <p className="text-gray-500">
-                                                {currentModel}
-                                            </p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            )}
-                            <span className="text-xs">
-                                {isLoading ? "生成中.." : "就绪"}
-                            </span>
-                        </>
-                    )}
-                    {currentModel === undefined && (
-                        <>
-                            <CrossCircledIcon className="w-4 h-4 text-red-500" />
-                            <span className="text-xs">
-                                连接 vLLM 服务器失败
-                            </span>
-                        </>
-                    )}
-                </div>
-                <div className="flex items-end gap-2">
-                    {chatTokens > tokenLimit && (
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <span>
-                                        <InfoCircledIcon className="w-4 h-4 text-blue-500" />
-                                    </span>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                    sideOffset={4}
-                                    className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-sm text-xs"
-                                >
-                                    <p className="text-gray-500">
-                                        token 限制已超出。将截断中间消息。
-                                    </p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    )}
-                    {messages.length > 0 && (
-                        <span className="text-xs text-gray-500">
-                            {chatTokens} / {tokenLimit} 个 token
-                        </span>
-                    )}
-                </div>
+        <div className="md:w-full flex px-4 py-4 items-center justify-end">
+            <div className="flex items-end gap-2">
+                {chatTokens > tokenLimit && (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <span>
+                                    <InfoCircledIcon className="w-4 h-4 text-blue-500" />
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent
+                                sideOffset={4}
+                                className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-sm text-xs"
+                            >
+                                <p className="text-gray-500">
+                                    token 限制已超出。将截断中间消息。
+                                </p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                )}
+                {messages.length > 0 && (
+                    <span className="text-xs text-gray-500">
+                        {chatTokens} / {tokenLimit} 个 token
+                    </span>
+                )}
             </div>
         </div>
     );
