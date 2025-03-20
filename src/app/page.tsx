@@ -20,10 +20,10 @@ export default function Home() {
     };
 
     return (
-        <main className="flex h-[calc(100dvh)] w-full overflow-hidden">
+        <main className="flex h-[calc(100dvh)] w-full overflow-hidden bg-gray-100 dark:bg-gray-900 p-4">
             {/* Left Column */}
-            <div className="flex flex-col w-1/2 h-full border-r border-gray-200 dark:border-gray-800">
-                <div className="flex justify-center items-center py-4">
+            <div className="flex flex-col w-[45%] h-full rounded-lg shadow-md bg-white dark:bg-gray-800 overflow-hidden">
+                <div className="flex justify-center items-center py-4 border-b border-gray-200 dark:border-gray-700">
                     <button
                         onClick={handleNewChat}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
@@ -38,7 +38,7 @@ export default function Home() {
             </div>
 
             {/* Right Column */}
-            <div className="flex flex-col w-1/2 h-full items-center justify-center bg-gray-50 dark:bg-gray-900/20">
+            <div className="flex flex-col w-[55%] h-full items-center justify-center bg-gray-50 dark:bg-gray-900/20 ml-4 rounded-lg">
                 <FileUpload onFileChange={handleFileChange} />
             </div>
         </main>
