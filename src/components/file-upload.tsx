@@ -59,11 +59,10 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
             >
                 <UploadIcon className="w-10 h-10 mb-4 text-gray-400" />
                 <p className="mb-2 text-sm text-center text-gray-500 dark:text-gray-400">
-                    <span className="font-semibold">Click to upload</span> or
-                    drag and drop
+                    <span className="font-semibold">点击上传</span> 或拖拽文件
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                    PDF, DOC, TXT, or other document files
+                    支持 CSV、XLS、JSON 或其他文档格式
                 </p>
 
                 <input
@@ -78,14 +77,14 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
                     className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md 
             hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
                 >
-                    Upload file
+                    上传文件
                 </label>
             </div>
 
             {file && (
                 <div className="mt-4 w-full">
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Selected file:
+                        已选择文件:
                     </p>
                     <p className="text-sm text-gray-500 truncate">
                         {file.name}
