@@ -30,10 +30,6 @@ export default function ChatList({ messages, isLoading }: ChatListProps) {
     };
 
     useEffect(() => {
-        if (isLoading) {
-            return;
-        }
-        // if user scrolls up, disable auto-scroll
         scrollToBottom();
     }, [messages, isLoading]);
 
@@ -46,7 +42,7 @@ export default function ChatList({ messages, isLoading }: ChatListProps) {
                         alt="AI"
                         width={450}
                         height={400}
-                        draggable='false'
+                        draggable="false"
                         className="object-contain dark:invert"
                     />
                     <p className="text-center text-xl text-muted-foreground">
@@ -58,22 +54,26 @@ export default function ChatList({ messages, isLoading }: ChatListProps) {
     }
 
     return (
-        <div
-            id="scroller"
-            className="w-[800px] overflow-y-scroll overflow-x-hidden h-full justify-center m-auto"
-        >
-            <div className="px-4 py-2 justify-center text-base md:gap-6 m-auto">
-                {messages
-                    .filter((message) => message.role !== "system")
-                    .map((message, index) => (
-                        <div
-                            key={index}
-                            className="flex flex-1 text-base mx-auto gap-3 juice:gap-4 juice:md:gap-6 md:px-5 lg:px-1 xl:px-5 md:max-w-3xl lg:max-w-[40rem] xl:max-w-[48rem]"
-                        >
-                            <div className="flex flex-1 text-base mx-auto gap-3 juice:gap-4 juice:md:gap-6 md:px-5 lg:px-1 xl:px-5 md:max-w-3xl lg:max-w-[40rem] xl:max-w-[48rem]">
-                                <div className="flex-shrink-0 flex flex-col relative items-end">
-                                    <div className="pt-0.5">
-                                        <div className="gizmo-shadow-stroke flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
+        <div className="flex-1 overflow-hidden relative">
+            <div
+                id="scroller"
+                className="absolute inset-0 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-transparent hover:scrollbar-thumb-gray-300 dark:hover:scrollbar-thumb-gray-700 scrollbar-track-transparent"
+                style={{
+                    scrollbarWidth: "thin",
+                    scrollbarColor: "rgba(156, 163, 175, 0.3) transparent",
+                }}
+            >
+                <div className="px-4 py-2">
+                    {messages
+                        .filter((message) => message.role !== "system")
+                        .map((message, index) => (
+                            <div
+                                key={index}
+                                className="flex flex-col w-full py-4 border-b border-gray-100 dark:border-gray-800"
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0">
+                                        <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
                                             {message.role === "user" ? (
                                                 <div className="dark:invert h-full w-full bg-black" />
                                             ) : (
@@ -85,72 +85,119 @@ export default function ChatList({ messages, isLoading }: ChatListProps) {
                                             )}
                                         </div>
                                     </div>
+                                    {message.role === "user" && (
+                                        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+                                            <div className="font-semibold pb-2">
+                                                You
+                                            </div>
+                                            <div className="break-words">
+                                                {message.content}
+                                            </div>
+                                            <MessageToolbar />
+                                        </div>
+                                    )}
+                                    {message.role === "assistant" && (
+                                        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+                                            <div className="font-semibold pb-2">
+                                                Assistant
+                                            </div>
+                                            <div className="break-words overflow-hidden">
+                                                <span className="whitespace-pre-wrap">
+                                                    {/* Check if the message content contains a code block */}
+                                                    {message.content
+                                                        .split("```")
+                                                        .map((part, index) => {
+                                                            if (
+                                                                index % 2 ===
+                                                                0
+                                                            ) {
+                                                                return (
+                                                                    <Markdown
+                                                                        key={
+                                                                            index
+                                                                        }
+                                                                        remarkPlugins={[
+                                                                            remarkGfm,
+                                                                        ]}
+                                                                        className="prose dark:prose-invert max-w-full"
+                                                                    >
+                                                                        {part}
+                                                                    </Markdown>
+                                                                );
+                                                            } else {
+                                                                return (
+                                                                    <CodeDisplayBlock
+                                                                        key={
+                                                                            index
+                                                                        }
+                                                                        code={part.trim()}
+                                                                        lang=""
+                                                                    />
+                                                                );
+                                                            }
+                                                        })}
+                                                    {isLoading &&
+                                                        messages.indexOf(
+                                                            message
+                                                        ) ===
+                                                            messages.length -
+                                                                1 && (
+                                                            <span
+                                                                className="animate-pulse"
+                                                                aria-label="Typing"
+                                                            >
+                                                                ...
+                                                            </span>
+                                                        )}
+                                                </span>
+                                            </div>
+                                            <MessageToolbar />
+                                        </div>
+                                    )}
                                 </div>
-                                {message.role === "user" && (
-                                    <div className="relative flex w-full min-w-0 flex-col">
-                                        <div className="font-semibold pb-2">
-                                            You
-                                        </div>
-                                        <div className="flex-col gap-1 md:gap-3">
-                                            {message.content}
-                                        </div>
-                                        <MessageToolbar />
-                                    </div>
-                                )}
-                                {message.role === "assistant" && (
-                                    <div className="relative flex w-full min-w-0 flex-col">
-                                        <div className="font-semibold pb-2">
-                                            Assistant
-                                        </div>
-                                        <div className="flex-col gap-1 md:gap-3">
-                                            <span className="whitespace-pre-wrap">
-                                                {/* Check if the message content contains a code block */}
-                                                {message.content
-                                                    .split("```")
-                                                    .map((part, index) => {
-                                                        if (index % 2 === 0) {
-                                                            return (
-                                                                <Markdown
-                                                                    key={index}
-                                                                    remarkPlugins={[
-                                                                        remarkGfm,
-                                                                    ]}
-                                                                >
-                                                                    {part}
-                                                                </Markdown>
-                                                            );
-                                                        } else {
-                                                            return (
-                                                                <CodeDisplayBlock
-                                                                    key={index}
-                                                                    code={part.trim()}
-                                                                    lang=""
-                                                                />
-                                                            );
-                                                        }
-                                                    })}
-                                                {isLoading &&
-                                                    messages.indexOf(
-                                                        message
-                                                    ) ===
-                                                        messages.length - 1 && (
-                                                        <span
-                                                            className="animate-pulse"
-                                                            aria-label="Typing"
-                                                        >
-                                                            ...
-                                                        </span>
-                                                    )}
-                                            </span>
-                                        </div>
-                                        <MessageToolbar />
-                                    </div>
-                                )}
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    <div id="anchor" ref={bottomRef} className="h-4"></div>
+                </div>
             </div>
-            <div id="anchor" ref={bottomRef}></div>
+            <style jsx global>{`
+                /* 定义自定义滚动条样式 */
+                .scrollbar-thin::-webkit-scrollbar {
+                    width: 6px;
+                }
+
+                .scrollbar-thumb-transparent::-webkit-scrollbar-thumb {
+                    background-color: transparent;
+                    transition: background-color 0.3s;
+                }
+
+                .hover\:scrollbar-thumb-gray-300:hover::-webkit-scrollbar-thumb {
+                    background-color: rgba(209, 213, 219, 0.5);
+                }
+
+                .dark
+                    .dark\:hover\:scrollbar-thumb-gray-700:hover::-webkit-scrollbar-thumb {
+                    background-color: rgba(55, 65, 81, 0.5);
+                }
+
+                .scrollbar-thumb-rounded::-webkit-scrollbar-thumb {
+                    border-radius: 3px;
+                }
+
+                .scrollbar-track-transparent::-webkit-scrollbar-track {
+                    background-color: transparent;
+                }
+
+                /* Firefox 滚动条样式 */
+                .scrollbar-thin {
+                    scrollbar-width: thin;
+                    scrollbar-color: transparent transparent;
+                }
+
+                .scrollbar-thin:hover {
+                    scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+                }
+            `}</style>
         </div>
     );
 }
