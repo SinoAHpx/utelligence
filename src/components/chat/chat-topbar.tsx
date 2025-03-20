@@ -115,14 +115,16 @@ export default function ChatTopbar({
     return (
         <div className="w-full flex px-4 py-4 items-center justify-between border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-4">
-                <span className="font-medium text-lg">{chatTitle}</span>
+                <span className="font-medium text-lg truncate max-w-[120px] md:max-w-[180px] lg:max-w-full">
+                    {chatTitle}
+                </span>
 
                 <DropdownMenu>
-                    <DropdownMenuTrigger className="flex items-center px-3 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <span className="mr-2">
+                    <DropdownMenuTrigger className="flex items-center px-2 md:px-3 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <span className="mr-2 truncate max-w-[100px] md:max-w-full">
                             {currentModel || "选择模型"}
                         </span>
-                        <ChevronDownIcon className="w-4 h-4" />
+                        <ChevronDownIcon className="w-4 h-4 flex-shrink-0" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                         {models.map((model) => (
@@ -188,7 +190,7 @@ export default function ChatTopbar({
                     className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                     <ChatBubbleIcon className="w-4 h-4" />
-                    <span>对话列表</span>
+                    <span className="hidden md:inline">对话列表</span>
                 </Link>
 
                 <button
@@ -196,7 +198,7 @@ export default function ChatTopbar({
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                 >
                     <Pencil1Icon className="w-4 h-4" />
-                    <span>新建聊天</span>
+                    <span className="hidden md:inline">新建聊天</span>
                 </button>
             </div>
         </div>

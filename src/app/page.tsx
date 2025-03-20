@@ -25,16 +25,16 @@ export default function Home() {
     };
 
     return (
-        <main className="flex h-[calc(100dvh)] w-full overflow-hidden bg-gray-100 dark:bg-gray-900 p-4">
+        <main className="flex flex-col md:flex-row h-[calc(100dvh)] w-full overflow-hidden bg-gray-100 dark:bg-gray-900 p-4">
             {/* Left Column */}
-            <div className="flex flex-col w-[45%] h-full rounded-lg shadow-md bg-white dark:bg-gray-800 overflow-hidden">
+            <div className="flex flex-col w-full md:w-auto md:min-w-[350px] lg:min-w-[400px] md:max-w-[45%] h-full rounded-lg shadow-md bg-white dark:bg-gray-800 overflow-hidden">
                 <div className="flex-1">
                     <ChatPage chatId={chatId} setChatId={setChatId} />
                 </div>
             </div>
 
             {/* Right Column */}
-            <div className="flex flex-col w-[55%] h-full items-center justify-center bg-gray-50 dark:bg-gray-900/20 ml-4 rounded-lg">
+            <div className="flex flex-col w-full flex-1 h-full items-center justify-center bg-gray-50 dark:bg-gray-900/20 md:ml-4 mt-4 md:mt-0 rounded-lg">
                 <FileUpload onFileChange={handleFileChange} />
             </div>
         </main>
