@@ -7,9 +7,39 @@ interface FileUploadProps {
     onFileChange?: (file: File) => void;
 }
 
+const supportedFileTypes = [
+    { extension: "csv", description: "CSV文件" },
+    { extension: "xls", description: "Excel文件" },
+    { extension: "xlsx", description: "Excel文件" },
+    { extension: "json", description: "JSON文件" },
+    { extension: "txt", description: "文本文件" },
+    { extension: "xml", description: "XML文件" },
+    { extension: "parquet", description: "Parquet文件" },
+];
+
 export default function FileUpload({ onFileChange }: FileUploadProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [file, setFile] = useState<File | null>(null);
+    const [error, setError] = useState<string>("");
+
+    const validateFile = (file: File): boolean => {
+        const extension = file.name.split(".").pop()?.toLowerCase() || "";
+        const isValid = supportedFileTypes.some(
+            (type) => type.extension === extension
+        );
+
+        if (!isValid) {
+            setError(
+                `不支持的文件类型: .${extension}。请选择以下类型: ${supportedFileTypes
+                    .map((t) => `.${t.extension}`)
+                    .join(", ")}`
+            );
+        } else {
+            setError("");
+        }
+
+        return isValid;
+    };
 
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -26,9 +56,12 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
 
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const uploadedFile = e.dataTransfer.files[0];
-            setFile(uploadedFile);
-            if (onFileChange) {
-                onFileChange(uploadedFile);
+
+            if (validateFile(uploadedFile)) {
+                setFile(uploadedFile);
+                if (onFileChange) {
+                    onFileChange(uploadedFile);
+                }
             }
         }
     };
@@ -36,9 +69,12 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
     const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const uploadedFile = e.target.files[0];
-            setFile(uploadedFile);
-            if (onFileChange) {
-                onFileChange(uploadedFile);
+
+            if (validateFile(uploadedFile)) {
+                setFile(uploadedFile);
+                if (onFileChange) {
+                    onFileChange(uploadedFile);
+                }
             }
         }
     };
@@ -50,6 +86,8 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
           ${
               isDragging
                   ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                  : error
+                  ? "border-red-400 bg-red-50 dark:bg-red-900/10"
                   : "border-gray-300 dark:border-gray-700"
           }
         `}
@@ -57,27 +95,43 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
             >
-                <UploadIcon className="w-10 h-10 mb-4 text-gray-400" />
+                <UploadIcon
+                    className={`w-10 h-10 mb-4 ${
+                        error ? "text-red-400" : "text-gray-400"
+                    }`}
+                />
                 <p className="mb-2 text-sm text-center text-gray-500 dark:text-gray-400">
                     <span className="font-semibold">点击上传</span> 或拖拽文件
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                    支持 CSV、XLS、JSON 或其他文档格式
+                <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+                    支持 CSV、XLS、JSON 或其他数据格式
                 </p>
+
+                {error && (
+                    <p className="mt-2 text-xs text-center text-red-500">
+                        {error}
+                    </p>
+                )}
 
                 <input
                     id="file-upload"
                     type="file"
                     className="hidden"
                     onChange={handleFileInputChange}
+                    accept={supportedFileTypes
+                        .map((type) => `.${type.extension}`)
+                        .join(",")}
                 />
 
                 <label
                     htmlFor="file-upload"
-                    className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md 
-            hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
+                    className={`mt-4 px-4 py-2 text-white text-sm font-medium rounded-md cursor-pointer ${
+                        error
+                            ? "bg-red-500 hover:bg-red-600 focus:ring-red-500"
+                            : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2`}
                 >
-                    上传文件
+                    选择文件
                 </label>
             </div>
 
@@ -86,11 +140,37 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         已选择文件:
                     </p>
-                    <p className="text-sm text-gray-500 truncate">
-                        {file.name}
+                    <div className="flex items-center justify-between mt-1">
+                        <p className="text-sm text-gray-500 truncate max-w-[80%]">
+                            {file.name}
+                        </p>
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                            {file.name.split(".").pop()?.toUpperCase()}
+                        </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                        {file.size < 1024
+                            ? `${file.size} B`
+                            : file.size < 1024 * 1024
+                            ? `${(file.size / 1024).toFixed(2)} KB`
+                            : `${(file.size / (1024 * 1024)).toFixed(2)} MB`}
                     </p>
                 </div>
             )}
+
+            <div className="mt-6 w-full">
+                <p className="text-xs text-gray-500 mb-2">支持的文件类型:</p>
+                <div className="flex flex-wrap gap-2">
+                    {supportedFileTypes.map((type) => (
+                        <span
+                            key={type.extension}
+                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+                        >
+                            .{type.extension}
+                        </span>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 }
