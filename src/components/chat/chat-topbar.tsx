@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import {
     GearIcon,
@@ -52,6 +52,9 @@ export default function ChatTopbar({
     const [tokenLimit, setTokenLimit] = React.useState<number>(4096);
     const [error, setError] = React.useState<string | undefined>(undefined);
     const [models, setModels] = React.useState<string[]>([]);
+    const [showLabels, setShowLabels] = useState(true);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const topbarRef = useRef<HTMLDivElement>(null);
 
     const fetchData = async () => {
         if (!hasMounted) {
@@ -89,6 +92,43 @@ export default function ChatTopbar({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hasMounted]);
 
+    useEffect(() => {
+        const checkSpace = () => {
+            if (topbarRef.current && containerRef.current) {
+                const topbarWidth = topbarRef.current.offsetWidth;
+                const containerWidth = containerRef.current.offsetWidth;
+                const availableSpace = topbarWidth - containerWidth - 250; // 250px buffer for other elements
+                setShowLabels(availableSpace > 160); // 160px threshold for showing labels
+            }
+        };
+
+        // 初始检查
+        checkSpace();
+
+        // 窗口大小变化时检查
+        window.addEventListener("resize", checkSpace);
+
+        // 使用MutationObserver监听DOM变化
+        const observer = new MutationObserver(checkSpace);
+        if (topbarRef.current) {
+            observer.observe(topbarRef.current, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                characterData: true,
+            });
+        }
+
+        // 定期检查以防其他动态变化
+        const intervalId = setInterval(checkSpace, 1000);
+
+        return () => {
+            window.removeEventListener("resize", checkSpace);
+            observer.disconnect();
+            clearInterval(intervalId);
+        };
+    }, [messages, chatId, models, currentModel]); // 添加关键状态作为依赖项
+
     if (!hasMounted) {
         return null;
     }
@@ -113,15 +153,21 @@ export default function ChatTopbar({
         : "新对话";
 
     return (
-        <div className="w-full flex px-4 py-4 items-center justify-between border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-4">
-                <span className="font-medium text-lg truncate max-w-[120px] md:max-w-[180px] lg:max-w-full">
+        <div
+            ref={topbarRef}
+            className="w-full flex px-4 py-4 items-center justify-between border-b border-gray-200 dark:border-gray-700"
+        >
+            <div
+                ref={containerRef}
+                className="flex items-center space-x-4 overflow-hidden"
+            >
+                <span className="font-medium text-lg truncate max-w-[140px] md:max-w-[200px] lg:max-w-[240px]">
                     {chatTitle}
                 </span>
 
                 <DropdownMenu>
                     <DropdownMenuTrigger className="flex items-center px-2 md:px-3 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <span className="mr-2 truncate max-w-[100px] md:max-w-full">
+                        <span className="mr-2 truncate w-[120px] inline-block overflow-hidden">
                             {currentModel || "选择模型"}
                         </span>
                         <ChevronDownIcon className="w-4 h-4 flex-shrink-0" />
@@ -157,48 +203,21 @@ export default function ChatTopbar({
                 </TooltipProvider>
             </div>
 
-            <div className="flex items-center gap-4">
-                <div className="flex items-end gap-2">
-                    {chatTokens > tokenLimit && (
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <span>
-                                        <InfoCircledIcon className="w-4 h-4 text-blue-500" />
-                                    </span>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                    sideOffset={4}
-                                    className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-sm text-xs"
-                                >
-                                    <p className="text-gray-500">
-                                        token 限制已超出。将截断中间消息。
-                                    </p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    )}
-                    {messages.length > 0 && (
-                        <span className="text-xs text-gray-500">
-                            {chatTokens} / {tokenLimit} 个 token
-                        </span>
-                    )}
-                </div>
-
+            <div className="flex items-center gap-4 ml-auto">
                 <Link
                     href="/chats"
                     className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
-                    <ChatBubbleIcon className="w-4 h-4" />
-                    <span className="hidden md:inline">对话列表</span>
+                    <ChatBubbleIcon className="w-4 h-4 flex-shrink-0" />
+                    {showLabels && <span>对话列表</span>}
                 </Link>
 
                 <button
                     onClick={handleNewChat}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                 >
-                    <Pencil1Icon className="w-4 h-4" />
-                    <span className="hidden md:inline">新建聊天</span>
+                    <Pencil1Icon className="w-4 h-4 flex-shrink-0" />
+                    {showLabels && <span>新建聊天</span>}
                 </button>
             </div>
         </div>

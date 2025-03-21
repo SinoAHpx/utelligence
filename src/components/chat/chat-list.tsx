@@ -86,23 +86,23 @@ export default function ChatList({ messages, isLoading }: ChatListProps) {
                                         </div>
                                     </div>
                                     {message.role === "user" && (
-                                        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+                                        <div className="flex flex-col flex-1 min-w-0 overflow-hidden w-full">
                                             <div className="font-semibold pb-2">
                                                 You
                                             </div>
-                                            <div className="break-words">
+                                            <div className="break-words w-full">
                                                 {message.content}
                                             </div>
                                             <MessageToolbar />
                                         </div>
                                     )}
                                     {message.role === "assistant" && (
-                                        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+                                        <div className="flex flex-col flex-1 min-w-0 overflow-hidden w-full">
                                             <div className="font-semibold pb-2">
                                                 Assistant
                                             </div>
-                                            <div className="break-words overflow-hidden">
-                                                <span className="whitespace-pre-wrap">
+                                            <div className="break-words overflow-hidden w-full">
+                                                <span className="whitespace-pre-wrap w-full inline-block">
                                                     {/* Check if the message content contains a code block */}
                                                     {message.content
                                                         .split("```")
@@ -143,7 +143,7 @@ export default function ChatList({ messages, isLoading }: ChatListProps) {
                                                             messages.length -
                                                                 1 && (
                                                             <span
-                                                                className="animate-pulse"
+                                                                className="animate-pulse inline-block w-6 text-center"
                                                                 aria-label="Typing"
                                                             >
                                                                 ...
