@@ -52,16 +52,6 @@ export default function ChatBottombar({
         }
     };
 
-    const [tokenLimit, setTokenLimit] = React.useState<number>(4096);
-    React.useEffect(() => {
-        getTokenLimit(basePath).then((limit) => setTokenLimit(limit));
-    }, [hasMounted]);
-
-    const tokenCount = React.useMemo(
-        () => (input ? llama3Tokenizer.encode(input).length - 1 : 0),
-        [input]
-    );
-
     return (
         <div className="px-6 md:px-10">
             <div className="stretch flex flex-row gap-3 last:mb-2 md:last:mb-6 md:mx-auto md:max-w-2xl xl:max-w-3xl">
@@ -80,15 +70,6 @@ export default function ChatBottombar({
                             placeholder="向 vLLM 提问..."
                             className="border-input max-h-48 px-4 py-4 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 dark:focus-visible:ring-slate-500 disabled:cursor-not-allowed disabled:opacity-50 w-full border rounded-md flex items-center h-14 resize-none overflow-hidden dark:bg-card/35 pr-32"
                         />
-                        <div className="text-xs text-muted-foreground absolute right-14 px-0 text-right">
-                            {tokenCount > tokenLimit ? (
-                                <span className="text-red-700">
-                                    {tokenCount} 个 token
-                                </span>
-                            ) : (
-                                <span>{tokenCount} 个 token</span>
-                            )}
-                        </div>
                         {!isLoading ? (
                             <Button
                                 size="icon"

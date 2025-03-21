@@ -133,8 +133,6 @@ export default function ChatTopbar({
         return null;
     }
 
-    const chatTokens = messages.length > 0 ? encodeChat(messages) : 0;
-
     const handleNewChat = () => {
         setChatId("");
     };
