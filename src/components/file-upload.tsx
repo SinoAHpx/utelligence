@@ -100,7 +100,7 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
           <span className="font-semibold">点击上传</span> 或拖拽文件
         </p>
         <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-          支持 CSV、XLS、JSON 或其他数据格式
+          支持 CSV、Excel(XLS/XLSX) 格式
         </p>
 
         {error && (
