@@ -1,45 +1,118 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DataDisplay from "@/components/data-visualization/data-display";
 import DataCleaning from "@/components/data-visualization/data-cleaning";
 import DataAnalysis from "@/components/data-visualization/data-analysis";
+import FilePreview from "@/components/data-visualization/file-preview";
 
 interface DataTabsProps {
-    file: File | null;
+  file: File | null;
 }
 
 export default function DataTabs({ file }: DataTabsProps) {
-    const [activeTab, setActiveTab] = useState("display");
+  const [activeTab, setActiveTab] = useState("preview");
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [availableColumns, setAvailableColumns] = useState<string[]>([]);
 
-    return (
-        <div className="w-full h-full">
-            <Tabs
-                defaultValue="display"
-                className="w-full h-full flex flex-col"
-                onValueChange={setActiveTab}
-            >
-                <TabsList className="grid grid-cols-3 mb-4">
-                    <TabsTrigger value="display">数据展示</TabsTrigger>
-                    <TabsTrigger value="cleaning">数据清洗</TabsTrigger>
-                    <TabsTrigger value="analysis">数据分析</TabsTrigger>
-                </TabsList>
+  // 处理从FilePreview获取的列信息
+  const handleColumnsAvailable = React.useCallback(
+    (columns: string[]) => {
+      if (columns.length > 0) {
+        // 只在初始加载时设置可用列，避免重复更新
+        if (availableColumns.length === 0) {
+          setAvailableColumns(columns);
+        }
 
-                <div className="flex-1 overflow-auto">
-                    <TabsContent value="display" className="h-full">
-                        <DataDisplay file={file} />
-                    </TabsContent>
+        // 如果还没有选择列，则将传入的列设为已选择
+        if (selectedColumns.length === 0) {
+          setSelectedColumns(columns);
+        }
+      }
+    },
+    [availableColumns.length, selectedColumns.length]
+  );
 
-                    <TabsContent value="cleaning" className="h-full">
-                        <DataCleaning file={file} />
-                    </TabsContent>
+  // 监听可视化事件
+  useEffect(() => {
+    const handleVisualize = (e: Event) => {
+      // 如果是自定义事件，尝试从detail中获取选择的列
+      if (e instanceof CustomEvent && e.detail && e.detail.columns) {
+        const newSelectedColumns = e.detail.columns;
+        // 只有当选择的列发生变化时才更新
+        if (
+          JSON.stringify(newSelectedColumns) !== JSON.stringify(selectedColumns)
+        ) {
+          setSelectedColumns(newSelectedColumns);
+        }
+      }
 
-                    <TabsContent value="analysis" className="h-full">
-                        <DataAnalysis file={file} />
-                    </TabsContent>
-                </div>
-            </Tabs>
+      // 直接切换到数据展示标签页
+      setActiveTab("display");
+    };
+
+    window.addEventListener("visualize", handleVisualize as EventListener);
+
+    return () => {
+      window.removeEventListener("visualize", handleVisualize as EventListener);
+    };
+  }, [selectedColumns]);
+
+  // 处理列选择变化
+  const handleColumnSelectionChange = (columns: string[]) => {
+    setSelectedColumns(columns);
+  };
+
+  return (
+    <div className="w-full h-full">
+      <Tabs
+        value={activeTab}
+        className="w-full h-full flex flex-col"
+        onValueChange={setActiveTab}
+      >
+        <TabsList className="grid grid-cols-4 mb-4">
+          <TabsTrigger value="preview">文件预览</TabsTrigger>
+          <TabsTrigger value="display">数据展示</TabsTrigger>
+          <TabsTrigger value="cleaning">数据清洗</TabsTrigger>
+          <TabsTrigger value="analysis">数据分析</TabsTrigger>
+        </TabsList>
+
+        <div className="flex-1 overflow-auto">
+          <TabsContent value="preview" className="h-full">
+            <FilePreview
+              file={file}
+              maxRows={30}
+              onColumnsAvailable={handleColumnsAvailable}
+            />
+          </TabsContent>
+
+          <TabsContent value="display" className="h-full">
+            <DataDisplay
+              file={file}
+              selectedColumns={selectedColumns}
+              availableColumns={availableColumns}
+              onColumnSelectionChange={handleColumnSelectionChange}
+            />
+          </TabsContent>
+
+          <TabsContent value="cleaning" className="h-full">
+            <DataCleaning
+              file={file}
+              selectedColumns={selectedColumns}
+              availableColumns={availableColumns}
+            />
+          </TabsContent>
+
+          <TabsContent value="analysis" className="h-full">
+            <DataAnalysis
+              file={file}
+              selectedColumns={selectedColumns}
+              availableColumns={availableColumns}
+            />
+          </TabsContent>
         </div>
-    );
+      </Tabs>
+    </div>
+  );
 }
