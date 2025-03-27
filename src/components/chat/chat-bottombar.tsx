@@ -67,7 +67,7 @@ export default function ChatBottombar({
                             onKeyDown={handleKeyPress}
                             onChange={handleInputChange}
                             name="message"
-                            placeholder="向 vLLM 提问..."
+                            placeholder="您有什么问题..."
                             className="border-input max-h-48 px-4 py-4 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 dark:focus-visible:ring-slate-500 disabled:cursor-not-allowed disabled:opacity-50 w-full border rounded-md flex items-center h-14 resize-none overflow-hidden dark:bg-card/35 pr-32"
                         />
                         {!isLoading ? (
