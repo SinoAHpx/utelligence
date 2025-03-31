@@ -3,88 +3,91 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
+import { Chats, getLocalstorageChats } from "../../lib/chatUtils";
 
 export default function ChatsPage() {
-    const [chats, setChats] = useState<{ id: string; messages: any[] }[]>([]);
+  const [chats, setChats] = useState<Chats>({});
+  const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        // Load chat history from localStorage
-        const loadChats = () => {
-            const chatIds: { id: string; messages: any[] }[] = [];
-            // Iterate through localStorage to find chat items
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && key.startsWith("chat_")) {
-                    try {
-                        const chatId = key.replace("chat_", "");
-                        const messages = JSON.parse(
-                            localStorage.getItem(key) || "[]"
-                        );
-                        if (messages.length > 0) {
-                            chatIds.push({ id: chatId, messages });
-                        }
-                    } catch (error) {
-                        console.error("Error parsing chat history:", error);
-                    }
-                }
-            }
-            setChats(chatIds);
-        };
+  useEffect(() => {
+    const loadedChats = getLocalstorageChats();
+    setChats(loadedChats);
+    setIsLoading(false);
 
-        loadChats();
-        window.addEventListener("storage", loadChats);
-        return () => window.removeEventListener("storage", loadChats);
-    }, []);
+    const handleStorageChange = () => {
+      setChats(getLocalstorageChats());
+    };
 
-    return (
-        <div className="container mx-auto max-w-5xl py-8">
-            <div className="flex items-center mb-8">
-                <Link
-                    href="/"
-                    className="flex items-center gap-2 text-blue-600 hover:underline"
-                >
-                    <ArrowLeftIcon className="w-4 h-4" />
-                    <span>返回</span>
-                </Link>
-                <h1 className="text-2xl font-bold ml-4">聊天历史</h1>
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
+  return (
+    <div className="container mx-auto max-w-5xl py-8 px-4 md:px-0">
+      {" "}
+      {/* Added padding for smaller screens */}
+      <div className="flex items-center mb-8">
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-blue-600 hover:underline"
+        >
+          <ArrowLeftIcon className="w-4 h-4" />
+          <span>返回</span>
+        </Link>
+        <h1 className="text-2xl font-bold ml-4">聊天历史</h1>
+      </div>
+      {isLoading ? (
+        <div className="text-center py-8 text-gray-500">加载中...</div>
+      ) : Object.keys(chats).length > 0 ? (
+        // Render grouped chats
+        <div className="space-y-6">
+          {Object.entries(chats).map(([group, chatsInGroup]) => (
+            <div key={group}>
+              <h2 className="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">
+                {group}
+              </h2>
+              <div className="grid gap-4">
+                {chatsInGroup.map((chat) => {
+                  // Get the first user message as the title, or use a default
+                  const firstUserMessage = chat.messages.find(
+                    (msg) => msg.role === "user"
+                  );
+                  const title = firstUserMessage
+                    ? firstUserMessage.content.substring(0, 60) +
+                      (firstUserMessage.content.length > 60 ? "..." : "")
+                    : `对话 ${chat.chatId.substring(5, 13)}`; // Use chatId substring
+
+                  // Extract raw chat ID for the link
+                  const rawChatId = chat.chatId.replace("chat_", "");
+
+                  return (
+                    <Link
+                      // Use rawChatId for the link query parameter
+                      href={`/?chatId=${rawChatId}`}
+                      key={chat.chatId}
+                      className="p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition block" // Added block display
+                    >
+                      <div className="font-medium truncate">{title}</div>{" "}
+                      {/* Added truncate */}
+                      {/* Optional: Keep ID and message count if needed */}
+                      {/* <div className="text-sm text-gray-500 mt-1">
+                                                ID: {rawChatId.substring(0, 8)}...
+                                            </div> */}
+                      <div className="text-sm text-gray-500 mt-1">
+                        消息数: {chat.messages.length}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-
-            <div className="grid gap-4">
-                {chats.length > 0 ? (
-                    chats.map((chat) => {
-                        // Get the first user message as the title, or use a default
-                        const firstUserMessage = chat.messages.find(
-                            (msg) => msg.role === "user"
-                        );
-                        const title = firstUserMessage
-                            ? firstUserMessage.content.substring(0, 60) +
-                              (firstUserMessage.content.length > 60
-                                  ? "..."
-                                  : "")
-                            : `对话 ${chat.id.substring(0, 8)}`;
-
-                        return (
-                            <Link
-                                href={`/?chatId=${chat.id}`}
-                                key={chat.id}
-                                className="p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-                            >
-                                <div className="font-medium">{title}</div>
-                                <div className="text-sm text-gray-500 mt-1">
-                                    ID: {chat.id.substring(0, 8)}...
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                    消息数: {chat.messages.length}
-                                </div>
-                            </Link>
-                        );
-                    })
-                ) : (
-                    <div className="text-center py-8 text-gray-500">
-                        没有聊天记录
-                    </div>
-                )}
-            </div>
+          ))}
         </div>
-    );
+      ) : (
+        <div className="text-center py-8 text-gray-500">没有聊天记录</div>
+      )}
+    </div>
+  );
 }
