@@ -7,13 +7,16 @@ import {
   DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
-} from "@radix-ui/react-dialog";
+} from "@/components/ui/dialog";
 import { TrashIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 
 import { useHasMounted } from "@/lib/utils";
-import { DialogHeader } from "./ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export default function ClearChatsButton() {
   const hasMounted = useHasMounted();
@@ -39,30 +42,31 @@ export default function ClearChatsButton() {
 
   return (
     <Dialog>
-      <DialogTrigger
-        className="inline-flex items-center whitespace-nowrap font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 rounded-sm px-3 text-xs justify-start gap-2 w-full"
-        disabled={disabled}
-      >
-        <TrashIcon className="w-4 h-4" />
-        <span>清除聊天</span>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          className="justify-start gap-2 w-full h-9 px-3"
+          disabled={disabled}
+        >
+          <TrashIcon className="w-4 h-4" />
+          <span>清除聊天</span>
+        </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader className="space-y-2">
-          <DialogDescription className="text-xs">
+        <DialogHeader>
+          <DialogTitle>确认操作</DialogTitle>
+          <DialogDescription>
             确定要删除所有聊天记录吗？此操作无法撤销。
           </DialogDescription>
-          <div className="flex justify-end gap-2">
-            <DialogClose className="border border-input bg-background hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-sm text-xs">
-              取消
-            </DialogClose>
-            <DialogClose
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-3 py-2 rounded-sm text-xs"
-              onClick={() => clearChats()}
-            >
-              删除
-            </DialogClose>
-          </div>
         </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">取消</Button>
+          </DialogClose>
+          <Button variant="destructive" onClick={() => clearChats()}>
+            删除
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

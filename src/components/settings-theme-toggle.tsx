@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 
 import { useHasMounted } from "@/lib/utils";
 import { Button } from "./ui/button";
+import { Label } from "@/components/ui/label";
 
 export default function SettingsThemeToggle() {
   const hasMounted = useHasMounted();
@@ -19,18 +20,22 @@ export default function SettingsThemeToggle() {
   const nextTheme = theme === "light" ? "dark" : "light";
 
   return (
-    <Button
-      className="justify-start gap-2 w-full"
-      size="sm"
-      variant="ghost"
-      onClick={() => setTheme(nextTheme)}
-    >
-      {nextTheme === "light" ? (
-        <SunIcon className="w-4 h-4" />
-      ) : (
-        <MoonIcon className="w-4 h-4" />
-      )}
-      <p>{nextTheme === "light" ? "亮色模式" : "暗色模式"}</p>
-    </Button>
+    <div className="flex items-center justify-between px-2">
+      <Label htmlFor="theme-toggle">外观</Label>
+      <Button
+        id="theme-toggle"
+        className="gap-2"
+        size="icon"
+        variant="ghost"
+        onClick={() => setTheme(nextTheme)}
+      >
+        {theme === "light" ? (
+          <MoonIcon className="w-4 h-4" />
+        ) : (
+          <SunIcon className="w-4 h-4" />
+        )}
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+    </div>
   );
 }

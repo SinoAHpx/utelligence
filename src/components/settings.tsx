@@ -4,54 +4,55 @@ import ClearChatsButton from "./settings-clear-chats";
 import SettingsThemeToggle from "./settings-theme-toggle";
 import SystemPrompt, { SystemPromptProps } from "./system-prompt";
 import { Input } from "./ui/input";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
 
 const TemperatureSlider = ({
   chatOptions,
   setChatOptions,
 }: SystemPromptProps) => {
-  const handleTemperatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTemperatureChange = (value: number[]) => {
     setChatOptions({
       ...chatOptions,
-      temperature: parseFloat(e.target.value),
+      temperature: value[0],
+    });
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let temp = parseFloat(e.target.value);
+    if (isNaN(temp)) temp = 0; // Handle potential NaN
+    if (temp < 0) temp = 0;
+    if (temp > 2) temp = 2;
+    setChatOptions({
+      ...chatOptions,
+      temperature: temp,
     });
   };
 
   return (
-    <div>
-      <div
-        className="mx-2 flex align-middle gap-4 items-center justify-between
-      "
-      >
-        <label
-          htmlFor="small-input"
-          className="text-xs font-medium text-gray-900 dark:text-white align-middle"
-        >
-          Termperature
-        </label>
-        <Input
-          type="text"
-          id="small-input"
-          className="w-1/4 text-gray-900 hover:border hover:border-gray-300 rounded-sm hover:bg-gray-200 text-xs focus:ring-blue-500 focus:border-blue-500 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 h-6
-          text-right
-          "
-          value={chatOptions.temperature}
-          onChange={handleTemperatureChange}
+    <div className="space-y-4">
+      <div className="grid gap-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="temperature">Temperature</Label>
+          <Input
+            id="temperature-value"
+            type="number"
+            className="w-20 h-8 text-right" // Adjusted width and height
+            value={(chatOptions.temperature ?? 0).toFixed(1)} // Provide default 0 and format
+            onChange={handleInputChange}
+            min={0}
+            max={2}
+            step={0.1}
+          />
+        </div>
+        <Slider
+          id="temperature"
           min={0}
           max={2}
           step={0.1}
-        />
-      </div>
-
-      <div className="p-2">
-        <input
-          id="labels-range-input"
-          type="range"
-          value={chatOptions.temperature}
-          onChange={handleTemperatureChange}
-          min="0.0"
-          max="2.0"
-          step="0.1"
-          className="w-full h-1 bg-gray-200 rounded-sm appearance-none cursor-pointer range-sm dark:bg-gray-700"
+          value={[chatOptions.temperature ?? 0]} // Provide default 0
+          onValueChange={handleTemperatureChange} // Use onValueChange for shadcn Slider
+          className="w-full" // Use w-full for better responsiveness
         />
       </div>
     </div>
@@ -63,7 +64,7 @@ export default function Settings({
   setChatOptions,
 }: SystemPromptProps) {
   return (
-    <>
+    <div className="space-y-6 pt-4">
       <SystemPrompt chatOptions={chatOptions} setChatOptions={setChatOptions} />
       <TemperatureSlider
         chatOptions={chatOptions}
@@ -71,6 +72,6 @@ export default function Settings({
       />
       <SettingsThemeToggle />
       <ClearChatsButton />
-    </>
+    </div>
   );
 }
