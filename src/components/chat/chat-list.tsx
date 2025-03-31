@@ -3,7 +3,7 @@ import { Message } from "ai";
 
 import EmptyState from "./empty-state";
 import MessageItem from "./message-item";
-import ScrollbarStyles from "../ui/scrollbar-styles";
+// import ScrollbarStyles from "../ui/scrollbar-styles";
 
 interface ChatListProps {
   messages: Message[];
@@ -53,7 +53,7 @@ export default function ChatList({ messages, isLoading }: ChatListProps) {
           <div id="anchor" ref={bottomRef} className="h-4"></div>
         </div>
       </div>
-      <ScrollbarStyles />
+      {/* <ScrollbarStyles /> */}
     </div>
   );
 }
