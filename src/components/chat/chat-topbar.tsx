@@ -130,7 +130,7 @@ export default function ChatTopbar({
             <span className="mr-2 truncate w-[120px] inline-block overflow-hidden">
               {currentModel || "选择模型"}
             </span>
-            <ChevronDownIcon className="w-4 h-4 flex-shrink-0" />
+            <ChevronDownIcon className="w-4 h-4 shrink-0" />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             {models.map((model) => (
@@ -179,7 +179,7 @@ export default function ChatTopbar({
           href="/chats"
           className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
         >
-          <ChatBubbleIcon className="w-4 h-4 flex-shrink-0" />
+          <ChatBubbleIcon className="w-4 h-4 shrink-0" />
           <span className="hidden [320px]:inline">对话列表</span>
         </Link>
 
@@ -187,7 +187,7 @@ export default function ChatTopbar({
           onClick={handleNewChat}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
-          <Pencil1Icon className="w-4 h-4 flex-shrink-0" />
+          <Pencil1Icon className="w-4 h-4 shrink-0" />
           <span className="hidden [320px]:inline">新建聊天</span>
         </button>
       </div>

@@ -209,7 +209,7 @@ export default function DataDisplay({
 
   return (
     <div className="w-full">
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-6">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
         <div className="flex justify-between items-center mb-4">
           <div>
             <h3 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
@@ -232,7 +232,7 @@ export default function DataDisplay({
       {chartData.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* 柱状图 */}
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <h3 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
               柱状图
             </h3>
@@ -269,7 +269,7 @@ export default function DataDisplay({
           </div>
 
           {/* 线形图 */}
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <h3 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
               线形图
             </h3>
@@ -308,7 +308,7 @@ export default function DataDisplay({
           </div>
 
           {/* 面积图 */}
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <h3 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
               面积图
             </h3>
@@ -349,7 +349,7 @@ export default function DataDisplay({
           </div>
 
           {/* 饼图 */}
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
             <h3 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
               饼图 (基于第一行数据)
             </h3>
@@ -392,7 +392,7 @@ export default function DataDisplay({
 
           {/* 散点图 */}
           {selectedColumns.length >= 2 && (
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
               <h3 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
                 散点图
               </h3>
@@ -437,7 +437,7 @@ export default function DataDisplay({
 
           {/* 雷达图 */}
           {selectedColumns.length >= 3 && (
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
               <h3 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
                 雷达图 (基于前两行数据)
               </h3>

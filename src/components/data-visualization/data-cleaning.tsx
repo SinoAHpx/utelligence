@@ -57,7 +57,7 @@ export default function DataCleaning({
 
   return (
     <div className="w-full space-y-6">
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-medium text-gray-700 dark:text-gray-300">
             文件: <span className="font-bold">{file.name}</span>

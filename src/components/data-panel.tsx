@@ -20,7 +20,7 @@ export default function DataPanel() {
                 </div>
             ) : (
                 <div className="h-full flex flex-col overflow-hidden">
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800 flex-shrink-0">
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800 shrink-0">
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">

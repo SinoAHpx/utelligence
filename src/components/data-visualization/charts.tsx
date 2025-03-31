@@ -54,7 +54,7 @@ export default function Charts({ isVisible }: ChartsProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Bar Chart */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
                     <h3 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                         柱状图
                     </h3>
@@ -74,7 +74,7 @@ export default function Charts({ isVisible }: ChartsProps) {
                 </div>
 
                 {/* Line Chart */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
                     <h3 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                         线形图
                     </h3>
@@ -103,7 +103,7 @@ export default function Charts({ isVisible }: ChartsProps) {
                 </div>
 
                 {/* Area Chart */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
                     <h3 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                         面积图
                     </h3>
@@ -135,7 +135,7 @@ export default function Charts({ isVisible }: ChartsProps) {
                 </div>
 
                 {/* Pie Chart */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
                     <h3 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                         饼图
                     </h3>

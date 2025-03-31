@@ -20,7 +20,7 @@ export default function Home() {
   return (
     <main className="flex flex-col lg:flex-row h-[calc(100dvh)] w-full overflow-hidden bg-gray-100 dark:bg-gray-900 p-4">
       {/* Left Column - Chat */}
-      <div className="flex flex-col w-full lg:w-[30%] lg:flex-shrink-0 lg:flex-grow-0 h-full rounded-lg shadow-md bg-white dark:bg-gray-800 overflow-hidden">
+      <div className="flex flex-col w-full lg:w-[30%] lg:shrink-0 lg:grow-0 h-full rounded-lg shadow-md bg-white dark:bg-gray-800 overflow-hidden">
         <div className="flex-1">
           <ChatPage chatId={chatId} setChatId={setChatId} />
         </div>

@@ -167,7 +167,7 @@ export default function FilePreview({
 
   return (
     <div className="w-full overflow-x-auto">
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm overflow-hidden">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
             文件预览 ({file.name})

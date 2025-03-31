@@ -16,7 +16,7 @@ const AssistantAvatar = () => (
 );
 
 const Avatar = ({ role }: { role: string }) => (
-  <div className="flex-shrink-0">
+  <div className="shrink-0">
     <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
       {role === "user" ? <UserAvatar /> : <AssistantAvatar />}
     </div>

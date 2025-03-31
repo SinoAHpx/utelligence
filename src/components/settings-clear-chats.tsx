@@ -40,7 +40,7 @@ export default function ClearChatsButton() {
   return (
     <Dialog>
       <DialogTrigger
-        className="inline-flex items-center whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 rounded-sm px-3 text-xs justify-start gap-2 w-full"
+        className="inline-flex items-center whitespace-nowrap font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 rounded-sm px-3 text-xs justify-start gap-2 w-full"
         disabled={disabled}
       >
         <TrashIcon className="w-4 h-4" />

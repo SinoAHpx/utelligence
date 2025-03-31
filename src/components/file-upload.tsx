@@ -123,7 +123,7 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
             error
               ? "bg-red-500 hover:bg-red-600 focus:ring-red-500"
               : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
-          } focus:outline-none focus:ring-2 focus:ring-offset-2`}
+          } focus:outline-hidden focus:ring-2 focus:ring-offset-2`}
         >
           选择文件
         </label>
