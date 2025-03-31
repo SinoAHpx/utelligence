@@ -25,6 +25,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import Settings from "@/components/settings";
 import { encodeChat, getTokenLimit } from "@/lib/token-counter";
 import { basePath, useHasMounted } from "@/lib/utils";
 import { ChatOptions } from "./chat-options";
@@ -139,18 +147,31 @@ export default function ChatTopbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
-                <GearIcon className="w-5 h-5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>设置</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Sheet>
+          <TooltipProvider>
+            <Tooltip>
+              <SheetTrigger asChild>
+                <TooltipTrigger asChild>
+                  <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <GearIcon className="w-5 h-5" />
+                  </button>
+                </TooltipTrigger>
+              </SheetTrigger>
+              <TooltipContent>
+                <p>设置</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <SheetContent className="w-[300px] sm:w-[400px] p-4">
+            <SheetHeader className="mb-4">
+              <SheetTitle>设置</SheetTitle>
+            </SheetHeader>
+            <Settings
+              chatOptions={chatOptions}
+              setChatOptions={setChatOptions}
+            />
+          </SheetContent>
+        </Sheet>
       </div>
 
       <div className="flex items-center gap-4 ml-auto">
