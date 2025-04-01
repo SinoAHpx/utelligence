@@ -65,7 +65,7 @@ export default function ChartTypeModal({
               onClick={() => setSelectedType(type.id)}
               className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-colors ${
                 selectedType === type.id
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                  ? "border-primary bg-primary/10 dark:bg-primary/20"
                   : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
               }`}
             >
@@ -73,7 +73,7 @@ export default function ChartTypeModal({
               <span
                 className={`text-sm font-medium ${
                   selectedType === type.id
-                    ? "text-blue-700 dark:text-blue-300"
+                    ? "text-primary dark:text-primary"
                     : "text-gray-700 dark:text-gray-300"
                 }`}
               >
@@ -92,7 +92,7 @@ export default function ChartTypeModal({
           </button>
           <button
             onClick={handleSelect}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-primary"
           >
             选择并继续
           </button>

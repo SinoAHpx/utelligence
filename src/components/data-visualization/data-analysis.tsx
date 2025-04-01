@@ -101,7 +101,7 @@ export default function DataAnalysis({
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-4 py-2 text-sm whitespace-nowrap rounded-t-md transition-colors ${
                   activeTab === tab.id
-                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-b-2 border-blue-500"
+                    ? "bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary border-b-2 border-primary"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
@@ -121,7 +121,7 @@ export default function DataAnalysis({
                   onClick={() => setSelectedColumn(column)}
                   className={`px-3 py-1 text-xs rounded-full transition-colors ${
                     selectedColumn === column
-                      ? "bg-blue-600 text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                   }`}
                 >

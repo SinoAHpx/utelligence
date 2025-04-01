@@ -179,7 +179,7 @@ export default function FilePreview({
               className={`px-3 py-1 text-sm font-medium rounded-md ${
                 selectedColumns.length === 0
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
               }`}
             >
               {selectedColumns.length === 0
@@ -200,7 +200,7 @@ export default function FilePreview({
                 onClick={() => toggleColumnSelection(header)}
                 className={`px-2 py-1 text-xs rounded-full transition-colors ${
                   selectedColumns.includes(header)
-                    ? "bg-blue-600 text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500"
                 }`}
               >
@@ -224,7 +224,7 @@ export default function FilePreview({
                     scope="col"
                     className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${
                       selectedColumns.includes(header)
-                        ? "bg-blue-50 dark:bg-blue-900/20"
+                        ? "bg-primary/10 dark:bg-primary/20"
                         : ""
                     }`}
                   >
@@ -248,7 +248,7 @@ export default function FilePreview({
                       key={cellIndex}
                       className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 overflow-hidden text-ellipsis max-w-[200px] ${
                         selectedColumns.includes(parsedData.headers[cellIndex])
-                          ? "bg-blue-50 dark:bg-blue-900/10"
+                          ? "bg-primary/10 dark:bg-primary/10"
                           : ""
                       }`}
                       title={String(cell)}

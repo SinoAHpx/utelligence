@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import { Chats, getLocalstorageChats } from "../../lib/chatUtils";
+import { PlusCircle } from "lucide-react";
 
 export default function ChatsPage() {
   const [chats, setChats] = useState<Chats>({});
@@ -31,7 +32,7 @@ export default function ChatsPage() {
       <div className="flex items-center mb-8">
         <Link
           href="/"
-          className="flex items-center gap-2 text-blue-600 hover:underline"
+          className="flex items-center gap-2 text-primary hover:underline"
         >
           <ArrowLeftIcon className="w-4 h-4" />
           <span>返回</span>
@@ -86,7 +87,20 @@ export default function ChatsPage() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-8 text-gray-500">没有聊天记录</div>
+        <div className="text-center py-8 text-gray-500">
+          没有聊天记录
+          <div className="flex items-center justify-center mt-4">
+            {" "}
+            {/* Added margin-top */}
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-primary hover:underline" // Ensure text-primary is used
+            >
+              <PlusCircle size={20} /> {/* Ensure PlusCircle icon is used */}
+              新建聊天
+            </Link>
+          </div>
+        </div>
       )}
     </div>
   );

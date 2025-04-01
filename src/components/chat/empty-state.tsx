@@ -14,7 +14,7 @@ const EmptyState = () => (
         width={450}
         height={400}
         draggable="false"
-        className="object-contain dark:invert"
+        className="object-contain"
       />
       <p className="text-center text-xl text-muted-foreground">
         祝你早安, 午安, 晚安。

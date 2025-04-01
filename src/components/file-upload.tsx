@@ -81,7 +81,7 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
         className={`w-full h-64 border-2 border-dashed rounded-lg flex flex-col items-center justify-center p-6 transition-colors
           ${
             isDragging
-              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+              ? "border-primary bg-primary/10 dark:bg-primary/20"
               : error
               ? "border-red-400 bg-red-50 dark:bg-red-900/10"
               : "border-gray-300 dark:border-gray-700"
@@ -122,7 +122,7 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
           className={`mt-4 px-4 py-2 text-white text-sm font-medium rounded-md cursor-pointer ${
             error
               ? "bg-red-500 hover:bg-red-600 focus:ring-red-500"
-              : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+              : "bg-primary hover:bg-primary/90 focus:ring-primary"
           } focus:outline-hidden focus:ring-2 focus:ring-offset-2`}
         >
           选择文件
@@ -138,7 +138,7 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
             <p className="text-sm text-gray-500 truncate max-w-[80%]">
               {file.name}
             </p>
-            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+            <span className="text-xs bg-primary/10 dark:bg-primary/30 text-primary dark:text-primary px-2 py-0.5 rounded-full">
               {file.name.split(".").pop()?.toUpperCase()}
             </span>
           </div>

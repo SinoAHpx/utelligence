@@ -68,7 +68,7 @@ export default function DataCleaning({
             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
               isCleaning
                 ? "bg-gray-300 dark:bg-gray-700 cursor-not-allowed"
-                : "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
             }`}
           >
             {isCleaning ? "处理中..." : "执行清洗"}
@@ -88,7 +88,7 @@ export default function DataCleaning({
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 text-sm whitespace-nowrap rounded-t-md transition-colors ${
                 activeTab === tab.id
-                  ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-b-2 border-blue-500"
+                  ? "bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary border-b-2 border-primary"
                   : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
               }`}
             >
@@ -302,18 +302,26 @@ export default function DataCleaning({
                       <option value="name">名称</option>
                       <option value="date">日期</option>
                     </select>
-                    <button className="ml-2 px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800">
+                    <button className="ml-2 px-2 py-1 text-xs bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary rounded border border-primary/20 dark:border-primary/30 hover:bg-primary/20 dark:hover:bg-primary/30">
                       添加
                     </button>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <span className="px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded flex items-center">
-                      ID
-                      <button className="ml-1 text-blue-500 dark:text-blue-400">
-                        ×
-                      </button>
+                  <div className="mt-3 flex items-center flex-wrap gap-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-400 mr-3">
+                      已选列:
                     </span>
+                    {selectedColumns.map((col) => (
+                      <span
+                        key={col}
+                        className="px-2 py-1 text-xs bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary rounded flex items-center"
+                      >
+                        {col}
+                        <button className="ml-1 text-primary/80 dark:text-primary/70 hover:text-primary">
+                          &times;
+                        </button>
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>

@@ -76,7 +76,7 @@ export default function DataDisplay({
         processFileData(file);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file, selectedColumns]);
 
   // 处理文件数据
@@ -222,7 +222,7 @@ export default function DataDisplay({
           </div>
           <button
             onClick={() => window.dispatchEvent(new Event("visualize"))}
-            className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90"
           >
             重新选择列
           </button>
