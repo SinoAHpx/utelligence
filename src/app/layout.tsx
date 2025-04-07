@@ -7,7 +7,7 @@ import "./globals.css";
 export const runtime = "edge"; // 'nodejs' (default) | 'edge'
 
 export const metadata: Metadata = {
-    title: "vLLM UI",
+    title: "计算社会科学与国家治理实验室",
     description: "vLLM chatbot web interface",
 };
 
