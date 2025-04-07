@@ -11,13 +11,13 @@ const EmptyState = () => (
       <Image
         src={UCASSLogo}
         alt="AI"
-        width={450}
-        height={400}
+        width={225}
+        height={200}
         draggable="false"
-        className="object-contain opacity-25"
+        className="object-contain select-none"
       />
-      <p className="text-center text-xl text-muted-foreground">
-        祝你早安, 午安, 晚安。
+      <p className="text-center select-none text-xl bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-red-900">
+        计算社会科学与国家治理实验室
       </p>
     </div>
   </div>
