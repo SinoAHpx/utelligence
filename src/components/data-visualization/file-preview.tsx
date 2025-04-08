@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import { ScrollArea } from "../ui/scroll-area";
 
 interface FilePreviewProps {
   file: File | null;
@@ -66,7 +67,7 @@ export default function FilePreview({
                 }
               }
             },
-            error: (error) => {
+            error: (error: { message: any; }) => {
               setError(`解析CSV文件失败: ${error.message}`);
               setIsLoading(false);
             },
@@ -167,7 +168,7 @@ export default function FilePreview({
 
   return (
     <div className="w-full overflow-x-auto">
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
             文件预览 ({file.name})
@@ -176,11 +177,10 @@ export default function FilePreview({
             <button
               onClick={handleVisualize}
               disabled={selectedColumns.length === 0}
-              className={`px-3 py-1 text-sm font-medium rounded-md ${
-                selectedColumns.length === 0
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-primary text-primary-foreground hover:bg-primary/90"
-              }`}
+              className={`px-3 py-1 text-sm font-medium rounded-md ${selectedColumns.length === 0
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
+                }`}
             >
               {selectedColumns.length === 0
                 ? "请选择至少一列"
@@ -188,78 +188,77 @@ export default function FilePreview({
             </button>
           </div>
         </div>
-
-        <div className="mb-4">
-          <h4 className="text-xs font-medium mb-2 text-gray-600 dark:text-gray-400">
-            选择需要可视化的列：
-          </h4>
-          <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 bg-gray-50 dark:bg-gray-700 rounded-md">
-            {parsedData.headers.map((header, index) => (
-              <button
-                key={index}
-                onClick={() => toggleColumnSelection(header)}
-                className={`px-2 py-1 text-xs rounded-full transition-colors ${
-                  selectedColumns.includes(header)
+        <div className="w-full overflow-x-auto">
+          <div className="mb-4">
+            <h4 className="text-xs font-medium mb-2 text-gray-600 dark:text-gray-400">
+              选择需要可视化的列：
+            </h4>
+            <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto overflow-x-auto p-2 bg-gray-50 dark:bg-gray-700 rounded-md">
+              {parsedData.headers.map((header, index) => (
+                // biome-ignore lint/a11y/useButtonType: <explanation>
+<button
+                  key={index}
+                  onClick={() => toggleColumnSelection(header)}
+                  className={`px-2 py-1 text-xs rounded-full transition-colors ${selectedColumns.includes(header)
                     ? "bg-primary text-primary-foreground"
                     : "bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500"
-                }`}
-              >
-                {header || `列 ${index + 1}`}
-              </button>
-            ))}
+                    }`}
+                >
+                  {header || `列 ${index + 1}`}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="text-xs text-gray-500 mb-4">
-          显示前 {Math.min(parsedData.data.length, maxRows)} 行数据，共{" "}
-          {parsedData.data.length} 行
-        </div>
-        <div className="border rounded-md overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                {parsedData.headers.map((header, index) => (
-                  <th
-                    key={index}
-                    scope="col"
-                    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${
-                      selectedColumns.includes(header)
+          <div className="text-xs text-gray-500 mb-4">
+            显示前 {Math.min(parsedData.data.length, maxRows)} 行数据，共{" "}
+            {parsedData.data.length} 行
+          </div>
+          <div className="border rounded-md">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  {parsedData.headers.map((header, index) => (
+                    <th
+                      key={index}
+                      scope="col"
+                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${selectedColumns.includes(header)
                         ? "bg-primary/10 dark:bg-primary/20"
                         : ""
-                    }`}
-                  >
-                    {header || `列 ${index + 1}`}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {parsedData.data.map((row, rowIndex) => (
-                <tr
-                  key={rowIndex}
-                  className={
-                    rowIndex % 2 === 0
-                      ? "bg-white dark:bg-gray-800"
-                      : "bg-gray-50 dark:bg-gray-700"
-                  }
-                >
-                  {row.map((cell, cellIndex) => (
-                    <td
-                      key={cellIndex}
-                      className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 overflow-hidden text-ellipsis max-w-[200px] ${
-                        selectedColumns.includes(parsedData.headers[cellIndex])
-                          ? "bg-primary/10 dark:bg-primary/10"
-                          : ""
-                      }`}
-                      title={String(cell)}
+                        }`}
                     >
-                      {String(cell) || "-"}
-                    </td>
+                      {header || `列 ${index + 1}`}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {parsedData.data.map((row, rowIndex) => (
+                  <tr
+                    key={rowIndex}
+                    className={
+                      rowIndex % 2 === 0
+                        ? "bg-white dark:bg-gray-800"
+                        : "bg-gray-50 dark:bg-gray-700"
+                    }
+                  >
+                    {row.map((cell, cellIndex) => (
+                      <td
+                        key={cellIndex}
+                        className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 overflow-hidden text-ellipsis max-w-[200px] ${selectedColumns.includes(parsedData.headers[cellIndex])
+                          ? "bg-primary/10 dark:bg-primary/10"
+                          : ""
+                          }`}
+                        title={String(cell)}
+                      >
+                        {String(cell) || "-"}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

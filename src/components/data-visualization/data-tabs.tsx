@@ -71,7 +71,7 @@ export default function DataTabs({ file }: DataTabsProps) {
         className="w-full h-full flex flex-col"
         onValueChange={setActiveTab}
       >
-        <TabsList className="grid grid-cols-4 mb-4">
+        <TabsList className="w-full grid grid-cols-4 mb-4">
           <TabsTrigger value="preview">文件预览</TabsTrigger>
           <TabsTrigger value="display">数据展示</TabsTrigger>
           <TabsTrigger value="cleaning">数据清洗</TabsTrigger>

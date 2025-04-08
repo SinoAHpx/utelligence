@@ -28,7 +28,7 @@ export default function Home() {
       </div>
 
       {/* Right Column - Data Panel */}
-      <div className="flex-1 h-full lg:ml-4 mt-4 lg:mt-0">
+      <div className="flex-1 h-full overflow-auto lg:ml-4 mt-4 lg:mt-0">
         <DataPanel />
       </div>
     </main>
