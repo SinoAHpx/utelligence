@@ -1,17 +1,11 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { ChartConfig, ChartDataItem } from "@/types/chart-types";
 
-// Chart configuration type definitions
-interface ChartConfig {
-	id: string;
-	columns: string[];
-	chartType: string;
-	title: string;
-	xAxisColumn?: string;
-	yAxisColumn?: string;
-}
-
-// Column visualizability status
+/**
+ * Column visualizability status configuration
+ * Tracks whether a column is suitable for visualization
+ */
 export interface ColumnVisualizableConfig {
 	column: string;
 	isVisualizable: boolean;
@@ -20,11 +14,10 @@ export interface ColumnVisualizableConfig {
 	reason?: string;
 }
 
-// Chart data structure
-interface ChartDataItem {
-	[key: string]: string | number;
-}
-
+/**
+ * Data visualization state interface
+ * Manages all state related to the data visualization features
+ */
 interface DataVisualizationState {
 	// Chart data
 	chartData: ChartDataItem[];
@@ -61,6 +54,10 @@ interface DataVisualizationState {
 	setColumnsVisualizableStatus: (status: ColumnVisualizableConfig[]) => void;
 }
 
+/**
+ * Zustand store for data visualization
+ * Persists data to localStorage for session continuity
+ */
 export const useDataVisualizationStore = create<DataVisualizationState>()(
 	persist(
 		(set) => ({

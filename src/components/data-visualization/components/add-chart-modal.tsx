@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
-import { CHART_TYPES } from "@/types/chart-types";
+import { CHART_TYPES, ChartType } from "@/types/chart-types";
 import ColumnSelector from "./column-selector";
 import AxisSelector from "./axis-selector";
 import ChartTypeSelector from "./chart-type-selector";
@@ -18,6 +18,10 @@ interface AddChartModalProps {
     onCheckColumnsVisualizable: () => void;
 }
 
+/**
+ * 添加图表对话框组件
+ * 允许用户配置和添加新的可视化图表
+ */
 export const AddChartModal: React.FC<AddChartModalProps> = ({
     open,
     onOpenChange,
@@ -38,14 +42,17 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
     const [duplicateValueHandling, setDuplicateValueHandling] = useState<"merge" | "keep">("merge");
 
     // 处理打开对话框
-    React.useEffect(() => {
+    useEffect(() => {
         if (open) {
             resetForm();
             onCheckColumnsVisualizable();
         }
     }, [open, onCheckColumnsVisualizable]);
 
-    // 处理列选择
+    /**
+     * 处理列选择
+     * 添加或移除选中的数据列
+     */
     const handleColumnToggle = (column: string) => {
         if (selectedColumnsForChart.includes(column)) {
             // 移除列
@@ -70,46 +77,69 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
         setValidationError("");
     };
 
-    // 处理添加图表
-    const handleAddChart = () => {
-        // 验证必填项
+    /**
+     * 验证表单数据
+     * 检查图表配置的有效性
+     */
+    const validateForm = (): boolean => {
+        // 验证图表类型
         if (selectedChartType === "") {
             setValidationError("请选择图表类型");
-            return;
+            return false;
         }
 
+        // 验证选择的列
         if (selectedColumnsForChart.length === 0) {
             setValidationError("请选择至少一列数据");
-            return;
+            return false;
         }
 
-        // 饼图只需要一列数据
-        if (selectedChartType === "pie" && selectedColumnsForChart.length !== 1) {
-            setValidationError("饼图只需要选择一列数据");
-            return;
+        // 获取图表类型定义
+        const chartTypeDef = CHART_TYPES.find(type => type.id === selectedChartType);
+        if (!chartTypeDef) {
+            setValidationError("未知的图表类型");
+            return false;
         }
 
-        // 需要X轴和Y轴的图表
-        if (
-            ["bar", "line", "scatter", "area", "radar"].includes(selectedChartType) &&
-            (selectedColumnsForChart.length !== 2 || !xAxisColumn || !yAxisColumn)
-        ) {
-            setValidationError("此类型图表需要选择两列数据，并指定X轴和Y轴");
-            return;
+        // 验证列数
+        if (selectedColumnsForChart.length !== chartTypeDef.requiresColumns) {
+            setValidationError(
+                chartTypeDef.id === "pie"
+                    ? "饼图只需要选择一列数据"
+                    : "此类型图表需要选择两列数据"
+            );
+            return false;
         }
 
-        // 验证可视化状态
-        for (const column of selectedColumnsForChart) {
-            const statusItem = columnsVisualizableStatus.find(status => status.column === column);
-            if (
-                statusItem && !statusItem.isVisualizable &&
-                selectedChartType !== "scatter"
-            ) {
-                setValidationError(
-                    `列 "${column}" 不适合可视化。${statusItem.reason}`
-                );
-                return;
+        // 验证坐标轴
+        if (chartTypeDef.requiresAxis && (!xAxisColumn || !yAxisColumn)) {
+            setValidationError("此类型图表需要指定X轴和Y轴");
+            return false;
+        }
+
+        // 验证可视化状态（散点图可以不受此限制）
+        if (selectedChartType !== "scatter") {
+            for (const column of selectedColumnsForChart) {
+                const statusItem = columnsVisualizableStatus.find(status => status.column === column);
+                if (statusItem && !statusItem.isVisualizable) {
+                    setValidationError(
+                        `列 "${column}" 不适合可视化。${statusItem.reason}`
+                    );
+                    return false;
+                }
             }
+        }
+
+        return true;
+    };
+
+    /**
+     * 处理添加图表
+     * 验证数据并创建新图表
+     */
+    const handleAddChart = () => {
+        if (!validateForm()) {
+            return;
         }
 
         // 所有验证通过，添加图表
@@ -118,9 +148,9 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
             columns: selectedColumnsForChart,
             chartType: selectedChartType,
             title: chartTitle || `${selectedChartType.charAt(0).toUpperCase() + selectedChartType.slice(1)} 图表`,
-            xAxisColumn: xAxisColumn,
-            yAxisColumn: yAxisColumn,
-            duplicateValueHandling: duplicateValueHandling,
+            xAxisColumn,
+            yAxisColumn,
+            duplicateValueHandling,
         };
 
         addChart(newChart);
@@ -128,7 +158,10 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
         resetForm();
     };
 
-    // 重置表单
+    /**
+     * 重置表单
+     * 清除所有输入和选择
+     */
     const resetForm = () => {
         setSelectedColumnsForChart([]);
         setSelectedChartType("bar");

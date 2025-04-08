@@ -1,6 +1,6 @@
 import type React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import type { ChartConfig, ChartDataItem } from "@/types/chart-types";
+import type { ChartConfig, ChartDataItem, ChartType } from "@/types/chart-types";
 import PieChartComponent from "./pie-chart";
 import BarChartComponent from "./bar-chart";
 import LineChartComponent from "./line-chart";
@@ -14,12 +14,49 @@ interface ChartRendererProps {
     onRemoveChart?: (chartId: string) => void;
 }
 
+/**
+ * Chart component mapping
+ * Maps chart types to their respective components
+ */
+const CHART_COMPONENTS: Record<ChartType, React.FC<any>> = {
+    pie: PieChartComponent,
+    bar: BarChartComponent,
+    line: LineChartComponent,
+    scatter: ScatterChartComponent,
+    area: AreaChartComponent,
+    radar: RadarChartComponent,
+};
+
+/**
+ * ChartRenderer - Renders the appropriate chart based on configuration
+ * Handles different chart types and their specific data requirements
+ */
 export const ChartRenderer: React.FC<ChartRendererProps> = ({
     chartConfig,
     chartData,
     onRemoveChart,
 }) => {
-    const { chartType, columns, title, xAxisColumn, yAxisColumn, duplicateValueHandling = "merge" } = chartConfig;
+    const {
+        chartType,
+        columns,
+        title,
+        xAxisColumn,
+        yAxisColumn,
+        duplicateValueHandling = "merge"
+    } = chartConfig;
+
+    // Get the appropriate chart component based on type
+    const ChartComponent = CHART_COMPONENTS[chartType as ChartType];
+
+    if (!ChartComponent) {
+        return (
+            <Card className="h-[400px]">
+                <CardContent className="flex items-center justify-center h-full p-4">
+                    不支持的图表类型: {chartType}
+                </CardContent>
+            </Card>
+        );
+    }
 
     // 饼图只需要一列数据
     if (chartType === "pie" && columns.length > 0) {
@@ -35,9 +72,9 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
     }
 
     // 对于需要x轴和y轴的图表
-    if (chartType === "bar" && xAxisColumn && yAxisColumn) {
+    if (chartType !== "pie" && xAxisColumn && yAxisColumn) {
         return (
-            <BarChartComponent
+            <ChartComponent
                 title={title}
                 chartData={chartData}
                 xAxisColumn={xAxisColumn}
@@ -46,55 +83,11 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
         );
     }
 
-    if (chartType === "line" && xAxisColumn && yAxisColumn) {
-        return (
-            <LineChartComponent
-                title={title}
-                chartData={chartData}
-                xAxisColumn={xAxisColumn}
-                yAxisColumn={yAxisColumn}
-            />
-        );
-    }
-
-    if (chartType === "scatter" && xAxisColumn && yAxisColumn) {
-        return (
-            <ScatterChartComponent
-                title={title}
-                chartData={chartData}
-                xAxisColumn={xAxisColumn}
-                yAxisColumn={yAxisColumn}
-            />
-        );
-    }
-
-    if (chartType === "area" && xAxisColumn && yAxisColumn) {
-        return (
-            <AreaChartComponent
-                title={title}
-                chartData={chartData}
-                xAxisColumn={xAxisColumn}
-                yAxisColumn={yAxisColumn}
-            />
-        );
-    }
-
-    if (chartType === "radar" && xAxisColumn && yAxisColumn) {
-        return (
-            <RadarChartComponent
-                title={title}
-                chartData={chartData}
-                xAxisColumn={xAxisColumn}
-                yAxisColumn={yAxisColumn}
-            />
-        );
-    }
-
-    // 其他图表类型的实现可以类似添加
+    // 配置不完整
     return (
         <Card className="h-[400px]">
             <CardContent className="flex items-center justify-center h-full p-4">
-                不支持的图表类型或配置不完整
+                图表配置不完整，请检查X轴和Y轴设置
             </CardContent>
         </Card>
     );

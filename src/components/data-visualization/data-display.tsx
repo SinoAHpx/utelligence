@@ -1,51 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  AreaChart,
-  Area,
-  ScatterChart,
-  Scatter,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import React, { useState, useEffect, useCallback } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { PlusCircle, AlertCircle, HelpCircle, X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { PlusCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Card, CardContent } from "@/components/ui/card";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
 import { ColumnVisualizableConfig } from "@/store/dataVisualizationStore";
-import { ChartDataItem } from "@/types/chart-types";
+import { ChartDataItem, CHART_TYPES } from "@/types/chart-types";
+import { getChartColor } from "@/constants/chart-colors";
 import ChartRenderer from "./charts/chart-renderer";
 import AddChartModal from "./components/add-chart-modal";
 
@@ -55,46 +19,17 @@ interface DataDisplayProps {
   selectedColumns: string[];
   availableColumns: string[];
   onColumnSelectionChange?: (columns: string[]) => void;
-  chartType?: string;
 }
 
+// File data types
 type CellValue = string | number;
 type FileRow = CellValue[];
 type FileData = FileRow[];
 
-// Chart types
-const chartTypes = [
-  { id: "bar", name: "柱状图" },
-  { id: "line", name: "线形图" },
-  { id: "area", name: "面积图" },
-  { id: "pie", name: "饼图" },
-  { id: "scatter", name: "散点图" },
-  { id: "radar", name: "雷达图" },
-];
-
-// 首先添加一个美观的配色方案替代随机颜色
-const CHART_COLORS = [
-  "#8884d8", // 紫色
-  "#82ca9d", // 绿色
-  "#ffc658", // 黄色
-  "#ff8042", // 橙色
-  "#0088FE", // 蓝色
-  "#00C49F", // 青色
-  "#FFBB28", // 金色
-  "#FF8042", // 橙红色
-  "#a4de6c", // 浅绿
-  "#d0ed57", // 黄绿
-  "#83a6ed", // 天蓝
-  "#8dd1e1", // 浅蓝
-  "#a4add3", // 淡紫
-  "#d85896", // 粉红
-  "#ffc0cb", // 粉色
-  "#e8c3b9", // 棕色
-];
-
-// 获取颜色的辅助函数
-const getChartColor = (index: number) => CHART_COLORS[index % CHART_COLORS.length];
-
+/**
+ * 数据可视化显示组件
+ * 负责处理数据文件(CSV/Excel)并显示可视化图表
+ */
 export default function DataDisplay({
   file,
   selectedColumns,
@@ -127,9 +62,6 @@ export default function DataDisplay({
   // Local state
   const [loading, setLoading] = useState<boolean>(false);
   const [addChartModalOpen, setAddChartModalOpen] = useState<boolean>(false);
-  const [validationError, setValidationError] = useState<string>("");
-  // 添加重复值处理选项状态
-  const [duplicateValueHandling, setDuplicateValueHandling] = useState<"merge" | "keep">("merge");
 
   // 当选择的文件改变时处理数据
   useEffect(() => {
@@ -148,7 +80,10 @@ export default function DataDisplay({
     }
   }, [file, selectedColumns, processedFile, setProcessedFile]);
 
-  // 处理文件数据
+  /**
+   * 处理文件数据
+   * 读取CSV或Excel文件并生成图表数据
+   */
   const processFileData = async (file: File) => {
     if (!file || selectedColumns.length === 0) return;
 
@@ -201,8 +136,11 @@ export default function DataDisplay({
     }
   };
 
-  // 从解析的数据创建图表数据
-  const createChartData = React.useCallback(
+  /**
+   * 从解析的数据创建图表数据
+   * 将原始数据转换为图表可用的格式
+   */
+  const createChartData = useCallback(
     (headers: string[], rows: FileData): ChartDataItem[] => {
       // 使用模拟数据确保图表能正常显示
       if (rows.length === 0) {
@@ -247,8 +185,11 @@ export default function DataDisplay({
     [selectedColumns]
   );
 
-  // 检查列是否可视化
-  const checkColumnsVisualizable = React.useCallback(async () => {
+  /**
+   * 检查列是否适合可视化
+   * 分析数据分布特征，确定列是否适合可视化
+   */
+  const checkColumnsVisualizable = useCallback(async () => {
     if (!file || selectedColumns.length === 0) return;
 
     const newStatus: ColumnVisualizableConfig[] = [];
@@ -262,34 +203,7 @@ export default function DataDisplay({
             const headers = results.data[0] as string[];
             const rows = results.data.slice(1) as string[][];
 
-            // 分析每一列
-            for (const colName of selectedColumns) {
-              const colIndex = headers.indexOf(colName);
-              if (colIndex === -1) continue;
-
-              // 提取该列所有值
-              const values = rows.map(row => row[colIndex]).filter(v => v !== undefined && v !== null && v !== "");
-
-              // 计算唯一值数量
-              const uniqueValues = new Set(values).size;
-
-              // 检查是否可视化（如果唯一值太多，则不适合可视化）
-              const isVisualizable = uniqueValues < values.length * 0.9 && uniqueValues > 1;
-
-              newStatus.push({
-                column: colName,
-                isVisualizable,
-                uniqueValues,
-                totalValues: values.length,
-                reason: !isVisualizable
-                  ? uniqueValues <= 1
-                    ? "数据值过少，不适合可视化"
-                    : "唯一值占比过高，不适合可视化"
-                  : undefined
-              });
-            }
-
-            setColumnsVisualizableStatus(newStatus);
+            analyzeColumns(headers, rows, newStatus);
           }
         });
       } else if (fileExtension === "xlsx" || fileExtension === "xls") {
@@ -302,39 +216,46 @@ export default function DataDisplay({
         const headers = jsonData[0] as string[];
         const rows = jsonData.slice(1) as FileData;
 
-        // 分析每一列
-        for (const colName of selectedColumns) {
-          const colIndex = headers.indexOf(colName);
-          if (colIndex === -1) continue;
-
-          // 提取该列所有值
-          const values = rows.map(row => row[colIndex]).filter(v => v !== undefined && v !== null && v !== "");
-
-          // 计算唯一值数量
-          const uniqueValues = new Set(values.map(v => String(v))).size;
-
-          // 检查是否可视化（如果唯一值太多，则不适合可视化）
-          const isVisualizable = uniqueValues < values.length * 0.9 && uniqueValues > 1;
-
-          newStatus.push({
-            column: colName,
-            isVisualizable,
-            uniqueValues,
-            totalValues: values.length,
-            reason: !isVisualizable
-              ? uniqueValues <= 1
-                ? "数据值过少，不适合可视化"
-                : "唯一值占比过高，不适合可视化"
-              : undefined
-          });
-        }
-
-        setColumnsVisualizableStatus(newStatus);
+        analyzeColumns(headers, rows, newStatus);
       }
     } catch (err) {
       console.error("分析列可视化状态失败:", err);
     }
   }, [file, selectedColumns, setColumnsVisualizableStatus]);
+
+  /**
+   * 分析列数据分布特征
+   */
+  const analyzeColumns = (headers: string[], rows: any[], newStatus: ColumnVisualizableConfig[]) => {
+    // 分析每一列
+    for (const colName of selectedColumns) {
+      const colIndex = headers.indexOf(colName);
+      if (colIndex === -1) continue;
+
+      // 提取该列所有值
+      const values = rows.map(row => row[colIndex]).filter(v => v !== undefined && v !== null && v !== "");
+
+      // 计算唯一值数量
+      const uniqueValues = new Set(values.map(v => String(v))).size;
+
+      // 检查是否可视化（如果唯一值太多，则不适合可视化）
+      const isVisualizable = uniqueValues < values.length * 0.9 && uniqueValues > 1;
+
+      newStatus.push({
+        column: colName,
+        isVisualizable,
+        uniqueValues,
+        totalValues: values.length,
+        reason: !isVisualizable
+          ? uniqueValues <= 1
+            ? "数据值过少，不适合可视化"
+            : "唯一值占比过高，不适合可视化"
+          : undefined
+      });
+    }
+
+    setColumnsVisualizableStatus(newStatus);
+  };
 
   // 打开添加图表对话框
   const openAddChartModal = () => {
@@ -344,34 +265,8 @@ export default function DataDisplay({
     setChartTitle("");
     setXAxisColumn("");
     setYAxisColumn("");
-    setValidationError("");
     // 检查列是否可视化
     checkColumnsVisualizable();
-  };
-
-  // 处理列选择
-  const handleColumnToggle = (column: string) => {
-    if (selectedColumnsForChart.includes(column)) {
-      // 移除列
-      setSelectedColumnsForChart(
-        selectedColumnsForChart.filter(col => col !== column)
-      );
-
-      // 如果是X轴或Y轴列，也要清除
-      if (xAxisColumn === column) setXAxisColumn("");
-      if (yAxisColumn === column) setYAxisColumn("");
-    } else {
-      // 如果已选择了2列，则不再添加
-      if (selectedColumnsForChart.length >= 2) {
-        return;
-      }
-
-      // 添加列
-      setSelectedColumnsForChart([...selectedColumnsForChart, column]);
-    }
-
-    // 清除任何验证错误
-    setValidationError("");
   };
 
   // Render loading and empty states

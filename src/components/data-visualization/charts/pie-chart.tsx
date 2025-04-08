@@ -1,22 +1,15 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartProps } from "@/types/chart-types";
+import { ChartDataItem } from "@/types/chart-types";
+import { CHART_COLORS, getChartColor } from "@/constants/chart-colors";
 
-interface PieChartProps extends ChartProps {
+interface PieChartProps {
+    title: string;
+    chartData: ChartDataItem[];
     dataColumn: string;
-    duplicateValueHandling: "merge" | "keep";
+    duplicateValueHandling?: "merge" | "keep";
 }
-
-// 美观的配色方案
-const CHART_COLORS = [
-    "#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE", "#00C49F",
-    "#FFBB28", "#FF8042", "#a4de6c", "#d0ed57", "#83a6ed", "#8dd1e1",
-    "#a4add3", "#d85896", "#ffc0cb", "#e8c3b9",
-];
-
-// 获取颜色的辅助函数
-const getChartColor = (index: number) => CHART_COLORS[index % CHART_COLORS.length];
 
 export const PieChartComponent: React.FC<PieChartProps> = ({
     title,
