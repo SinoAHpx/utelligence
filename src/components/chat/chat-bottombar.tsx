@@ -4,12 +4,11 @@ import React from "react";
 
 import { PaperPlaneIcon, StopIcon } from "@radix-ui/react-icons";
 import { ChatRequestOptions } from "ai";
-import llama3Tokenizer from "llama3-tokenizer-js";
 import dynamic from "next/dynamic";
 
-import { basePath, useHasMounted } from "@/lib/utils";
-import { getTokenLimit } from "@/lib/token-counter";
+import { useHasMounted } from "@/lib/utils";
 import { Button } from "../ui/button";
+import { useChatStore } from "@/store/chatStore";
 
 // Dynamically import TextareaAutosize with SSR disabled
 const TextareaAutosize = dynamic(() => import("react-textarea-autosize"), {
@@ -17,7 +16,6 @@ const TextareaAutosize = dynamic(() => import("react-textarea-autosize"), {
 });
 
 interface ChatBottombarProps {
-    selectedModel: string | undefined;
     input: string;
     handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
     handleSubmit: (
@@ -29,7 +27,6 @@ interface ChatBottombarProps {
 }
 
 export default function ChatBottombar({
-    selectedModel,
     input,
     handleInputChange,
     handleSubmit,
@@ -37,8 +34,9 @@ export default function ChatBottombar({
     stop,
 }: ChatBottombarProps) {
     const hasMounted = useHasMounted();
+    const { chatOptions } = useChatStore();
     const inputRef = React.useRef<HTMLTextAreaElement>(null);
-    const hasSelectedModel = selectedModel && selectedModel !== "";
+    const hasSelectedModel = chatOptions.selectedModel && chatOptions.selectedModel !== "";
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (

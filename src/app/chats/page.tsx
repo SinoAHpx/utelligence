@@ -3,27 +3,33 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
-import { Chats, getLocalstorageChats } from "../../lib/chatUtils";
 import { PlusCircle } from "lucide-react";
+import { useChatStore } from "@/store/chatStore";
+import { Chats } from "@/lib/chatUtils";
 
 export default function ChatsPage() {
+  const { getGroupedChats } = useChatStore();
   const [chats, setChats] = useState<Chats>({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadedChats = getLocalstorageChats();
-    setChats(loadedChats);
-    setIsLoading(false);
+    const loadChats = () => {
+      const loadedChats = getGroupedChats();
+      setChats(loadedChats);
+      setIsLoading(false);
+    };
+
+    loadChats();
 
     const handleStorageChange = () => {
-      setChats(getLocalstorageChats());
+      loadChats();
     };
 
     window.addEventListener("storage", handleStorageChange);
     return () => {
       window.removeEventListener("storage", handleStorageChange);
     };
-  }, []);
+  }, [getGroupedChats]);
 
   return (
     <div className="container mx-auto max-w-5xl py-8 px-4 md:px-0">

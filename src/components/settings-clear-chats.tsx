@@ -17,26 +17,26 @@ import { useRouter } from "next/navigation";
 
 import { useHasMounted } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useChatStore } from "@/store/chatStore";
 
 export default function ClearChatsButton() {
   const hasMounted = useHasMounted();
   const router = useRouter();
+  const { clearAllChats } = useChatStore();
 
   if (!hasMounted) {
     return null;
   }
 
-  const chats = Object.keys(localStorage).filter((key) =>
+  // Check if there are any chats in localStorage
+  const chatExists = Object.keys(localStorage).some((key) => 
     key.startsWith("chat_")
   );
 
-  const disabled = chats.length === 0;
+  const disabled = !chatExists;
 
-  const clearChats = () => {
-    chats.forEach((key) => {
-      localStorage.removeItem(key);
-    });
-    window.dispatchEvent(new Event("storage"));
+  const handleClearChats = () => {
+    clearAllChats();
     router.push("/");
   };
 
@@ -63,7 +63,7 @@ export default function ClearChatsButton() {
           <DialogClose asChild>
             <Button variant="outline">取消</Button>
           </DialogClose>
-          <Button variant="destructive" onClick={() => clearChats()}>
+          <Button variant="destructive" onClick={handleClearChats}>
             删除
           </Button>
         </DialogFooter>

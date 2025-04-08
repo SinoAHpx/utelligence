@@ -6,6 +6,7 @@ import SystemPrompt, { SystemPromptProps } from "./system-prompt";
 import { Input } from "./ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
+import { ChatOptions } from "./chat/chat-options";
 
 const TemperatureSlider = ({
   chatOptions,

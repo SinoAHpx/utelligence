@@ -1,6 +1,6 @@
 "use client";
 
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 
 export interface SystemPromptProps {
   chatOptions: ChatOptions;
-  setChatOptions: Dispatch<SetStateAction<ChatOptions>>;
+  setChatOptions: (options: ChatOptions) => void;
 }
 export default function SystemPrompt({
   chatOptions,
@@ -32,7 +32,7 @@ export default function SystemPrompt({
       setChatOptions({ ...chatOptions, systemPrompt: debouncedText });
       toast.success("系统提示已更新", { duration: 1000 });
     }
-  }, [hasMounted, debouncedText]);
+  }, [hasMounted, debouncedText, systemPrompt, chatOptions, setChatOptions]);
 
   return (
     <div className="grid w-full gap-1.5 px-2">

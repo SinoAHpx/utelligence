@@ -1,34 +1,32 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Chat, { ChatProps, ChatTopbarProps } from "./chat";
+import Chat from "./chat";
+import { useChatActions } from "@/hooks/useChatActions";
+import { useChatStore } from "@/store/chatStore";
 
 interface ChatLayoutProps {
-    defaultLayout: number[] | undefined;
+    defaultLayout?: number[];
     defaultCollapsed?: boolean;
-    navCollapsedSize: number;
-    chatId: string;
+    navCollapsedSize?: number;
 }
-
-type MergedProps = ChatLayoutProps & ChatProps & ChatTopbarProps;
 
 export function ChatLayout({
     defaultLayout = [30, 160],
     defaultCollapsed = false,
     navCollapsedSize = 768,
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading,
-    error,
-    stop,
-    chatId,
-    setChatId,
-    chatOptions,
-    setChatOptions,
-}: MergedProps) {
+}: ChatLayoutProps) {
     const [isMobile, setIsMobile] = useState(false);
+    const {
+        messages,
+        input,
+        handleInputChange,
+        handleSubmit,
+        isLoading,
+        error,
+        stop,
+        createNewChat,
+    } = useChatActions();
 
     useEffect(() => {
         const checkScreenWidth = () => {
@@ -51,10 +49,6 @@ export function ChatLayout({
         <div className="relative flex h-full w-full overflow-hidden">
             <div className="relative flex h-full max-w-full flex-1 flex-col overflow-hidden">
                 <Chat
-                    chatId={chatId}
-                    setChatId={setChatId}
-                    chatOptions={chatOptions}
-                    setChatOptions={setChatOptions}
                     messages={messages}
                     input={input}
                     handleInputChange={handleInputChange}
@@ -62,6 +56,7 @@ export function ChatLayout({
                     isLoading={isLoading}
                     error={error}
                     stop={stop}
+                    createNewChat={createNewChat}
                 />
             </div>
         </div>

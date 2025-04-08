@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect } from "react";
 
 import {
   GearIcon,
@@ -33,77 +33,33 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import Settings from "@/components/settings";
-import { encodeChat, getTokenLimit } from "@/lib/token-counter";
-import { basePath, useHasMounted } from "@/lib/utils";
-import { ChatOptions } from "./chat-options";
+import { useHasMounted } from "@/lib/utils";
+import { useChatStore } from "@/store/chatStore";
 
 interface ChatTopbarProps {
-  chatOptions: ChatOptions;
-  setChatOptions: React.Dispatch<React.SetStateAction<ChatOptions>>;
   isLoading: boolean;
-  chatId?: string;
-  setChatId: React.Dispatch<React.SetStateAction<string>>;
   messages: Message[];
+  createNewChat: () => void;
 }
 
 export default function ChatTopbar({
-  chatOptions,
-  setChatOptions,
   isLoading,
-  chatId,
-  setChatId,
   messages,
+  createNewChat,
 }: ChatTopbarProps) {
   const hasMounted = useHasMounted();
-
-  const currentModel = chatOptions && chatOptions.selectedModel;
-  const [tokenLimit, setTokenLimit] = React.useState<number>(4096);
-  const [error, setError] = React.useState<string | undefined>(undefined);
-  const [models, setModels] = React.useState<string[]>([]);
-
-  const fetchData = async () => {
-    if (!hasMounted) {
-      return null;
-    }
-    try {
-      const res = await fetch(basePath + "/api/models");
-
-      if (!res.ok) {
-        const errorResponse = await res.json();
-        const errorMessage = `Connection to vLLM server failed: ${errorResponse.error} [${res.status} ${res.statusText}]`;
-        throw new Error(errorMessage);
-      }
-
-      const data = await res.json();
-      // Extract the "name" field from each model object and store them in the state
-      const modelNames = data.data.map((model: any) => model.id);
-      setModels(modelNames);
-      // save the first and only model in the list as selectedModel in localstorage
-      if (!chatOptions.selectedModel) {
-        setChatOptions({
-          ...chatOptions,
-          selectedModel: modelNames[0],
-        });
-      }
-    } catch (error) {
-      setChatOptions({ ...chatOptions, selectedModel: undefined });
-      toast.error(error as string);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-    getTokenLimit(basePath).then((limit) => setTokenLimit(limit));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasMounted]);
+  
+  const {
+    chatOptions,
+    setChatOptions,
+    currentChatId,
+    availableModels,
+    tokenLimit,
+  } = useChatStore();
 
   if (!hasMounted) {
     return null;
   }
-
-  const handleNewChat = () => {
-    setChatId("");
-  };
 
   const handleModelChange = (model: string) => {
     setChatOptions({ ...chatOptions, selectedModel: model });
@@ -114,8 +70,8 @@ export default function ChatTopbar({
   const chatTitle = firstUserMessage
     ? firstUserMessage.content.substring(0, 30) +
       (firstUserMessage.content.length > 30 ? "..." : "")
-    : chatId
-    ? `对话 ${chatId.substring(0, 8)}`
+    : currentChatId
+    ? `对话 ${currentChatId.substring(0, 8)}`
     : "新对话";
 
   return (
@@ -128,17 +84,17 @@ export default function ChatTopbar({
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center px-2 md:px-3 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
             <span className="mr-2 truncate w-[120px] inline-block overflow-hidden">
-              {currentModel || "选择模型"}
+              {chatOptions.selectedModel || "选择模型"}
             </span>
             <ChevronDownIcon className="w-4 h-4 shrink-0" />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            {models.map((model) => (
+            {availableModels.map((model) => (
               <DropdownMenuItem
                 key={model}
                 onClick={() => handleModelChange(model)}
                 className={
-                  currentModel === model ? "bg-gray-100 dark:bg-gray-800" : ""
+                  chatOptions.selectedModel === model ? "bg-gray-100 dark:bg-gray-800" : ""
                 }
               >
                 {model}
@@ -184,7 +140,7 @@ export default function ChatTopbar({
         </Link>
 
         <button
-          onClick={handleNewChat}
+          onClick={createNewChat}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
         >
           <Pencil1Icon className="w-4 h-4 shrink-0" />

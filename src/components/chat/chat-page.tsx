@@ -1,22 +1,12 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
+import { useChatActions } from "@/hooks/useChatActions";
+import { useChatStore } from "@/store/chatStore";
+import Chat from "./chat";
 
-import { ChatRequestOptions } from "ai";
-import { useChat } from "ai/react";
-import { toast } from "sonner";
-import useLocalStorageState from "use-local-storage-state";
-import { v4 as uuidv4 } from "uuid";
-
-import { ChatLayout } from "@/components/chat/chat-layout";
-import { ChatOptions } from "@/components/chat/chat-options";
-import { basePath } from "@/lib/utils";
-
-interface ChatPageProps {
-    chatId: string;
-    setChatId: React.Dispatch<React.SetStateAction<string>>;
-}
-export default function ChatPage({ chatId, setChatId }: ChatPageProps) {
+export default function ChatPage() {
+    const { currentChatId } = useChatStore();
     const {
         messages,
         input,
@@ -25,84 +15,23 @@ export default function ChatPage({ chatId, setChatId }: ChatPageProps) {
         isLoading,
         error,
         stop,
-        setMessages,
-    } = useChat({
-        api: basePath + "/api/chat",
-        streamMode: "stream-data",
-        onError: (error) => {
-            toast.error("Something went wrong: " + error);
-        },
-    });
-    const [chatOptions, setChatOptions] = useLocalStorageState<ChatOptions>(
-        "chatOptions",
-        {
-            defaultValue: {
-                selectedModel: "",
-                systemPrompt: "",
-                temperature: 0.9,
-            },
-        }
-    );
-
-    useEffect(() => {
-        if (chatId) {
-            const item = localStorage.getItem(`chat_${chatId}`);
-            if (item) {
-                setMessages(JSON.parse(item));
-            }
-        } else {
-            setMessages([]);
-        }
-    }, [setMessages, chatId]);
-
-    useEffect(() => {
-        if (!isLoading && !error && chatId && messages.length > 0) {
-            // Save messages to local storage
-            localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages));
-            // Trigger the storage event to update the sidebar component
-            window.dispatchEvent(new Event("storage"));
-        }
-    }, [messages, chatId, isLoading, error]);
-
-    const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
-        if (messages.length === 0) {
-            // Generate a random id for the chat
-            const id = uuidv4();
-            setChatId(id);
-        }
-
-        setMessages([...messages]);
-
-        // Prepare the options object with additional body data, to pass the model.
-        const requestOptions: ChatRequestOptions = {
-            options: {
-                body: {
-                    chatOptions: chatOptions,
-                },
-            },
-        };
-
-        // Call the handleSubmit function with the options
-        handleSubmit(e, requestOptions);
-    };
+        createNewChat,
+    } = useChatActions();
 
     return (
-        <ChatLayout
-            chatId={chatId}
-            setChatId={setChatId}
-            chatOptions={chatOptions}
-            setChatOptions={setChatOptions}
-            messages={messages}
-            input={input}
-            handleInputChange={handleInputChange}
-            handleSubmit={onSubmit}
-            isLoading={isLoading}
-            error={error}
-            stop={stop}
-            navCollapsedSize={10}
-            defaultLayout={[30, 160]}
-        />
+        <div className="relative flex h-full w-full overflow-hidden">
+            <div className="relative flex h-full max-w-full flex-1 flex-col overflow-hidden">
+                <Chat
+                    messages={messages}
+                    input={input}
+                    handleInputChange={handleInputChange}
+                    handleSubmit={handleSubmit}
+                    isLoading={isLoading}
+                    error={error}
+                    stop={stop}
+                    createNewChat={createNewChat}
+                />
+            </div>
+        </div>
     );
 }
