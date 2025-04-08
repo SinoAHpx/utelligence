@@ -27,7 +27,7 @@ import {
 } from "recharts";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { PlusCircle, AlertCircle, HelpCircle } from "lucide-react";
+import { PlusCircle, AlertCircle, HelpCircle, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -40,9 +40,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
+import { ColumnVisualizableConfig } from "@/store/dataVisualizationStore";
+import { ChartDataItem } from "@/types/chart-types";
+import ChartRenderer from "./charts/chart-renderer";
+import AddChartModal from "./components/add-chart-modal";
 
-// 类型定义
+// Types
 interface DataDisplayProps {
   file: File | null;
   selectedColumns: string[];
@@ -51,24 +58,11 @@ interface DataDisplayProps {
   chartType?: string;
 }
 
-interface ChartData {
-  [key: string]: string | number;
-}
-
-interface ChartConfig {
-  id: string;
-  columns: string[];
-  chartType: string;
-  title: string;
-  xAxisColumn?: string;
-  yAxisColumn?: string;
-}
-
 type CellValue = string | number;
 type FileRow = CellValue[];
 type FileData = FileRow[];
 
-// 定义图表类型
+// Chart types
 const chartTypes = [
   { id: "bar", name: "柱状图" },
   { id: "line", name: "线形图" },
@@ -78,14 +72,28 @@ const chartTypes = [
   { id: "radar", name: "雷达图" },
 ];
 
-// 判断某一列是否可视化的配置
-interface ColumnVisualizableConfig {
-  column: string;
-  isVisualizable: boolean;
-  uniqueValues: number;
-  totalValues: number;
-  reason?: string;
-}
+// 首先添加一个美观的配色方案替代随机颜色
+const CHART_COLORS = [
+  "#8884d8", // 紫色
+  "#82ca9d", // 绿色
+  "#ffc658", // 黄色
+  "#ff8042", // 橙色
+  "#0088FE", // 蓝色
+  "#00C49F", // 青色
+  "#FFBB28", // 金色
+  "#FF8042", // 橙红色
+  "#a4de6c", // 浅绿
+  "#d0ed57", // 黄绿
+  "#83a6ed", // 天蓝
+  "#8dd1e1", // 浅蓝
+  "#a4add3", // 淡紫
+  "#d85896", // 粉红
+  "#ffc0cb", // 粉色
+  "#e8c3b9", // 棕色
+];
+
+// 获取颜色的辅助函数
+const getChartColor = (index: number) => CHART_COLORS[index % CHART_COLORS.length];
 
 export default function DataDisplay({
   file,
@@ -93,18 +101,35 @@ export default function DataDisplay({
   availableColumns,
   onColumnSelectionChange,
 }: DataDisplayProps) {
-  const [chartData, setChartData] = useState<ChartData[]>([]);
+  // Get state from Zustand store
+  const {
+    chartData,
+    setChartData,
+    userCharts,
+    addChart,
+    removeChart,
+    selectedChartType,
+    setSelectedChartType,
+    selectedColumnsForChart,
+    setSelectedColumnsForChart,
+    chartTitle,
+    setChartTitle,
+    xAxisColumn,
+    setXAxisColumn,
+    yAxisColumn,
+    setYAxisColumn,
+    processedFile,
+    setProcessedFile,
+    columnsVisualizableStatus,
+    setColumnsVisualizableStatus
+  } = useDataVisualizationStore();
+
+  // Local state
   const [loading, setLoading] = useState<boolean>(false);
-  const [processedFile, setProcessedFile] = useState<File | null>(null);
   const [addChartModalOpen, setAddChartModalOpen] = useState<boolean>(false);
-  const [selectedColumnsForChart, setSelectedColumnsForChart] = useState<string[]>([]);
-  const [selectedChartType, setSelectedChartType] = useState<string>("bar");
-  const [userCharts, setUserCharts] = useState<ChartConfig[]>([]);
-  const [chartTitle, setChartTitle] = useState<string>("");
-  const [xAxisColumn, setXAxisColumn] = useState<string>("");
-  const [yAxisColumn, setYAxisColumn] = useState<string>("");
-  const [columnsVisualizableStatus, setColumnsVisualizableStatus] = useState<ColumnVisualizableConfig[]>([]);
   const [validationError, setValidationError] = useState<string>("");
+  // 添加重复值处理选项状态
+  const [duplicateValueHandling, setDuplicateValueHandling] = useState<"merge" | "keep">("merge");
 
   // 当选择的文件改变时处理数据
   useEffect(() => {
@@ -116,12 +141,12 @@ export default function DataDisplay({
         : "";
 
       if (fileSignature !== processedSignature) {
-        setProcessedFile(file);
+        setProcessedFile({ name: file.name, size: file.size });
         setLoading(true);
         processFileData(file);
       }
     }
-  }, [file, selectedColumns, processedFile]);
+  }, [file, selectedColumns, processedFile, setProcessedFile]);
 
   // 处理文件数据
   const processFileData = async (file: File) => {
@@ -178,12 +203,12 @@ export default function DataDisplay({
 
   // 从解析的数据创建图表数据
   const createChartData = React.useCallback(
-    (headers: string[], rows: FileData) => {
+    (headers: string[], rows: FileData): ChartDataItem[] => {
       // 使用模拟数据确保图表能正常显示
       if (rows.length === 0) {
-        const mockData: ChartData[] = [];
+        const mockData: ChartDataItem[] = [];
         for (let i = 0; i < 10; i++) {
-          const item: ChartData = { name: `项目 ${i + 1}` };
+          const item: ChartDataItem = { name: `项目 ${i + 1}` };
           for (const col of selectedColumns) {
             item[col] = Math.floor(Math.random() * 100);
           }
@@ -193,7 +218,7 @@ export default function DataDisplay({
       }
 
       return rows.slice(0, 20).map((row, index) => {
-        const rowData: ChartData = { name: `项 ${index + 1}` };
+        const rowData: ChartDataItem = { name: `项 ${index + 1}` };
 
         // 如果有一列可以作为名称列，使用它
         if (headers[0] && row[0]) {
@@ -221,10 +246,6 @@ export default function DataDisplay({
     },
     [selectedColumns]
   );
-
-  // 随机颜色生成
-  const getRandomColor = () =>
-    `#${Math.floor(Math.random() * 16777215).toString(16)}`;
 
   // 检查列是否可视化
   const checkColumnsVisualizable = React.useCallback(async () => {
@@ -313,7 +334,7 @@ export default function DataDisplay({
     } catch (err) {
       console.error("分析列可视化状态失败:", err);
     }
-  }, [file, selectedColumns]);
+  }, [file, selectedColumns, setColumnsVisualizableStatus]);
 
   // 打开添加图表对话框
   const openAddChartModal = () => {
@@ -355,56 +376,66 @@ export default function DataDisplay({
 
   // 处理添加图表
   const handleAddChart = () => {
-    // 检查是否选择了列
+    // 验证必填项
+    if (selectedChartType === "") {
+      setValidationError("请选择图表类型");
+      return;
+    }
+
     if (selectedColumnsForChart.length === 0) {
-      setValidationError("请至少选择一列数据");
+      setValidationError("请选择至少一列数据");
       return;
     }
 
-    // 饼图检查：只能选择一列
+    // 饼图只需要一列数据
     if (selectedChartType === "pie" && selectedColumnsForChart.length !== 1) {
-      setValidationError("饼图只能选择一列数据");
+      setValidationError("饼图只需要选择一列数据");
       return;
     }
 
-    // 其他图表检查：需要选择两列数据（除非是仅用于展示分布的图表）
-    if (selectedChartType !== "pie" && selectedColumnsForChart.length !== 2) {
-      setValidationError(`${chartTypes.find(t => t.id === selectedChartType)?.name || "此类型图表"}需要选择两列数据`);
+    // 需要X轴和Y轴的图表
+    if (
+      ["bar", "line", "scatter", "area", "radar"].includes(selectedChartType) &&
+      (selectedColumnsForChart.length !== 2 || !xAxisColumn || !yAxisColumn)
+    ) {
+      setValidationError("此类型图表需要选择两列数据，并指定X轴和Y轴");
       return;
     }
 
-    // 对于需要X轴和Y轴的图表，检查是否都已选择
-    if (["bar", "line", "scatter"].includes(selectedChartType)) {
-      if (!xAxisColumn || !yAxisColumn) {
-        setValidationError("请选择X轴和Y轴数据列");
+    // 验证可视化状态
+    for (const column of selectedColumnsForChart) {
+      const statusItem = columnsVisualizableStatus.find(status => status.column === column);
+      if (
+        statusItem && !statusItem.isVisualizable &&
+        selectedChartType !== "scatter"
+      ) {
+        setValidationError(
+          `列 "${column}" 不适合可视化。${statusItem.reason}`
+        );
         return;
       }
     }
 
-    // 检查选择的列是否可视化
-    const nonVisualizableColumns = selectedColumnsForChart.filter(col => {
-      const status = columnsVisualizableStatus.find(s => s.column === col);
-      return status && !status.isVisualizable;
-    });
-
-    if (nonVisualizableColumns.length > 0) {
-      const colNames = nonVisualizableColumns.join(", ");
-      setValidationError(`选择的数据列 ${colNames} 不适合可视化`);
-      return;
-    }
-
-    const newChart: ChartConfig = {
-      id: Date.now().toString(),
+    // 所有验证通过，添加图表
+    const newChart = {
+      id: `chart-${Math.random().toString(36).substr(2, 9)}`,
       columns: selectedColumnsForChart,
       chartType: selectedChartType,
-      title: chartTitle || `${chartTypes.find(t => t.id === selectedChartType)?.name || ""}图表`,
-      xAxisColumn: xAxisColumn || undefined,
-      yAxisColumn: yAxisColumn || undefined,
+      title: chartTitle || `${selectedChartType.charAt(0).toUpperCase() + selectedChartType.slice(1)} 图表`,
+      xAxisColumn: xAxisColumn,
+      yAxisColumn: yAxisColumn,
+      duplicateValueHandling: duplicateValueHandling,
     };
 
-    setUserCharts([...userCharts, newChart]);
+    addChart(newChart);
     setAddChartModalOpen(false);
-    resetChartForm();
+
+    // 重置状态
+    setSelectedColumnsForChart([]);
+    setChartTitle("");
+    setXAxisColumn("");
+    setYAxisColumn("");
+    setValidationError("");
   };
 
   // 重置图表表单
@@ -418,8 +449,18 @@ export default function DataDisplay({
   };
 
   // 渲染图表
-  const renderChart = (config: ChartConfig) => {
-    const { chartType, columns, title, xAxisColumn, yAxisColumn } = config;
+  const renderChart = (config: {
+    id: string;
+    columns: string[];
+    chartType: string;
+    title: string;
+    xAxisColumn?: string;
+    yAxisColumn?: string;
+    duplicateValueHandling?: "merge" | "keep";
+  }) => {
+    const { chartType, columns, title, xAxisColumn, yAxisColumn, duplicateValueHandling: chartDupHandling } = config;
+    // 使用本地状态的重复值处理选项，如果图表没有指定则
+    const dupHandling = chartDupHandling || duplicateValueHandling;
 
     // 饼图只需要一列数据
     if (chartType === "pie") {
@@ -428,11 +469,17 @@ export default function DataDisplay({
       // 构建饼图数据：计算每个值的频率
       const pieData = chartData.reduce((acc: { name: string, value: number }[], item) => {
         const value = String(item[dataColumn] || "未知");
-        const existingItem = acc.find(a => a.name === value);
 
-        if (existingItem) {
-          existingItem.value += 1;
+        // 根据重复值处理选项处理数据
+        if (dupHandling === "merge") {
+          const existingItem = acc.find(a => a.name === value);
+          if (existingItem) {
+            existingItem.value += 1;
+          } else {
+            acc.push({ name: value, value: 1 });
+          }
         } else {
+          // 保留所有值
           acc.push({ name: value, value: 1 });
         }
 
@@ -440,11 +487,11 @@ export default function DataDisplay({
       }, []);
 
       return (
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-          <h3 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-            {title}
-          </h3>
-          <div className="h-80">
+        <Card className="h-[400px]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{title}</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[340px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -463,7 +510,7 @@ export default function DataDisplay({
                   {pieData.map((entry, index) => (
                     <Cell
                       key={`pie-cell-${entry.name}-${index}`}
-                      fill={getRandomColor()}
+                      fill={getChartColor(index)}
                     />
                   ))}
                 </Pie>
@@ -471,22 +518,22 @@ export default function DataDisplay({
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       );
     }
 
     // 对于需要x轴和y轴的图表
     if (chartType === "bar" && xAxisColumn && yAxisColumn) {
       return (
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-          <h3 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-            {title}
-          </h3>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            X轴: {xAxisColumn}, Y轴: {yAxisColumn}
-          </div>
-          <div className="h-80">
+        <Card className="h-[400px]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{title}</CardTitle>
+            <CardDescription className="text-xs">
+              X轴: {xAxisColumn}, Y轴: {yAxisColumn}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="h-[340px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData.slice(0, 20)}
@@ -505,26 +552,26 @@ export default function DataDisplay({
                 <Legend />
                 <Bar
                   dataKey={yAxisColumn}
-                  fill={getRandomColor()}
+                  fill={getChartColor(0)}
                   name={yAxisColumn}
                 />
               </BarChart>
             </ResponsiveContainer>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       );
     }
 
     if (chartType === "line" && xAxisColumn && yAxisColumn) {
       return (
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-          <h3 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-            {title}
-          </h3>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            X轴: {xAxisColumn}, Y轴: {yAxisColumn}
-          </div>
-          <div className="h-80">
+        <Card className="h-[400px]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{title}</CardTitle>
+            <CardDescription className="text-xs">
+              X轴: {xAxisColumn}, Y轴: {yAxisColumn}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="h-[340px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData.slice(0, 20)}
@@ -544,27 +591,27 @@ export default function DataDisplay({
                 <Line
                   type="monotone"
                   dataKey={yAxisColumn}
-                  stroke={getRandomColor()}
+                  stroke={getChartColor(0)}
                   activeDot={{ r: 8 }}
                   name={yAxisColumn}
                 />
               </LineChart>
             </ResponsiveContainer>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       );
     }
 
     if (chartType === "scatter" && xAxisColumn && yAxisColumn) {
       return (
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-          <h3 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-            {title}
-          </h3>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            X轴: {xAxisColumn}, Y轴: {yAxisColumn}
-          </div>
-          <div className="h-80">
+        <Card className="h-[400px]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{title}</CardTitle>
+            <CardDescription className="text-xs">
+              X轴: {xAxisColumn}, Y轴: {yAxisColumn}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="h-[340px]">
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart
                 margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
@@ -577,20 +624,121 @@ export default function DataDisplay({
                 <Scatter
                   name={`${xAxisColumn} vs ${yAxisColumn}`}
                   data={chartData.slice(0, 50)}
-                  fill={getRandomColor()}
+                  fill={getChartColor(0)}
                 />
               </ScatterChart>
             </ResponsiveContainer>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // 添加面积图支持
+    if (chartType === "area" && xAxisColumn && yAxisColumn) {
+      return (
+        <Card className="h-[400px]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{title}</CardTitle>
+            <CardDescription className="text-xs">
+              X轴: {xAxisColumn}, Y轴: {yAxisColumn}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="h-[340px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={chartData.slice(0, 20)}
+                margin={{ top: 10, right: 30, left: 10, bottom: 30 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey={xAxisColumn}
+                  angle={-45}
+                  textAnchor="end"
+                  interval={0}
+                  height={50}
+                />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Area
+                  type="monotone"
+                  dataKey={yAxisColumn}
+                  stroke={getChartColor(0)}
+                  fill={getChartColor(0)}
+                  fillOpacity={0.3}
+                  name={yAxisColumn}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // 添加雷达图支持
+    if (chartType === "radar" && xAxisColumn && yAxisColumn) {
+      // 处理雷达图数据
+      // 雷达图需要特殊格式的数据，我们需要处理一下
+      interface DataItem {
+        [key: string]: string | number | null | undefined;
+      }
+
+      const radarData = chartData.slice(0, 8).map((item) => {
+        const typedItem = item as DataItem;
+        const subjectValue = typedItem[xAxisColumn];
+        const numericValue = typedItem[yAxisColumn];
+        return {
+          subject: String(subjectValue || "未知"),
+          value: Number(numericValue || 0),
+          fullMark: Math.max(...chartData.map((d) => {
+            const typedD = d as DataItem;
+            return Number(typedD[yAxisColumn] || 0);
+          })) * 1.2
+        };
+      });
+
+      return (
+        <Card className="h-[400px]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{title}</CardTitle>
+            <CardDescription className="text-xs">
+              分类: {xAxisColumn}, 值: {yAxisColumn}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="h-[340px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="subject" />
+                <PolarRadiusAxis />
+                <Radar
+                  name={yAxisColumn}
+                  dataKey="value"
+                  stroke={getChartColor(0)}
+                  fill={getChartColor(0)}
+                  fillOpacity={0.6}
+                />
+                <Tooltip />
+                <Legend />
+              </RadarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       );
     }
 
     // 其他图表类型的实现可以类似添加
 
-    return <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">不支持的图表类型或配置不完整</div>;
+    return (
+      <Card className="h-[400px]">
+        <CardContent className="flex items-center justify-center h-full p-4">
+          不支持的图表类型或配置不完整
+        </CardContent>
+      </Card>
+    );
   };
 
+  // Render loading and empty states
   if (!file) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -619,47 +767,49 @@ export default function DataDisplay({
 
   return (
     <div className="w-full">
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h3 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-              数据可视化总览
-            </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              已选择 {selectedColumns.length} 列数据:{" "}
-              {selectedColumns.join(", ")}
-            </p>
+      <Card className="mb-6">
+        <CardContent className="p-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-sm font-medium mb-2">
+                数据可视化总览
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                已选择 {selectedColumns.length} 列数据:{" "}
+                {selectedColumns.join(", ")}
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => window.dispatchEvent(new Event("visualize"))}
+            >
+              重新选择列
+            </Button>
           </div>
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new Event("visualize"))}
-            className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90"
-          >
-            重新选择列
-          </button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {userCharts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-          <p className="text-gray-500 dark:text-gray-400 mb-6 text-center">
-            您尚未创建任何数据可视化图表。<br />
-            点击下方按钮，选择需要可视化的列和图表类型。
-          </p>
-          <Button
-            type="button"
-            onClick={openAddChartModal}
-            className="flex items-center gap-2"
-          >
-            <PlusCircle size={16} />
-            <span>添加可视化图表</span>
-          </Button>
-        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center h-64 p-6">
+            <p className="text-muted-foreground mb-6 text-center">
+              您尚未创建任何数据可视化图表。<br />
+              点击下方按钮，选择需要可视化的列和图表类型。
+            </p>
+            <Button
+              onClick={openAddChartModal}
+              className="flex items-center gap-2"
+            >
+              <PlusCircle size={16} />
+              <span>添加可视化图表</span>
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <>
           <div className="flex justify-end mb-4">
             <Button
-              type="button"
               onClick={openAddChartModal}
               variant="default"
               className="flex items-center gap-2"
@@ -672,20 +822,20 @@ export default function DataDisplay({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {userCharts.map((chart) => (
               <div key={chart.id} className="relative">
-                {renderChart(chart)}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUserCharts(userCharts.filter(c => c.id !== chart.id));
-                  }}
-                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                <ChartRenderer
+                  chartConfig={chart}
+                  chartData={chartData}
+                  onRemoveChart={removeChart}
+                />
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 h-6 w-6"
+                  onClick={() => removeChart(chart.id)}
                   aria-label="删除图表"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
+                  <X size={12} />
+                </Button>
               </div>
             ))}
           </div>
@@ -693,176 +843,12 @@ export default function DataDisplay({
       )}
 
       {/* 添加图表对话框 */}
-      <Dialog open={addChartModalOpen} onOpenChange={setAddChartModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>添加可视化图表</DialogTitle>
-            <DialogDescription>
-              选择需要可视化的数据列和图表类型（最多选择2列数据）
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="chart-title">图表标题</Label>
-              <input
-                id="chart-title"
-                type="text"
-                value={chartTitle}
-                onChange={(e) => setChartTitle(e.target.value)}
-                placeholder="输入图表标题（可选）"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>选择图表类型</Label>
-              <div className="flex flex-wrap gap-2">
-                {chartTypes.map((type) => (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedChartType(type.id);
-                      // 清除验证错误
-                      setValidationError("");
-                    }}
-                    className={`px-3 py-1 text-xs rounded ${selectedChartType === type.id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                      }`}
-                  >
-                    {type.name}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-1 text-xs text-gray-500">
-                {selectedChartType === "pie" ? (
-                  <p>饼图只需选择一列数据，将展示各个值的占比分布</p>
-                ) : (
-                  <p>此类型图表需要选择两列数据，分别作为X轴和Y轴</p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>选择数据列 {selectedColumnsForChart.length > 0 && `(已选择 ${selectedColumnsForChart.length}/2)`}</Label>
-                {columnsVisualizableStatus.some(col => !col.isVisualizable) && (
-                  <div className="flex items-center text-amber-500 text-xs">
-                    <AlertCircle size={14} className="mr-1" />
-                    部分列不适合可视化
-                  </div>
-                )}
-              </div>
-
-              <div className="max-h-60 overflow-auto border border-gray-200 dark:border-gray-700 rounded-md p-3 space-y-2">
-                {selectedColumns.map((column) => {
-                  const colStatus = columnsVisualizableStatus.find(s => s.column === column);
-                  const isVisualizable = colStatus ? colStatus.isVisualizable : true;
-
-                  return (
-                    <div key={column} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`column-${column}`}
-                        checked={selectedColumnsForChart.includes(column)}
-                        onCheckedChange={() => handleColumnToggle(column)}
-                        disabled={!isVisualizable || (selectedColumnsForChart.length >= 2 && !selectedColumnsForChart.includes(column))}
-                      />
-                      <Label
-                        htmlFor={`column-${column}`}
-                        className={`cursor-pointer flex items-center ${!isVisualizable ? 'text-gray-400' : ''}`}
-                      >
-                        {column}
-                        {!isVisualizable && colStatus?.reason && (
-                          <TooltipProvider>
-                            <UITooltip>
-                              <TooltipTrigger asChild>
-                                <HelpCircle size={14} className="ml-1 text-amber-500" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{colStatus.reason}</p>
-                                <p className="text-xs mt-1">唯一值: {colStatus.uniqueValues}/{colStatus.totalValues}</p>
-                              </TooltipContent>
-                            </UITooltip>
-                          </TooltipProvider>
-                        )}
-                      </Label>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {validationError && (
-                <p className="text-red-500 text-xs flex items-center">
-                  <AlertCircle size={14} className="mr-1" />
-                  {validationError}
-                </p>
-              )}
-            </div>
-
-            {/* X轴和Y轴选择器（仅在选择了两列且不是饼图时显示） */}
-            {selectedColumnsForChart.length === 2 && selectedChartType !== "pie" && (
-              <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-3 mt-2">
-                <h4 className="text-sm font-medium">设置坐标轴</h4>
-
-                <div className="space-y-2">
-                  <Label>X轴（水平轴）</Label>
-                  <RadioGroup
-                    value={xAxisColumn}
-                    onValueChange={setXAxisColumn}
-                    className="flex flex-col space-y-1"
-                  >
-                    {selectedColumnsForChart.map(column => (
-                      <div key={`x-${column}`} className="flex items-center space-x-2">
-                        <RadioGroupItem value={column} id={`x-${column}`} />
-                        <Label htmlFor={`x-${column}`}>{column}</Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Y轴（垂直轴）</Label>
-                  <RadioGroup
-                    value={yAxisColumn}
-                    onValueChange={setYAxisColumn}
-                    className="flex flex-col space-y-1"
-                  >
-                    {selectedColumnsForChart.map(column => (
-                      <div key={`y-${column}`} className="flex items-center space-x-2">
-                        <RadioGroupItem value={column} id={`y-${column}`} />
-                        <Label htmlFor={`y-${column}`}>{column}</Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setAddChartModalOpen(false);
-                resetChartForm();
-              }}
-            >
-              取消
-            </Button>
-            <Button
-              type="button"
-              onClick={handleAddChart}
-              disabled={selectedColumnsForChart.length === 0}
-            >
-              添加图表
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddChartModal
+        open={addChartModalOpen}
+        onOpenChange={setAddChartModalOpen}
+        availableColumns={selectedColumns}
+        onCheckColumnsVisualizable={checkColumnsVisualizable}
+      />
     </div>
   );
 }

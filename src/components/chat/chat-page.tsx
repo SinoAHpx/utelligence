@@ -1,12 +1,17 @@
 "use client";
 
-import React from "react";
+import { useEffect } from "react";
 import { useChatActions } from "@/hooks/useChatActions";
 import { useChatStore } from "@/store/chatStore";
 import Chat from "./chat";
 
-export default function ChatPage() {
-    const { currentChatId } = useChatStore();
+interface ChatPageProps {
+    chatId?: string;
+    setChatId?: React.Dispatch<React.SetStateAction<string>>;
+}
+
+export default function ChatPage({ chatId, setChatId }: ChatPageProps = {}) {
+    const { currentChatId, setCurrentChatId } = useChatStore();
     const {
         messages,
         input,
@@ -17,6 +22,20 @@ export default function ChatPage() {
         stop,
         createNewChat,
     } = useChatActions();
+
+    // Sync the chatId from props with the store
+    useEffect(() => {
+        if (chatId && chatId !== currentChatId) {
+            setCurrentChatId(chatId);
+        }
+    }, [chatId, currentChatId, setCurrentChatId]);
+
+    // Update the URL chatId when store changes
+    useEffect(() => {
+        if (setChatId && currentChatId !== chatId) {
+            setChatId(currentChatId);
+        }
+    }, [currentChatId, chatId, setChatId]);
 
     return (
         <div className="relative flex h-full w-full overflow-hidden">
