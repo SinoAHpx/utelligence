@@ -9,27 +9,22 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import {
-    PieChart,
-    Pie,
-    Cell,
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-} from "recharts";
+import { Button } from "@/components/ui/button";
+import { getChartColor } from "@/constants/chart-colors";
+import { ChartDataItem as ChartData } from "@/types/chart-types";
+import { CellValue, analyzeColumnData } from "@/utils/data-processing";
 
-type CellValue = string | number;
-
+/**
+ * Chart data item structure for visualization
+ */
 interface ChartDataItem {
     name: string;
     value: number;
 }
 
+/**
+ * Props for the visualization modal component
+ */
 interface VisualizationModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -38,6 +33,10 @@ interface VisualizationModalProps {
     file: File | null;
 }
 
+/**
+ * Visualization modal component
+ * Displays column data in different chart types
+ */
 export default function VisualizationModal({
     isOpen,
     onClose,
@@ -45,57 +44,122 @@ export default function VisualizationModal({
     columnData,
     file,
 }: VisualizationModalProps) {
+    // State
     const [chartType, setChartType] = useState<string>("pie");
     const [processedData, setProcessedData] = useState<ChartDataItem[]>([]);
     const [uniqueValues, setUniqueValues] = useState<number>(0);
     const [isValidForVisualization, setIsValidForVisualization] = useState<boolean>(true);
     const [isEmpty, setIsEmpty] = useState<boolean>(false);
     const [frequencies, setFrequencies] = useState<{ [key: string]: number }>({});
-    const COLORS = ["#4A90E2", "#50E3C2", "#F5A623", "#D0021B", "#9013FE", "#B8E986"];
+    const [error, setError] = useState<string | null>(null);
 
+    /**
+     * Process column data for visualization
+     */
     useEffect(() => {
-        if (columnData && columnData.length > 0) {
-            // Count frequency of each value
-            const freqMap: { [key: string]: number } = {};
-
-            for (const value of columnData) {
-                const key = String(value).trim();
-                // Skip empty values
-                if (!key) continue;
-                freqMap[key] = (freqMap[key] || 0) + 1;
-            }
-
-            setFrequencies(freqMap);
-
-            // Count unique values
-            const uniqueCount = Object.keys(freqMap).length;
-            setUniqueValues(uniqueCount);
-
-            // Check if data is empty (all values are empty strings or null)
-            const nonEmptyCount = Object.keys(freqMap).filter(key => key.trim() !== '').length;
-            setIsEmpty(nonEmptyCount === 0);
-
-            // Check if data is valid for visualization
-            // If every value is unique or almost unique, it's not good for visualization
-            const isValid = uniqueCount < columnData.length * 0.9 && !isEmpty;
-            setIsValidForVisualization(isValid);
-
-            // Process data for charts
-            const chartData = Object.entries(freqMap).map(([name, value]) => ({
-                name,
-                value,
-            }));
-
-            // Sort by frequency for better visualization
-            chartData.sort((a, b) => b.value - a.value);
-
-            // Limit to top 10 values for better visualization
-            setProcessedData(chartData.slice(0, 10));
-        } else {
+        if (!columnData || columnData.length === 0) {
             setIsEmpty(true);
             setIsValidForVisualization(false);
+            return;
         }
-    }, [columnData, isEmpty]);
+
+        try {
+            // Use the shared analyzeColumnData utility
+            const analysis = analyzeColumnData(columnData);
+
+            setFrequencies(analysis.frequencies);
+            setUniqueValues(analysis.uniqueValues);
+            setIsEmpty(analysis.isEmpty);
+            setIsValidForVisualization(analysis.isValidForVisualization);
+            setProcessedData(analysis.processedData);
+            setError(null);
+        } catch (err) {
+            console.error("Error analyzing column data:", err);
+            setError("数据分析错误，请重试或选择其他列");
+        }
+    }, [columnData]);
+
+    /**
+     * Renders the appropriate chart based on type
+     */
+    const renderChart = () => {
+        // Import dynamic components to avoid bundle bloat
+        const { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = require('recharts');
+
+        return (
+            <div className="h-[350px] my-4">
+                <ResponsiveContainer width="100%" height="100%">
+                    {chartType === "pie" ? (
+                        <PieChart>
+                            <Pie
+                                data={processedData}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={true}
+                                outerRadius={120}
+                                fill="#8884d8"
+                                dataKey="value"
+                                nameKey="name"
+                                label={({ name, percent }) =>
+                                    `${name}: ${(percent * 100).toFixed(0)}%`
+                                }
+                            >
+                                {processedData.map((entry, index) => (
+                                    <Cell
+                                        key={`cell-${entry.name}`}
+                                        fill={getChartColor(index)}
+                                    />
+                                ))}
+                            </Pie>
+                            <Tooltip />
+                            <Legend />
+                        </PieChart>
+                    ) : (
+                        <BarChart
+                            data={processedData}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                                dataKey="name"
+                                angle={-45}
+                                textAnchor="end"
+                                interval={0}
+                                height={70}
+                            />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Bar
+                                dataKey="value"
+                                name="频率"
+                                fill={getChartColor(0)}
+                            />
+                        </BarChart>
+                    )}
+                </ResponsiveContainer>
+            </div>
+        );
+    };
+
+    /**
+     * Renders data analysis summary
+     */
+    const renderDataAnalysis = () => (
+        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+            <h4 className="text-sm font-medium mb-2">数据分析</h4>
+            <ul className="text-sm space-y-1">
+                <li>共有 <span className="font-medium">{columnData.length}</span> 条数据</li>
+                <li>包含 <span className="font-medium">{uniqueValues}</span> 个不同的值</li>
+                {processedData.slice(0, 3).map((item) => (
+                    <li key={`stat-${item.name}`}>
+                        最常出现的值: <span className="font-medium">{item.name}</span>
+                        (出现 <span className="font-medium">{item.value}</span> 次)
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -107,7 +171,12 @@ export default function VisualizationModal({
                     </DialogDescription>
                 </DialogHeader>
 
-                {isEmpty ? (
+                {error ? (
+                    <div className="py-6 text-center">
+                        <p className="text-red-500 font-medium mb-2">处理数据时出错</p>
+                        <p className="text-gray-500 text-sm">{error}</p>
+                    </div>
+                ) : isEmpty ? (
                     <div className="py-6 text-center">
                         <p className="text-amber-500 font-medium mb-2">此列数据为空</p>
                         <p className="text-gray-500 text-sm">
@@ -126,105 +195,29 @@ export default function VisualizationModal({
                 ) : (
                     <>
                         <div className="flex justify-center gap-4 mb-4">
-                            <button
-                                type="button"
+                            <Button
+                                variant={chartType === "pie" ? "default" : "outline"}
+                                size="sm"
                                 onClick={() => setChartType("pie")}
-                                className={`px-3 py-1 rounded ${chartType === "pie"
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                                    }`}
                             >
                                 饼图
-                            </button>
-                            <button
-                                type="button"
+                            </Button>
+                            <Button
+                                variant={chartType === "bar" ? "default" : "outline"}
+                                size="sm"
                                 onClick={() => setChartType("bar")}
-                                className={`px-3 py-1 rounded ${chartType === "bar"
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                                    }`}
                             >
                                 柱状图
-                            </button>
+                            </Button>
                         </div>
 
-                        <div className="h-[350px] my-4">
-                            <ResponsiveContainer width="100%" height="100%">
-                                {chartType === "pie" ? (
-                                    <PieChart>
-                                        <Pie
-                                            data={processedData}
-                                            cx="50%"
-                                            cy="50%"
-                                            labelLine={true}
-                                            outerRadius={120}
-                                            fill="#8884d8"
-                                            dataKey="value"
-                                            nameKey="name"
-                                            label={({ name, percent }) =>
-                                                `${name}: ${(percent * 100).toFixed(0)}%`
-                                            }
-                                        >
-                                            {processedData.map((entry) => (
-                                                <Cell
-                                                    key={`cell-${entry.name}`}
-                                                    fill={COLORS[processedData.indexOf(entry) % COLORS.length]}
-                                                />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip />
-                                        <Legend />
-                                    </PieChart>
-                                ) : (
-                                    <BarChart
-                                        data={processedData}
-                                        margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
-                                    >
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis
-                                            dataKey="name"
-                                            angle={-45}
-                                            textAnchor="end"
-                                            interval={0}
-                                            height={70}
-                                        />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Legend />
-                                        <Bar
-                                            dataKey="value"
-                                            name="频率"
-                                            fill="#8884d8"
-                                        />
-                                    </BarChart>
-                                )}
-                            </ResponsiveContainer>
-                        </div>
-
-                        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                            <h4 className="text-sm font-medium mb-2">数据分析</h4>
-                            <ul className="text-sm space-y-1">
-                                <li>共有 <span className="font-medium">{columnData.length}</span> 条数据</li>
-                                <li>包含 <span className="font-medium">{uniqueValues}</span> 个不同的值</li>
-                                {processedData.slice(0, 3).map((item) => (
-                                    <li key={`stat-${item.name}`}>
-                                        最常出现的值: <span className="font-medium">{item.name}</span>
-                                        (出现 <span className="font-medium">{item.value}</span> 次)
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                        {renderChart()}
+                        {renderDataAnalysis()}
                     </>
                 )}
 
                 <DialogFooter>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-                    >
-                        关闭
-                    </button>
+                    <Button onClick={onClose}>关闭</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

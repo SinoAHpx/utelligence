@@ -3,7 +3,8 @@ import React from "react";
 
 import { CheckIcon, CopyIcon } from "@radix-ui/react-icons";
 import { useTheme } from "next-themes";
-import { CodeBlock, dracula, github } from "react-code-blocks";
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { atomDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { toast } from "sonner";
 
 import { Button } from "./ui/button";
@@ -27,23 +28,26 @@ export default function CodeDisplayBlock({ code, lang }: ButtonCodeblockProps) {
     };
 
     return (
-        <div className="relative my-4 overflow-scroll overflow-x-scroll  flex flex-col   text-start  ">
-            <CodeBlock
-                customStyle={
-                    theme === "dark"
-                        ? { background: "#303033" }
-                        : { background: "#fcfcfc" }
-                }
-                text={code}
-                language="tsx"
-                showLineNumbers={false}
-                theme={theme === "dark" ? dracula : github}
-            />
+        <div className="relative my-4 overflow-hidden rounded-md">
+            <SyntaxHighlighter
+                language={lang || "text"}
+                style={atomDark}
+                customStyle={{
+                    margin: 0,
+                    padding: '1rem',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.9rem',
+                    lineHeight: 1.5,
+                }}
+                showLineNumbers={true}
+            >
+                {code}
+            </SyntaxHighlighter>
             <Button
                 onClick={copyToClipboard}
                 variant="ghost"
                 size="iconSm"
-                className="h-5 w-5 absolute top-2 right-2"
+                className="h-6 w-6 absolute top-2 right-2 bg-primary/10 hover:bg-primary/20"
             >
                 {isCopied ? (
                     <CheckIcon className="w-4 h-4" />

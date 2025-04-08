@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { PlusCircle, X } from "lucide-react";
@@ -10,21 +10,19 @@ import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
 import { ColumnVisualizableConfig } from "@/store/dataVisualizationStore";
 import { ChartDataItem, CHART_TYPES } from "@/types/chart-types";
 import { getChartColor } from "@/constants/chart-colors";
+import { processFileData, CellValue, FileRow, FileData, analyzeColumnData } from "@/utils/data-processing";
 import ChartRenderer from "./charts/chart-renderer";
 import AddChartModal from "./components/add-chart-modal";
 
-// Types
+/**
+ * Props for the DataDisplay component
+ */
 interface DataDisplayProps {
   file: File | null;
   selectedColumns: string[];
   availableColumns: string[];
   onColumnSelectionChange?: (columns: string[]) => void;
 }
-
-// File data types
-type CellValue = string | number;
-type FileRow = CellValue[];
-type FileData = FileRow[];
 
 /**
  * 数据可视化显示组件
@@ -62,6 +60,7 @@ export default function DataDisplay({
   // Local state
   const [loading, setLoading] = useState<boolean>(false);
   const [addChartModalOpen, setAddChartModalOpen] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   // 当选择的文件改变时处理数据
   useEffect(() => {
@@ -75,148 +74,55 @@ export default function DataDisplay({
       if (fileSignature !== processedSignature) {
         setProcessedFile({ name: file.name, size: file.size });
         setLoading(true);
-        processFileData(file);
-      }
-    }
-  }, [file, selectedColumns, processedFile, setProcessedFile]);
+        setError(null);
 
-  /**
-   * 处理文件数据
-   * 读取CSV或Excel文件并生成图表数据
-   */
-  const processFileData = async (file: File) => {
-    if (!file || selectedColumns.length === 0) return;
-
-    try {
-      const fileExtension = file.name.split(".").pop()?.toLowerCase();
-
-      if (fileExtension === "csv") {
-        // 解析CSV文件
-        const text = await file.text();
-        Papa.parse(text, {
-          complete: (results) => {
-            const headers = results.data[0] as string[];
-            const rows = results.data.slice(1) as string[][];
-
-            // 创建图表数据
-            const chartData = createChartData(headers, rows as FileData);
+        // Use the shared processFileData utility
+        processFileData(
+          file,
+          selectedColumns,
+          (chartData) => {
             setChartData(chartData);
             setLoading(false);
           },
-          error: (error: { message: string }) => {
-            console.error("解析CSV文件失败:", error);
+          (errorMsg) => {
+            setError(errorMsg);
             setLoading(false);
-          },
-        });
-      } else if (fileExtension === "xlsx" || fileExtension === "xls") {
-        // 解析Excel文件
-        const arrayBuffer = await file.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer);
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-
-        // 转换为JSON
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-        // 提取表头和数据
-        const headers = jsonData[0] as string[];
-        const rows = jsonData.slice(1) as FileData;
-
-        // 创建图表数据
-        const chartData = createChartData(headers, rows);
-        setChartData(chartData);
-        setLoading(false);
-      } else {
-        console.error("不支持的文件类型");
-        setLoading(false);
+          }
+        );
       }
-    } catch (err) {
-      console.error("文件解析错误:", err);
-      setLoading(false);
     }
-  };
-
-  /**
-   * 从解析的数据创建图表数据
-   * 将原始数据转换为图表可用的格式
-   */
-  const createChartData = useCallback(
-    (headers: string[], rows: FileData): ChartDataItem[] => {
-      // 使用模拟数据确保图表能正常显示
-      if (rows.length === 0) {
-        const mockData: ChartDataItem[] = [];
-        for (let i = 0; i < 10; i++) {
-          const item: ChartDataItem = { name: `项目 ${i + 1}` };
-          for (const col of selectedColumns) {
-            item[col] = Math.floor(Math.random() * 100);
-          }
-          mockData.push(item);
-        }
-        return mockData;
-      }
-
-      return rows.slice(0, 20).map((row, index) => {
-        const rowData: ChartDataItem = { name: `项 ${index + 1}` };
-
-        // 如果有一列可以作为名称列，使用它
-        if (headers[0] && row[0]) {
-          rowData.name = String(row[0] || "").slice(0, 10); // 截断过长的名称
-        }
-
-        // 添加选中的列数据
-        for (const column of selectedColumns) {
-          const colIndex = headers.indexOf(column);
-          if (colIndex !== -1 && colIndex < row.length) {
-            // 尝试将值转换为数值
-            const strValue = String(row[colIndex]);
-            const numValue = Number.parseFloat(strValue);
-            rowData[column] = Number.isNaN(numValue)
-              ? Math.floor(Math.random() * 100)
-              : numValue;
-          } else {
-            // 如果没有数据，使用随机值
-            rowData[column] = Math.floor(Math.random() * 100);
-          }
-        }
-
-        return rowData;
-      });
-    },
-    [selectedColumns]
-  );
+  }, [file, selectedColumns, processedFile, setProcessedFile, setChartData]);
 
   /**
    * 检查列是否适合可视化
    * 分析数据分布特征，确定列是否适合可视化
    */
-  const checkColumnsVisualizable = useCallback(async () => {
+  const checkColumnsVisualizable = React.useCallback(async () => {
     if (!file || selectedColumns.length === 0) return;
 
-    const newStatus: ColumnVisualizableConfig[] = [];
-    const fileExtension = file.name.split(".").pop()?.toLowerCase();
-
     try {
+      const fileExtension = file.name.split(".").pop()?.toLowerCase();
+      const newStatus: ColumnVisualizableConfig[] = [];
+
       if (fileExtension === "csv") {
         const text = await file.text();
-        Papa.parse(text, {
-          complete: (results) => {
-            const headers = results.data[0] as string[];
-            const rows = results.data.slice(1) as string[][];
+        const result = Papa.parse(text);
+        const headers = result.data[0] as string[];
+        const rows = result.data.slice(1) as string[][];
 
-            analyzeColumns(headers, rows, newStatus);
-          }
-        });
+        analyzeColumnsForVisualization(headers, rows, newStatus);
       } else if (fileExtension === "xlsx" || fileExtension === "xls") {
         const arrayBuffer = await file.arrayBuffer();
+        const XLSX = await import('xlsx');
         const workbook = XLSX.read(arrayBuffer);
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
         const headers = jsonData[0] as string[];
         const rows = jsonData.slice(1) as FileData;
 
-        analyzeColumns(headers, rows, newStatus);
+        analyzeColumnsForVisualization(headers, rows, newStatus);
       }
     } catch (err) {
       console.error("分析列可视化状态失败:", err);
@@ -226,28 +132,25 @@ export default function DataDisplay({
   /**
    * 分析列数据分布特征
    */
-  const analyzeColumns = (headers: string[], rows: any[], newStatus: ColumnVisualizableConfig[]) => {
+  const analyzeColumnsForVisualization = (headers: string[], rows: any[], newStatus: ColumnVisualizableConfig[]) => {
     // 分析每一列
     for (const colName of selectedColumns) {
       const colIndex = headers.indexOf(colName);
       if (colIndex === -1) continue;
 
       // 提取该列所有值
-      const values = rows.map(row => row[colIndex]).filter(v => v !== undefined && v !== null && v !== "");
+      const columnData = rows.map(row => row[colIndex]).filter(v => v !== undefined && v !== null && v !== "");
 
-      // 计算唯一值数量
-      const uniqueValues = new Set(values.map(v => String(v))).size;
-
-      // 检查是否可视化（如果唯一值太多，则不适合可视化）
-      const isVisualizable = uniqueValues < values.length * 0.9 && uniqueValues > 1;
+      // Use the shared analyzeColumnData utility
+      const analysis = analyzeColumnData(columnData);
 
       newStatus.push({
         column: colName,
-        isVisualizable,
-        uniqueValues,
-        totalValues: values.length,
-        reason: !isVisualizable
-          ? uniqueValues <= 1
+        isVisualizable: analysis.isValidForVisualization,
+        uniqueValues: analysis.uniqueValues,
+        totalValues: columnData.length,
+        reason: !analysis.isValidForVisualization
+          ? analysis.uniqueValues <= 1
             ? "数据值过少，不适合可视化"
             : "唯一值占比过高，不适合可视化"
           : undefined
@@ -269,7 +172,7 @@ export default function DataDisplay({
     checkColumnsVisualizable();
   };
 
-  // Render loading and empty states
+  // Render loading and error states
   if (!file) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -282,6 +185,14 @@ export default function DataDisplay({
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-gray-500 dark:text-gray-400">加载中...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-red-500 dark:text-red-400">{error}</p>
       </div>
     );
   }
