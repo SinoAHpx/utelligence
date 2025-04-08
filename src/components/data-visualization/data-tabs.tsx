@@ -28,11 +28,20 @@ export default function DataTabs({ file }: DataTabsProps) {
         // 如果还没有选择列，则将传入的列设为已选择
         if (selectedColumns.length === 0) {
           setSelectedColumns(columns);
+          // 当首次获取列数据时，自动切换到"数据展示"选项卡
+          setActiveTab("display");
         }
       }
     },
     [availableColumns.length, selectedColumns.length]
   );
+
+  // 当文件变更时，重置到预览标签
+  useEffect(() => {
+    if (file) {
+      setActiveTab("preview");
+    }
+  }, [file]);
 
   // 监听可视化事件
   useEffect(() => {
