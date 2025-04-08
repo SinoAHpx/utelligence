@@ -1,16 +1,27 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, memo } from "react";
 import { useChatActions } from "@/hooks/useChatActions";
 import { useChatStore } from "@/store/chatStore";
 import Chat from "./chat";
 
-interface ChatPageProps {
+/**
+ * Props interface for the ChatPage component
+ */
+type ChatPageProps = {
     chatId?: string;
     setChatId?: React.Dispatch<React.SetStateAction<string>>;
-}
+};
 
-export default function ChatPage({ chatId, setChatId }: ChatPageProps = {}) {
+/**
+ * ChatPage component coordinates between URL state and chat store
+ * 
+ * Features:
+ * - Syncs chatId between URL and global store
+ * - Handles chat state via useChatActions hook
+ * - Renders the main chat interface
+ */
+const ChatPage = memo(({ chatId, setChatId }: ChatPageProps = {}) => {
     const { currentChatId, setCurrentChatId } = useChatStore();
     const {
         messages,
@@ -23,14 +34,14 @@ export default function ChatPage({ chatId, setChatId }: ChatPageProps = {}) {
         createNewChat,
     } = useChatActions();
 
-    // Sync the chatId from props with the store
+    // Sync URL chatId with store when props change
     useEffect(() => {
         if (chatId && chatId !== currentChatId) {
             setCurrentChatId(chatId);
         }
     }, [chatId, currentChatId, setCurrentChatId]);
 
-    // Update the URL chatId when store changes
+    // Update URL when store chatId changes
     useEffect(() => {
         if (setChatId && currentChatId !== chatId) {
             setChatId(currentChatId);
@@ -53,4 +64,8 @@ export default function ChatPage({ chatId, setChatId }: ChatPageProps = {}) {
             </div>
         </div>
     );
-}
+});
+
+ChatPage.displayName = "ChatPage";
+
+export default ChatPage;

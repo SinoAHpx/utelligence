@@ -1,12 +1,14 @@
-import React from "react";
-
+import React, { memo } from "react";
 import { Message } from "ai/react";
 
 import ChatBottombar from "./chat-bottombar";
 import ChatList from "./chat-list";
 import ChatTopbar from "./chat-topbar";
 
-export interface ChatProps {
+/**
+ * Props for the Chat component
+ */
+type ChatProps = {
     messages: Message[];
     input: string;
     handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
@@ -15,9 +17,17 @@ export interface ChatProps {
     error: undefined | Error;
     stop: () => void;
     createNewChat: () => void;
-}
+};
 
-export default function Chat({
+/**
+ * Main Chat component that composes the whole chat interface
+ * 
+ * Features:
+ * - Integrates chat topbar, message list, and input bar
+ * - Handles message display and user input
+ * - Manages loading states and error handling
+ */
+const Chat = memo(({
     messages,
     input,
     handleInputChange,
@@ -26,7 +36,7 @@ export default function Chat({
     error,
     stop,
     createNewChat,
-}: ChatProps) {
+}: ChatProps) => {
     return (
         <div className="flex flex-col justify-between w-full h-full">
             <ChatTopbar
@@ -46,4 +56,8 @@ export default function Chat({
             />
         </div>
     );
-}
+});
+
+Chat.displayName = "Chat";
+
+export default Chat;

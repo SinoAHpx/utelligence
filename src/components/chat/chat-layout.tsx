@@ -1,21 +1,27 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, memo } from "react";
 import Chat from "./chat";
 import { useChatActions } from "@/hooks/useChatActions";
-import { useChatStore } from "@/store/chatStore";
 
-interface ChatLayoutProps {
-    defaultLayout?: number[];
-    defaultCollapsed?: boolean;
+/**
+ * Props for the ChatLayout component
+ */
+type ChatLayoutProps = {
     navCollapsedSize?: number;
-}
+};
 
-export function ChatLayout({
-    defaultLayout = [30, 160],
-    defaultCollapsed = false,
+/**
+ * ChatLayout component manages responsive layout for the chat interface
+ * 
+ * Features:
+ * - Handles mobile vs desktop layout detection
+ * - Wraps the Chat component with responsive layout
+ * - Passes chat action props to the Chat component
+ */
+export const ChatLayout = memo(({
     navCollapsedSize = 768,
-}: ChatLayoutProps) {
+}: ChatLayoutProps) => {
     const [isMobile, setIsMobile] = useState(false);
     const {
         messages,
@@ -28,22 +34,23 @@ export function ChatLayout({
         createNewChat,
     } = useChatActions();
 
+    // Handle responsive layout detection
     useEffect(() => {
         const checkScreenWidth = () => {
-            setIsMobile(window.innerWidth <= 768);
+            setIsMobile(window.innerWidth <= navCollapsedSize);
         };
 
         // Initial check
         checkScreenWidth();
 
-        // Event listener for screen width changes
+        // Add resize listener
         window.addEventListener("resize", checkScreenWidth);
 
-        // Cleanup the event listener on component unmount
+        // Cleanup
         return () => {
             window.removeEventListener("resize", checkScreenWidth);
         };
-    }, []);
+    }, [navCollapsedSize]);
 
     return (
         <div className="relative flex h-full w-full overflow-hidden">
@@ -61,4 +68,6 @@ export function ChatLayout({
             </div>
         </div>
     );
-}
+});
+
+ChatLayout.displayName = "ChatLayout";

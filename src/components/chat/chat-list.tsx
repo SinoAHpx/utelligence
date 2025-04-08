@@ -1,38 +1,50 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, memo } from "react";
 import { Message } from "ai";
 
 import EmptyState from "./empty-state";
 import MessageItem from "./message-item";
-// import ScrollbarStyles from "../ui/scrollbar-styles";
 
-interface ChatListProps {
+type ChatListProps = {
   messages: Message[];
   isLoading: boolean;
-}
+};
 
 /**
- * Main chat list component that displays all messages
- * Handles auto-scrolling and empty state
+ * ChatList component displays all chat messages and handles scrolling behavior
+ * 
+ * Features:
+ * - Automatically scrolls to the bottom when new messages arrive
+ * - Shows an empty state when no messages exist
+ * - Filters out system messages from the display
+ * - Optimized scrolling performance
  */
-export default function ChatList({ messages, isLoading }: ChatListProps) {
+const ChatList = ({ messages, isLoading }: ChatListProps) => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Scroll to the bottom of the message list
   const scrollToBottom = () => {
-    bottomRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "auto", block: "end" });
+    }
   };
 
+  // Auto-scroll when messages change or when loading state changes
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
 
+  // Show empty state when no messages exist
   if (messages.length === 0) {
     return <EmptyState />;
   }
 
+  // Filter out system messages for display
+  const displayMessages = messages.filter(message => message.role !== "system");
+
   return (
     <div className="flex-1 overflow-hidden relative">
       <div
-        id="scroller"
+        id="message-container"
         className="absolute inset-0 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-transparent hover:scrollbar-thumb-gray-300 dark:hover:scrollbar-thumb-gray-700 scrollbar-track-transparent"
         style={{
           scrollbarWidth: "thin",
@@ -40,20 +52,19 @@ export default function ChatList({ messages, isLoading }: ChatListProps) {
         }}
       >
         <div className="px-4 py-2">
-          {messages
-            .filter((message) => message.role !== "system")
-            .map((message, index, filteredMessages) => (
-              <MessageItem
-                key={index}
-                message={message}
-                isLastMessage={index === filteredMessages.length - 1}
-                isLoading={isLoading}
-              />
-            ))}
-          <div id="anchor" ref={bottomRef} className="h-4"></div>
+          {displayMessages.map((message, index) => (
+            <MessageItem
+              key={message.id || index}
+              message={message}
+              isLastMessage={index === displayMessages.length - 1}
+              isLoading={isLoading}
+            />
+          ))}
+          <div id="scroll-anchor" ref={bottomRef} className="h-4" aria-hidden="true"></div>
         </div>
       </div>
-      {/* <ScrollbarStyles /> */}
     </div>
   );
-}
+};
+
+export default memo(ChatList);

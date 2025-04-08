@@ -1,45 +1,62 @@
-import React from "react";
+import React, { memo } from "react";
 import Image from "next/image";
 import UCASSLogo from "../../../public/ucass_logo.png";
 import { Message } from "ai";
 import MessageFormatter from "./message-formatter";
 
-// Avatar components
-const UserAvatar = () => <div className="dark:invert h-full w-full bg-black" />;
+/**
+ * Avatar Components
+ * Displays user or assistant avatar based on role
+ */
+const UserAvatar = memo(() => <div className="dark:invert h-full w-full bg-black" />);
 
-const AssistantAvatar = () => (
+const AssistantAvatar = memo(() => (
   <Image
     src={UCASSLogo}
     alt="AI"
     className="object-contain dark:invert aspect-square h-full w-full"
+    priority
   />
-);
+));
 
-const Avatar = ({ role }: { role: string }) => (
+type AvatarProps = {
+  role: string;
+};
+
+const Avatar = memo(({ role }: AvatarProps) => (
   <div className="shrink-0">
     <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
       {role === "user" ? <UserAvatar /> : <AssistantAvatar />}
     </div>
   </div>
-);
+));
 
-// Message content components
-const UserMessage = ({ content }: { content: string }) => (
+/**
+ * Message Content Components
+ * Renders different content based on message role
+ */
+type UserMessageProps = {
+  content: string;
+};
+
+const UserMessage = memo(({ content }: UserMessageProps) => (
   <div className="flex flex-col flex-1 min-w-0 overflow-hidden w-full">
     <div className="font-semibold pb-2">You</div>
     <div className="break-words w-full">{content}</div>
   </div>
-);
+));
 
-const AssistantMessage = ({
-  content,
-  isLastMessage,
-  isLoading,
-}: {
+type AssistantMessageProps = {
   content: string;
   isLastMessage: boolean;
   isLoading: boolean;
-}) => (
+};
+
+const AssistantMessage = memo(({
+  content,
+  isLastMessage,
+  isLoading,
+}: AssistantMessageProps) => (
   <div className="flex flex-col flex-1 min-w-0 overflow-hidden w-full">
     <div className="font-semibold pb-2">Assistant</div>
     <div className="break-words overflow-hidden w-full">
@@ -56,16 +73,19 @@ const AssistantMessage = ({
       </span>
     </div>
   </div>
-);
+));
 
-// Main message item component
+/**
+ * Main Message Item Component
+ * Renders a complete chat message with avatar and formatted content
+ */
 interface MessageItemProps {
   message: Message;
   isLastMessage: boolean;
   isLoading: boolean;
 }
 
-const MessageItem = ({
+const MessageItem = memo(({
   message,
   isLastMessage,
   isLoading,
@@ -84,6 +104,6 @@ const MessageItem = ({
       )}
     </div>
   </div>
-);
+));
 
 export default MessageItem;
