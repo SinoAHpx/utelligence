@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { useChat, ChatRequestOptions } from 'ai/react';
+import { useChat } from 'ai/react';
+import { ChatRequestOptions } from 'ai';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 

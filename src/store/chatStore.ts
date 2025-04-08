@@ -1,10 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Message } from 'ai/react';
-import { v4 as uuidv4 } from 'uuid';
 import { ChatOptions } from '@/components/chat/chat-options';
 import { basePath } from '@/lib/utils';
-import { Chats } from '@/lib/chatUtils';
+import { Chats, groupChatsByDate } from '@/lib/chatUtils';
 
 interface ChatState {
   // Chat options
@@ -178,53 +177,3 @@ export const useChatStore = create<ChatState>()(
     }
   )
 );
-
-// Helper function to group chats by date
-const groupChatsByDate = (
-  chatsToGroup: { chatId: string; messages: Message[] }[]
-): Chats => {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  const groupedChats: Chats = {};
-
-  chatsToGroup.forEach((chat) => {
-    // Add null/undefined check for createdAt
-    const createdAt = chat.messages[0]?.createdAt
-      ? new Date(chat.messages[0].createdAt)
-      : new Date(0);
-    // Handle cases where createdAt might be invalid
-    if (isNaN(createdAt.getTime())) {
-      console.warn(`Invalid date for chat ${chat.chatId}, skipping grouping.`);
-      return;
-    }
-
-    // Calculate difference in days relative to the start of the day
-    const todayStart = new Date(today.setHours(0, 0, 0, 0));
-    const createdAtStart = new Date(createdAt.setHours(0, 0, 0, 0));
-
-    const diffInTime = todayStart.getTime() - createdAtStart.getTime();
-    const diffInDays = Math.floor(diffInTime / (1000 * 3600 * 24));
-
-    let group: string;
-    if (diffInDays === 0) {
-      group = "今天";
-    } else if (diffInDays === 1) {
-      group = "昨天";
-    } else if (diffInDays <= 7) {
-      group = "过去 7 天";
-    } else if (diffInDays <= 30) {
-      group = "过去 30 天";
-    } else {
-      group = "更早";
-    }
-
-    if (!groupedChats[group]) {
-      groupedChats[group] = [];
-    }
-    groupedChats[group].push(chat);
-  });
-
-  return groupedChats;
-}; 

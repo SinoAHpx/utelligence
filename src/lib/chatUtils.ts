@@ -6,7 +6,7 @@ export interface Chats {
 }
 
 // Helper function to group chats by date
-const groupChatsByDate = (
+export const groupChatsByDate = (
   chatsToGroup: { chatId: string; messages: Message[] }[]
 ): Chats => {
   const today = new Date();
