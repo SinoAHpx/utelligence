@@ -18,13 +18,14 @@ export const MessageFormatter = ({ content }: MessageFormatterProps) => {
         // Regular text (odd indexes in the split)
         if (index % 2 === 0) {
           return (
-            <Markdown
-              key={index}
-              remarkPlugins={[remarkGfm]}
-              className="prose dark:prose-invert max-w-full"
-            >
-              {part}
-            </Markdown>
+            <article className="prose dark:prose-invert max-w-full">
+              <Markdown
+                key={index}
+                remarkPlugins={[remarkGfm]}
+              >
+                {part}
+              </Markdown>
+            </article>
           );
         }
         // Code blocks (even indexes in the split)
