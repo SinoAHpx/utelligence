@@ -25,6 +25,7 @@ export const useChatActions = () => {
 		setTokenLimit,
 		messages: storedMessages,
 		setMessages,
+		getSystemPrompt,
 	} = useChatStore();
 
 	// Initialize the AI chat hook
@@ -106,11 +107,19 @@ export const useChatActions = () => {
 			setCurrentChatId(newChatId);
 		}
 
+		// Get the system prompt for the current chat
+		// This uses either the per-chat stored system prompt or falls back to the global default
+		const chatId = currentChatId || uuidv4();
+		const systemPrompt = getSystemPrompt(chatId);
+
 		// Prepare the options object with additional body data for the model
 		const requestOptions: ChatRequestOptions = {
 			options: {
 				body: {
-					chatOptions,
+					chatOptions: {
+						...chatOptions,
+						systemPrompt: systemPrompt,
+					},
 				},
 			},
 		};

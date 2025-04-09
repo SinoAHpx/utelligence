@@ -22,6 +22,11 @@ interface ChatState {
 	setCurrentChatId: (id: string) => void;
 	createNewChat: () => void;
 
+	// System prompts per chat
+	systemPrompts: Record<string, string>;
+	setSystemPrompt: (chatId: string, systemPrompt: string) => void;
+	getSystemPrompt: (chatId: string) => string;
+
 	// Models
 	availableModels: string[];
 	setAvailableModels: (models: string[]) => void;
@@ -63,6 +68,20 @@ export const useChatStore = create<ChatState>()(
 			currentChatId: "",
 			setCurrentChatId: (id) => set({ currentChatId: id }),
 			createNewChat: () => set({ currentChatId: "" }),
+
+			// System prompts per chat
+			systemPrompts: {},
+			setSystemPrompt: (chatId, systemPrompt) => {
+				if (!chatId) return;
+				set((state) => ({
+					systemPrompts: { ...state.systemPrompts, [chatId]: systemPrompt },
+				}));
+			},
+			getSystemPrompt: (chatId) => {
+				const state = get();
+				if (!chatId) return state.chatOptions.systemPrompt;
+				return state.systemPrompts[chatId] || state.chatOptions.systemPrompt;
+			},
 
 			// Models
 			availableModels: [],
@@ -131,6 +150,7 @@ export const useChatStore = create<ChatState>()(
 			storage: createJSONStorage(() => localStorage),
 			partialize: (state) => ({
 				chatOptions: state.chatOptions,
+				systemPrompts: state.systemPrompts,
 				// Don't store messages or available models in persisted state
 				// as they're already managed separately
 			}),

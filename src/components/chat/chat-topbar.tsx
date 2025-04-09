@@ -86,10 +86,12 @@ ModelSelector.displayName = "ModelSelector";
  */
 const SettingsButton = memo(({
   chatOptions,
-  setChatOptions
+  setChatOptions,
+  currentChatId
 }: {
   chatOptions: any;
   setChatOptions: (options: any) => void;
+  currentChatId: string;
 }) => (
   <Dialog>
     <TooltipProvider>
@@ -184,6 +186,7 @@ const ChatTopbar = memo(({
         <SettingsButton
           chatOptions={chatOptions}
           setChatOptions={setChatOptions}
+          currentChatId={currentChatId}
         />
       </div>
 

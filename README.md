@@ -20,6 +20,7 @@ This project aims to be the easiest way for you to get started with LLMs. No ted
 - **Code syntax highligting:** Messages that include code, will be highlighted for easy access.
 - **Copy codeblocks easily:** Easily copy the highlighted code with one click.
 - **Chat history:** Chats are saved and easily accessed.
+- **Persistent system prompts:** Each chat can have its own system prompt that is saved automatically.
 - **Light & Dark mode:** Switch between light & dark mode.
 
 # Preview
