@@ -60,8 +60,7 @@ const AssistantMessage = memo(({
   <div className="flex flex-col flex-1 min-w-0 overflow-hidden w-full">
     <div className="font-semibold pb-2">Assistant</div>
     <div className="break-words overflow-hidden w-full">
-      <span className="whitespace-pre-wrap w-full inline-block">
-        <MessageFormatter content={content} />
+      <MessageFormatter content={content} />
         {isLoading && isLastMessage && (
           <span
             className="animate-pulse inline-block w-6 text-center"
@@ -70,7 +69,6 @@ const AssistantMessage = memo(({
             ...
           </span>
         )}
-      </span>
     </div>
   </div>
 ));
