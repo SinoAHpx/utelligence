@@ -30,6 +30,8 @@ export interface ChartTypeDefinition {
 	description: string;
 	requiresColumns: number;
 	requiresAxis: boolean;
+	maxDataPoints?: number;
+	colorDescription?: string;
 }
 
 // Chart type options for display
@@ -40,6 +42,9 @@ export const CHART_TYPES: ChartTypeDefinition[] = [
 		description: "适合展示分类数据对比",
 		requiresColumns: 2,
 		requiresAxis: true,
+		maxDataPoints: 50,
+		colorDescription:
+			"<span class='text-blue-600 font-medium'>最多展示50个数据点</span>，需要选择2列数据作为X轴和Y轴。",
 	},
 	{
 		id: "line",
@@ -47,6 +52,9 @@ export const CHART_TYPES: ChartTypeDefinition[] = [
 		description: "适合展示连续数据的趋势",
 		requiresColumns: 2,
 		requiresAxis: true,
+		maxDataPoints: 100,
+		colorDescription:
+			"<span class='text-green-600 font-medium'>最多展示100个数据点</span>，需要选择2列数据作为X轴和Y轴。",
 	},
 	{
 		id: "area",
@@ -54,6 +62,9 @@ export const CHART_TYPES: ChartTypeDefinition[] = [
 		description: "适合展示数量随时间的变化趋势",
 		requiresColumns: 2,
 		requiresAxis: true,
+		maxDataPoints: 100,
+		colorDescription:
+			"<span class='text-purple-600 font-medium'>最多展示100个数据点</span>，需要选择2列数据作为X轴和Y轴。",
 	},
 	{
 		id: "pie",
@@ -61,6 +72,9 @@ export const CHART_TYPES: ChartTypeDefinition[] = [
 		description: "适合展示比例分布",
 		requiresColumns: 1,
 		requiresAxis: false,
+		maxDataPoints: 10,
+		colorDescription:
+			"<span class='text-red-600 font-medium'>最多展示10个数据点</span>，需要选择1列数据，自动合并和计算比例。",
 	},
 	{
 		id: "scatter",
@@ -68,12 +82,18 @@ export const CHART_TYPES: ChartTypeDefinition[] = [
 		description: "适合展示数据分布和相关性",
 		requiresColumns: 2,
 		requiresAxis: true,
+		maxDataPoints: 50,
+		colorDescription:
+			"<span class='text-amber-600 font-medium'>最多展示50个数据点</span>，需要选择2列数据作为X轴和Y轴。",
 	},
 	{
 		id: "radar",
 		name: "雷达图",
 		description: "适合多维度数据比较",
-		requiresColumns: 2,
+		requiresColumns: 3,
 		requiresAxis: true,
+		maxDataPoints: 10,
+		colorDescription:
+			"<span class='text-emerald-600 font-medium'>最多展示10个数据项</span>，需要选择至少3列数据作为多维比较指标。",
 	},
 ];

@@ -9,32 +9,61 @@ interface RadarChartProps {
     chartData: ChartDataItem[];
     xAxisColumn: string;
     yAxisColumn: string;
+    columns?: string[]; // 添加 columns 属性以支持多列数据
 }
 
 export const RadarChartComponent: React.FC<RadarChartProps> = ({
     title,
     chartData,
     xAxisColumn,
-    yAxisColumn
+    yAxisColumn,
+    columns = []
 }) => {
     // 定义类型帮助处理索引访问
     interface DataItem {
         [key: string]: string | number | null | undefined;
     }
 
-    // 处理雷达图数据
-    const radarData = chartData.slice(0, 8).map((item) => {
-        const typedItem = item as DataItem;
-        const subjectValue = typedItem[xAxisColumn];
-        const numericValue = typedItem[yAxisColumn];
-        return {
-            subject: String(subjectValue || "未知"),
-            value: Number(numericValue || 0),
-            fullMark: Math.max(...chartData.map((d) => {
-                const typedD = d as DataItem;
-                return Number(typedD[yAxisColumn] || 0);
-            })) * 1.2
+    // 确定要使用的列
+    // 如果提供了columns且长度>=3，则使用columns；否则使用xAxisColumn和yAxisColumn
+    const useMultipleColumns = columns.length >= 3;
+    const categoryColumn = useMultipleColumns ? columns[0] : xAxisColumn;
+    const dataColumns = useMultipleColumns
+        ? columns.slice(1)
+        : [yAxisColumn];
+
+    // 提取雷达图的唯一类别
+    const categories = [...new Set(
+        chartData.slice(0, 10).map(item => String((item as DataItem)[categoryColumn] || "未知"))
+    )];
+
+    // 处理雷达图数据 - 每个类别作为一个数据点
+    const radarData = categories.map(category => {
+        // 创建基本对象，带有类别名
+        const dataPoint: Record<string, string | number> = {
+            subject: category
         };
+
+        // 对于每个数据列，计算该类别的平均值
+        dataColumns.forEach(colName => {
+            // 找到所有匹配该类别的行
+            const matchingRows = chartData.filter(
+                item => String((item as DataItem)[categoryColumn]) === category
+            );
+
+            // 计算该列在这个类别下的平均值
+            if (matchingRows.length > 0) {
+                const sum = matchingRows.reduce(
+                    (acc, row) => acc + Number((row as DataItem)[colName] || 0),
+                    0
+                );
+                dataPoint[colName] = sum / matchingRows.length;
+            } else {
+                dataPoint[colName] = 0;
+            }
+        });
+
+        return dataPoint;
     });
 
     return (
@@ -42,7 +71,10 @@ export const RadarChartComponent: React.FC<RadarChartProps> = ({
             <CardHeader className="pb-2">
                 <CardTitle className="text-sm">{title}</CardTitle>
                 <CardDescription className="text-xs">
-                    分类: {xAxisColumn}, 值: {yAxisColumn}
+                    {useMultipleColumns
+                        ? `分类: ${categoryColumn}, 维度: ${dataColumns.join(', ')}`
+                        : `分类: ${xAxisColumn}, 值: ${yAxisColumn}`
+                    }
                 </CardDescription>
             </CardHeader>
             <CardContent className="h-[340px]">
@@ -51,13 +83,18 @@ export const RadarChartComponent: React.FC<RadarChartProps> = ({
                         <PolarGrid />
                         <PolarAngleAxis dataKey="subject" />
                         <PolarRadiusAxis />
-                        <Radar
-                            name={yAxisColumn}
-                            dataKey="value"
-                            stroke={getChartColor(0)}
-                            fill={getChartColor(0)}
-                            fillOpacity={0.6}
-                        />
+
+                        {dataColumns.map((column, index) => (
+                            <Radar
+                                key={column}
+                                name={column}
+                                dataKey={column}
+                                stroke={getChartColor(index)}
+                                fill={getChartColor(index)}
+                                fillOpacity={0.6}
+                            />
+                        ))}
+
                         <Tooltip />
                         <Legend />
                     </RadarChart>

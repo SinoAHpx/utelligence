@@ -12,6 +12,11 @@ export const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
     selectedChartType,
     onChartTypeChange,
 }) => {
+    // 获取当前选择的图表类型定义
+    const selectedChartTypeDef = CHART_TYPES.find(
+        (type) => type.id === selectedChartType
+    );
+
     return (
         <div className="space-y-2">
             <Label>选择图表类型</Label>
@@ -28,11 +33,20 @@ export const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
                 ))}
             </div>
 
-            <div className="mt-1 text-xs text-muted-foreground">
-                {selectedChartType === "pie" ? (
-                    <p>饼图只需选择一列数据，将展示各个值的占比分布</p>
+            <div className="mt-2 p-3 border rounded-md bg-gray-50 dark:bg-gray-800">
+                {selectedChartTypeDef ? (
+                    <>
+                        <h4 className="text-sm font-medium mb-1">{selectedChartTypeDef.name}</h4>
+                        <p className="text-xs text-muted-foreground mb-2">{selectedChartTypeDef.description}</p>
+                        {selectedChartTypeDef.colorDescription && (
+                            <div
+                                className="text-xs"
+                                dangerouslySetInnerHTML={{ __html: selectedChartTypeDef.colorDescription }}
+                            />
+                        )}
+                    </>
                 ) : (
-                    <p>此类型图表需要选择两列数据，分别作为X轴和Y轴</p>
+                    <p className="text-xs text-muted-foreground">请选择一个图表类型</p>
                 )}
             </div>
         </div>

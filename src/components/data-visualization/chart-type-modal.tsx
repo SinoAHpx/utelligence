@@ -54,20 +54,23 @@ export default function ChartTypeModal({
               key={type.id}
               onClick={() => setSelectedType(type.id)}
               className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-colors ${selectedType === type.id
-                  ? "border-primary bg-primary/10 dark:bg-primary/20"
-                  : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                ? "border-primary bg-primary/10 dark:bg-primary/20"
+                : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
             >
               <span className="text-2xl mb-2">{CHART_ICONS[type.id]}</span>
               <span
                 className={`text-sm font-medium ${selectedType === type.id
-                    ? "text-primary dark:text-primary"
-                    : "text-gray-700 dark:text-gray-300"
+                  ? "text-primary dark:text-primary"
+                  : "text-gray-700 dark:text-gray-300"
                   }`}
               >
                 {type.name}
               </span>
               <span className="text-xs text-gray-500 mt-1">{type.description}</span>
+              {type.colorDescription && (
+                <div className="mt-2 text-xs" dangerouslySetInnerHTML={{ __html: type.colorDescription }} />
+              )}
             </button>
           ))}
         </div>

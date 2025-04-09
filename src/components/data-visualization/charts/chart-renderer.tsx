@@ -71,6 +71,19 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
         );
     }
 
+    // 雷达图需要多列数据（至少3列）
+    if (chartType === "radar" && columns.length >= 3) {
+        return (
+            <RadarChartComponent
+                title={title}
+                chartData={chartData}
+                xAxisColumn={xAxisColumn || columns[0]}
+                yAxisColumn={yAxisColumn || columns[1]}
+                columns={columns}
+            />
+        );
+    }
+
     // 对于需要x轴和y轴的图表
     if (chartType !== "pie" && xAxisColumn && yAxisColumn) {
         return (

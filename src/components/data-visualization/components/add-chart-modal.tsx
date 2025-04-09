@@ -40,6 +40,22 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
 
     const [validationError, setValidationError] = useState<string>("");
     const [duplicateValueHandling, setDuplicateValueHandling] = useState<"merge" | "keep">("merge");
+    const [maxColumns, setMaxColumns] = useState<number>(2);
+
+    // 当图表类型改变时，更新最大列数
+    useEffect(() => {
+        const chartTypeDef = CHART_TYPES.find(type => type.id === selectedChartType);
+        if (chartTypeDef) {
+            setMaxColumns(chartTypeDef.requiresColumns);
+
+            // 如果已选择的列超过了当前图表类型允许的列数，则裁剪选择
+            if (selectedColumnsForChart.length > chartTypeDef.requiresColumns) {
+                setSelectedColumnsForChart(
+                    selectedColumnsForChart.slice(0, chartTypeDef.requiresColumns)
+                );
+            }
+        }
+    }, [selectedChartType, selectedColumnsForChart, setSelectedColumnsForChart]);
 
     // 处理打开对话框
     useEffect(() => {
@@ -64,8 +80,11 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
             if (xAxisColumn === column) setXAxisColumn("");
             if (yAxisColumn === column) setYAxisColumn("");
         } else {
-            // 如果已选择了2列，则不再添加
-            if (selectedColumnsForChart.length >= 2) {
+            const chartTypeDef = CHART_TYPES.find(type => type.id === selectedChartType);
+            const requiredColumns = chartTypeDef?.requiresColumns || 2;
+
+            // 如果已选择的列达到了最大数量，则不再添加
+            if (selectedColumnsForChart.length >= requiredColumns) {
                 return;
             }
 
@@ -102,17 +121,15 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
         }
 
         // 验证列数
-        if (selectedColumnsForChart.length !== chartTypeDef.requiresColumns) {
+        if (selectedColumnsForChart.length < chartTypeDef.requiresColumns) {
             setValidationError(
-                chartTypeDef.id === "pie"
-                    ? "饼图只需要选择一列数据"
-                    : "此类型图表需要选择两列数据"
+                `${chartTypeDef.name}需要选择${chartTypeDef.requiresColumns}列数据`
             );
             return false;
         }
 
         // 验证坐标轴
-        if (chartTypeDef.requiresAxis && (!xAxisColumn || !yAxisColumn)) {
+        if (chartTypeDef.requiresAxis && selectedColumnsForChart.length >= 2 && (!xAxisColumn || !yAxisColumn)) {
             setValidationError("此类型图表需要指定X轴和Y轴");
             return false;
         }
@@ -172,14 +189,16 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
         setDuplicateValueHandling("merge");
     };
 
+    // 获取当前选择的图表类型定义
+    const currentChartType = CHART_TYPES.find(type => type.id === selectedChartType);
+    const requiresAxis = currentChartType?.requiresAxis || false;
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                     <DialogTitle>添加可视化图表</DialogTitle>
-                    <DialogDescription>
-                        选择需要可视化的数据列和图表类型（最多选择2列数据）
-                    </DialogDescription>
+
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
@@ -224,7 +243,7 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
 
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <Label>选择数据列 {selectedColumnsForChart.length > 0 && `(已选择 ${selectedColumnsForChart.length}/2)`}</Label>
+                            <Label>选择数据列 {selectedColumnsForChart.length > 0 && `(已选择 ${selectedColumnsForChart.length}/${maxColumns})`}</Label>
                             {columnsVisualizableStatus.some(col => !col.isVisualizable) && (
                                 <div className="flex items-center text-amber-500 text-xs">
                                     <AlertCircle size={14} className="mr-1" />
@@ -237,7 +256,7 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
                             columns={availableColumns}
                             selectedColumns={selectedColumnsForChart}
                             onColumnToggle={handleColumnToggle}
-                            maxColumns={2}
+                            maxColumns={maxColumns}
                             columnsVisualizableStatus={columnsVisualizableStatus}
                         />
 
@@ -249,8 +268,8 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
                         )}
                     </div>
 
-                    {/* X轴和Y轴选择器（仅在选择了两列且不是饼图时显示） */}
-                    {selectedColumnsForChart.length === 2 && selectedChartType !== "pie" && (
+                    {/* X轴和Y轴选择器（仅在选择了两列或以上且需要坐标轴时显示） */}
+                    {selectedColumnsForChart.length >= 2 && requiresAxis && (
                         <AxisSelector
                             columns={selectedColumnsForChart}
                             xAxisColumn={xAxisColumn}
