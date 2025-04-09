@@ -29,7 +29,7 @@ const MessageFormatter: FC<MessageFormatterProps> = ({ content, className }) => 
 
   return (
     <div className={cn("max-w-none", className)}>
-      <article className='prose dark:prose-invert prose-p:leading-relaxed prose-pre:p-0 max-w'>
+      <article className='prose dark:prose-invert prose-p:leading-relaxed prose-pre:p-0'>
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={markdownComponents}
