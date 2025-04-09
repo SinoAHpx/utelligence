@@ -42,6 +42,10 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
     const [duplicateValueHandling, setDuplicateValueHandling] = useState<"merge" | "keep">("merge");
     const [maxColumns, setMaxColumns] = useState<number>(2);
 
+    // 获取当前选择的图表类型定义
+    const currentChartType = CHART_TYPES.find(type => type.id === selectedChartType);
+    const requiresAxis = currentChartType?.requiresAxis || false;
+
     // 当图表类型改变时，更新最大列数
     useEffect(() => {
         const chartTypeDef = CHART_TYPES.find(type => type.id === selectedChartType);
@@ -56,6 +60,35 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
             }
         }
     }, [selectedChartType, selectedColumnsForChart, setSelectedColumnsForChart]);
+
+    // 当选择的列发生变化时，自动选择x轴和y轴
+    useEffect(() => {
+        // 如果是饼图或不需要坐标轴的图表，不需要设置
+        const chartTypeDef = CHART_TYPES.find(type => type.id === selectedChartType);
+        if (!chartTypeDef || !chartTypeDef.requiresAxis) {
+            return;
+        }
+
+        // 如果有足够的列进行选择
+        if (selectedColumnsForChart.length >= 2) {
+            // 重置或初始设置X轴和Y轴
+            if (!xAxisColumn || !selectedColumnsForChart.includes(xAxisColumn)) {
+                setXAxisColumn(selectedColumnsForChart[0]);
+            }
+
+            // 为Y轴选择一个不同于X轴的列
+            if (!yAxisColumn || !selectedColumnsForChart.includes(yAxisColumn) || yAxisColumn === xAxisColumn) {
+                const otherColumn = selectedColumnsForChart.find(col => col !== xAxisColumn);
+                if (otherColumn) {
+                    setYAxisColumn(otherColumn);
+                }
+            }
+        } else {
+            // 如果列不足，清除坐标轴选择
+            setXAxisColumn("");
+            setYAxisColumn("");
+        }
+    }, [selectedColumnsForChart, selectedChartType, xAxisColumn, yAxisColumn, setXAxisColumn, setYAxisColumn]);
 
     // 处理打开对话框
     useEffect(() => {
@@ -189,16 +222,19 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
         setDuplicateValueHandling("merge");
     };
 
-    // 获取当前选择的图表类型定义
-    const currentChartType = CHART_TYPES.find(type => type.id === selectedChartType);
-    const requiresAxis = currentChartType?.requiresAxis || false;
-
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                     <DialogTitle>添加可视化图表</DialogTitle>
-
+                    <DialogDescription>
+                        选择需要可视化的数据列和图表类型
+                        {currentChartType && (
+                            <span className="ml-1">
+                                （{currentChartType.name}需要选择{currentChartType.requiresColumns}列数据）
+                            </span>
+                        )}
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">

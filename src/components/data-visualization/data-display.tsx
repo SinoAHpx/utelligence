@@ -270,9 +270,9 @@ export default function DataDisplay({
                   onRemoveChart={removeChart}
                 />
                 <Button
-                  variant="destructive"
+                  variant="ghost"
                   size="icon"
-                  className="absolute top-2 right-2 h-6 w-6"
+                  className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-destructive"
                   onClick={() => removeChart(chart.id)}
                   aria-label="删除图表"
                 >

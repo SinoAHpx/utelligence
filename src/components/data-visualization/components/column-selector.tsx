@@ -21,7 +21,7 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
     columnsVisualizableStatus = [],
 }) => {
     return (
-        <div className="max-h-60 overflow-auto border rounded-md p-3 space-y-2">
+        <div className="max-h-32 sm:max-h-24 overflow-auto border rounded-md p-3 space-y-2">
             {columns.map((column) => {
                 const colStatus = columnsVisualizableStatus.find(s => s.column === column);
                 const isVisualizable = colStatus ? colStatus.isVisualizable : true;
