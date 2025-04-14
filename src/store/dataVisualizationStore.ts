@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { ChartConfig, ChartDataItem } from "@/types/chart-types";
-import { FileData } from "@/utils/data-processing";
+import {
+	FileData,
+	processFileData,
+	analyzeColumnData,
+} from "@/utils/data-processing";
+import { processAndAnalyzeFileData } from "@/utils/data-visualization-helpers";
 
 /**
  * Column visualizability status configuration
@@ -57,6 +62,16 @@ interface DataVisualizationState {
 	// Column visualization status
 	columnsVisualizableStatus: ColumnVisualizableConfig[];
 	setColumnsVisualizableStatus: (status: ColumnVisualizableConfig[]) => void;
+
+	// File processing state
+	isFileLoading: boolean;
+	fileError: string | null;
+
+	// Actions
+	processAndAnalyzeFile: (
+		file: File,
+		columnsToAnalyze: string[],
+	) => Promise<void>;
 }
 
 /**
@@ -65,7 +80,7 @@ interface DataVisualizationState {
  */
 export const useDataVisualizationStore = create<DataVisualizationState>()(
 	persist(
-		(set) => ({
+		(set, get) => ({
 			// Raw file data
 			rawFileData: null,
 			setRawFileData: (data) => set({ rawFileData: data }),
@@ -109,6 +124,53 @@ export const useDataVisualizationStore = create<DataVisualizationState>()(
 			columnsVisualizableStatus: [],
 			setColumnsVisualizableStatus: (status) =>
 				set({ columnsVisualizableStatus: status }),
+
+			// File processing state
+			isFileLoading: false,
+			fileError: null,
+
+			// --- Actions ---
+			processAndAnalyzeFile: async (file, columnsToAnalyze) => {
+				// Set initial loading state and clear previous data/errors
+				set({
+					isFileLoading: true,
+					fileError: null,
+					rawFileData: null,
+					columnsVisualizableStatus: [],
+					processedFile: null, // Clear processed file info too
+				});
+
+				try {
+					// Call the extracted helper function
+					const { rawData, columnsVisualizableStatus } =
+						await processAndAnalyzeFileData(file, columnsToAnalyze);
+
+					// Update store with results on success
+					set({
+						rawFileData: rawData,
+						columnsVisualizableStatus: columnsVisualizableStatus,
+						processedFile: { name: file.name, size: file.size },
+						fileError: null, // Ensure error is cleared on success
+					});
+				} catch (error: any) {
+					// Handle errors thrown by the helper function
+					console.error(
+						"Error during processAndAnalyzeFile store action:",
+						error,
+					);
+					set({
+						fileError:
+							error.message ||
+							"An unknown error occurred during file processing.",
+						rawFileData: null, // Clear data on error
+						columnsVisualizableStatus: [],
+						processedFile: null,
+					});
+				} finally {
+					// Ensure loading state is reset regardless of success or failure
+					set({ isFileLoading: false });
+				}
+			},
 		}),
 		{
 			name: "data-visualization-storage",

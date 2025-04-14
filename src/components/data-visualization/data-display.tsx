@@ -1,22 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Papa from "papaparse";
-import * as XLSX from "xlsx";
 import { PlusCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
-import { ColumnVisualizableConfig } from "@/store/dataVisualizationStore";
-import { ChartDataItem, CHART_TYPES } from "@/types/chart-types";
-import { getChartColor } from "@/constants/chart-colors";
-import {
-  processFileData,
-  CellValue,
-  FileRow,
-  FileData,
-  analyzeColumnData,
-} from "@/utils/data-processing";
 import ChartRenderer from "./charts/chart-renderer";
 import AddChartModal from "./components/add-chart-modal";
 
@@ -37,153 +25,77 @@ interface DataDisplayProps {
 export default function DataDisplay({
   file,
   selectedColumns,
-  availableColumns,
-  onColumnSelectionChange,
 }: DataDisplayProps) {
   // Get state from Zustand store
   const {
     userCharts,
-    addChart,
     removeChart,
-    selectedChartType,
     setSelectedChartType,
-    selectedColumnsForChart,
     setSelectedColumnsForChart,
-    chartTitle,
     setChartTitle,
-    xAxisColumn,
     setXAxisColumn,
-    yAxisColumn,
     setYAxisColumn,
     processedFile,
-    setProcessedFile,
-    columnsVisualizableStatus,
-    setColumnsVisualizableStatus,
-    rawFileData,
+    isFileLoading,
+    fileError,
+    processAndAnalyzeFile,
     setRawFileData,
+    setProcessedFile,
+    setColumnsVisualizableStatus,
   } = useDataVisualizationStore();
 
-  // Local state
-  const [loading, setLoading] = useState<boolean>(false);
+  // Local state only for modal open/close
   const [addChartModalOpen, setAddChartModalOpen] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // 当选择的文件改变时处理数据
+  // Simplified useEffect to trigger file processing via store action
   useEffect(() => {
     if (file) {
-      // 检查文件是否已经处理过
+      // Check if the file needs processing (based on processedFile state)
       const fileSignature = `${file.name}-${file.size}`;
       const processedSignature = processedFile
         ? `${processedFile.name}-${processedFile.size}`
         : "";
 
       if (fileSignature !== processedSignature) {
-        setProcessedFile({ name: file.name, size: file.size });
-        setLoading(true);
-        setError(null);
-        setRawFileData(null);
-
-        // Use the shared processFileData utility to get raw data
-        processFileData(
-          file,
-          (rawData) => {
-            setRawFileData(rawData);
-            setLoading(false);
-            if (availableColumns.length > 0) {
-              checkColumnsVisualizable(rawData.headers, rawData.rows as any[]);
-            }
-          },
-          (errorMsg) => {
-            setError(errorMsg);
-            setLoading(false);
-            setRawFileData(null);
-          }
-        );
+        // Call the store action to handle processing and analysis
+        // We pass `selectedColumns` here to tell the action *which* columns to analyze
+        processAndAnalyzeFile(file, selectedColumns);
       }
     } else {
+      // Clear relevant state if file is removed
       setRawFileData(null);
       setProcessedFile(null);
       setColumnsVisualizableStatus([]);
+      // Optionally reset chart creation state too?
     }
-  }, [file, processedFile, setProcessedFile, setRawFileData, availableColumns]);
-
-  /**
-   * 检查列是否适合可视化
-   * 分析数据分布特征，确定列是否适合可视化
-   */
-  const checkColumnsVisualizable = React.useCallback(async (
-    headers: string[],
-    rows: any[]
-  ) => {
-    if (!headers || headers.length === 0 || !rows || rows.length === 0 || availableColumns.length === 0) return;
-
-    try {
-      const newStatus: ColumnVisualizableConfig[] = [];
-      analyzeColumnsForVisualization(headers, rows, newStatus, availableColumns);
-      setColumnsVisualizableStatus(newStatus);
-    } catch (err) {
-      console.error("分析列可视化状态失败:", err);
-      setError("Failed to analyze column visualization status.");
-    }
-  }, [setColumnsVisualizableStatus, availableColumns]);
-
-  /**
-   * 分析列数据分布特征
-   */
-  const analyzeColumnsForVisualization = (
-    headers: string[],
-    rows: any[],
-    newStatus: ColumnVisualizableConfig[],
-    columnsToAnalyze: string[]
-  ) => {
-    // 分析每一列
-    for (const colName of columnsToAnalyze) {
-      const colIndex = headers.indexOf(colName);
-      if (colIndex === -1) continue;
-
-      // 提取该列所有值
-      const columnData = rows.map(row => row[colIndex]);
-
-      // Use the shared analyzeColumnData utility
-      const analysis = analyzeColumnData(columnData, colName);
-
-      newStatus.push({
-        column: colName,
-        isVisualizable: analysis.isCategorical || analysis.isNumeric,
-        uniqueValues: analysis.uniqueValues,
-        totalValues: analysis.totalValues,
-        reason: !analysis.isValidForVisualization
-          ? analysis.uniqueValues <= 1
-            ? "数据值单一或过少"
-            : "唯一值占比过高，可能为ID列"
-          : undefined
-      });
-    }
-  };
-
-  // 当 availableColumns 更新时，如果 rawFileData 存在，重新检查可视化状态
-  useEffect(() => {
-    if (rawFileData && availableColumns.length > 0) {
-      checkColumnsVisualizable(rawFileData.headers, rawFileData.rows as any[]);
-    }
-  }, [availableColumns, rawFileData, checkColumnsVisualizable]);
+    // Dependency array: re-run if the file object changes or the list of selected columns changes
+  }, [file, selectedColumns, processedFile, processAndAnalyzeFile, setRawFileData, setProcessedFile, setColumnsVisualizableStatus]);
 
   // 打开添加图表对话框
   const openAddChartModal = () => {
-    if (!rawFileData) {
-      setError("Please wait for the data to be processed before adding charts.");
+    // Check for fileError from the store instead of rawFileData presence
+    if (fileError) {
+      // Maybe show a toast or keep the error message displayed?
+      console.error("Cannot open add chart modal due to file error:", fileError);
+      return; // Prevent opening modal if there's a file error
+    }
+    if (isFileLoading) {
+      console.warn("Data is still loading, please wait.");
+      // Optionally disable the add button while loading
       return;
     }
+
     setAddChartModalOpen(true);
+    // Reset temporary chart config state in the store when modal opens
     setSelectedColumnsForChart([]);
     setSelectedChartType("bar");
     setChartTitle("");
     setXAxisColumn("");
     setYAxisColumn("");
-    checkColumnsVisualizable(rawFileData.headers, rawFileData.rows as any[]);
+    // No need to call checkColumnsVisualizable here, status is updated by the store action
   };
 
-  // Render loading and error states
+  // Render loading and error states based on store state
   if (!file) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -192,18 +104,20 @@ export default function DataDisplay({
     );
   }
 
-  if (loading) {
+  if (isFileLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-gray-500 dark:text-gray-400">加载中...</p>
+        <p className="text-gray-500 dark:text-gray-400">正在处理文件...</p>
       </div>
     );
   }
 
-  if (error) {
+  if (fileError) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-red-500 dark:text-red-400">{error}</p>
+      <div className="flex flex-col items-center justify-center h-full p-4">
+        <p className="text-red-500 dark:text-red-400 mb-4">文件处理失败:</p>
+        <p className="text-red-400 dark:text-red-300 text-sm bg-red-900/20 p-2 rounded">{fileError}</p>
+        {/* Optionally add a button to clear the error or re-upload */}
       </div>
     );
   }
@@ -212,7 +126,7 @@ export default function DataDisplay({
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-gray-500 dark:text-gray-400">
-          请在文件预览选项卡中选择至少一列数据
+          请在文件预览选项卡中选择至少一列数据进行可视化
         </p>
       </div>
     );
@@ -253,6 +167,7 @@ export default function DataDisplay({
             <Button
               onClick={openAddChartModal}
               className="flex items-center gap-2"
+              disabled={isFileLoading || !!fileError}
             >
               <PlusCircle size={16} />
               <span>添加可视化图表</span>
@@ -267,6 +182,7 @@ export default function DataDisplay({
               variant="default"
               className="flex items-center gap-2"
               size="sm"
+              disabled={isFileLoading || !!fileError}
             >
               <PlusCircle size={16} />
               <span>添加图表</span>
