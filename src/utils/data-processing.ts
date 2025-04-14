@@ -160,6 +160,8 @@ export const processFileData = async (
  * @param config Basic chart config with xAxisColumn and yAxisColumn selected
  * @returns An object containing processed data, layout type, and relevant keys for Recharts
  */
+const MAX_Y_CATEGORIES_FOR_BAR_CHART = 10; // Define a threshold
+
 export const processBarChartData = (
 	rawData: { headers: string[]; rows: FileData },
 	config: Pick<ChartConfig, "xAxisColumn" | "yAxisColumn">,
@@ -186,6 +188,15 @@ export const processBarChartData = (
 
 	if (yAxisAnalysis.isEmpty) {
 		return { error: `Y-axis column '${yAxisColumn}' contains no valid data.` };
+	}
+
+	// Add check for excessive unique values on Y-axis for bar charts
+	if (yAxisAnalysis.uniqueValues > MAX_Y_CATEGORIES_FOR_BAR_CHART) {
+		return {
+			error:
+				`Y-axis column '${yAxisColumn}' has too many unique values (${yAxisAnalysis.uniqueValues}) ` +
+				`for a bar chart. Maximum allowed is ${MAX_Y_CATEGORIES_FOR_BAR_CHART}.`,
+		};
 	}
 
 	// Group data by X-axis values
