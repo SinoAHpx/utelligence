@@ -31,16 +31,10 @@ const CHART_COMPONENTS: Record<ChartType, React.FC<any>> = {
  * Handles different chart types and their specific data requirements
  */
 export const ChartRenderer: React.FC<ChartRendererProps> = ({
-    chartConfig,
-    onRemoveChart,
+    chartConfig
 }) => {
     const {
-        chartType,
-        columns,
-        title,
-        xAxisColumn,
-        yAxisColumn,
-        duplicateValueHandling = "merge"
+        chartType
     } = chartConfig;
 
     // Get the appropriate chart component based on type
@@ -77,55 +71,6 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
     // --- Pass the full chartConfig to the specific component ---
     // The specific component (e.g., BarChartComponent) will handle its props
     return <ChartComponent chartConfig={chartConfig} />;
-
-    /* --- Old Logic (for reference, now handled within specific components) ---
-    // 饼图只需要一列数据
-    if (chartType === "pie" && columns.length > 0) {
-        const dataColumn = columns[0];
-        return (
-            <PieChartComponent
-                title={title}
-                chartData={chartData} // Needs update if PieChart uses processedData
-                dataColumn={dataColumn}
-                duplicateValueHandling={duplicateValueHandling}
-            />
-        );
-    }
-
-    // 雷达图需要多列数据（至少3列）
-    if (chartType === "radar" && columns.length >= 3) {
-        return (
-            <RadarChartComponent
-                title={title}
-                chartData={chartData} // Needs update
-                xAxisColumn={xAxisColumn || columns[0]}
-                yAxisColumn={yAxisColumn || columns[1]}
-                columns={columns}
-            />
-        );
-    }
-
-    // 对于需要x轴和y轴的图表
-    if (chartType !== "pie" && xAxisColumn && yAxisColumn) {
-        return (
-            <ChartComponent
-                title={title}
-                chartData={chartData} // Needs update
-                xAxisColumn={xAxisColumn}
-                yAxisColumn={yAxisColumn}
-            />
-        );
-    }
-
-    // 配置不完整
-    return (
-        <Card className="h-[400px]">
-            <CardContent className="flex items-center justify-center h-full p-4">
-                图表配置不完整，请检查X轴和Y轴设置
-            </CardContent>
-        </Card>
-    );
-    */
 };
 
 export default ChartRenderer; 

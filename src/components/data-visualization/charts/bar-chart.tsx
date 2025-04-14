@@ -38,7 +38,8 @@ export const BarChartComponent: React.FC<BarChartComponentProps> = ({
 
     const displayTitle = title || "Bar Chart";
 
-    const dataToRender = processedData?.slice(0, 50) ?? [];
+    const dataToRender = processedData?.slice(0, 100) ?? [];
+    console.log(processedData)
 
     if (!processedData || dataToRender.length === 0) {
         return (
