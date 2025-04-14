@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { ChartConfig, ChartDataItem } from "@/types/chart-types";
+import { FileData } from "@/utils/data-processing";
 
 /**
  * Column visualizability status configuration
@@ -19,9 +20,13 @@ export interface ColumnVisualizableConfig {
  * Manages all state related to the data visualization features
  */
 interface DataVisualizationState {
-	// Chart data
-	chartData: ChartDataItem[];
-	setChartData: (data: ChartDataItem[]) => void;
+	// Raw data from the uploaded file
+	rawFileData: { headers: string[]; rows: FileData } | null;
+	setRawFileData: (data: { headers: string[]; rows: FileData } | null) => void;
+
+	// Chart data (REMOVED - Each chart config now holds its own data)
+	// chartData: ChartDataItem[];
+	// setChartData: (data: ChartDataItem[]) => void;
 
 	// Chart configurations
 	userCharts: ChartConfig[];
@@ -61,9 +66,13 @@ interface DataVisualizationState {
 export const useDataVisualizationStore = create<DataVisualizationState>()(
 	persist(
 		(set) => ({
-			// Chart data
-			chartData: [],
-			setChartData: (data) => set({ chartData: data }),
+			// Raw file data
+			rawFileData: null,
+			setRawFileData: (data) => set({ rawFileData: data }),
+
+			// Chart data (REMOVED)
+			// chartData: [],
+			// setChartData: (data) => set({ chartData: data }),
 
 			// Chart configurations
 			userCharts: [],

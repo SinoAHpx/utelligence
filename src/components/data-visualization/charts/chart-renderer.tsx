@@ -1,5 +1,5 @@
 import type React from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { ChartConfig, ChartDataItem, ChartType } from "@/types/chart-types";
 import PieChartComponent from "./pie-chart";
 import BarChartComponent from "./bar-chart";
@@ -10,7 +10,6 @@ import RadarChartComponent from "./radar-chart";
 
 interface ChartRendererProps {
     chartConfig: ChartConfig;
-    chartData: ChartDataItem[];
     onRemoveChart?: (chartId: string) => void;
 }
 
@@ -33,7 +32,6 @@ const CHART_COMPONENTS: Record<ChartType, React.FC<any>> = {
  */
 export const ChartRenderer: React.FC<ChartRendererProps> = ({
     chartConfig,
-    chartData,
     onRemoveChart,
 }) => {
     const {
@@ -58,13 +56,36 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
         );
     }
 
+    // Check if the chart has processed data
+    if (!chartConfig.processedData || chartConfig.processedData.length === 0) {
+        return (
+            <Card className="h-[400px]">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{chartConfig.title || chartType}</CardTitle>
+                    <CardDescription className="text-xs">
+                        Waiting for data or configuration...
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex items-center justify-center h-full p-4">
+                    No data processed for this chart yet.
+                    {/* Optionally add a remove button here */}
+                </CardContent>
+            </Card>
+        );
+    }
+
+    // --- Pass the full chartConfig to the specific component ---
+    // The specific component (e.g., BarChartComponent) will handle its props
+    return <ChartComponent chartConfig={chartConfig} />;
+
+    /* --- Old Logic (for reference, now handled within specific components) ---
     // 饼图只需要一列数据
     if (chartType === "pie" && columns.length > 0) {
         const dataColumn = columns[0];
         return (
             <PieChartComponent
                 title={title}
-                chartData={chartData}
+                chartData={chartData} // Needs update if PieChart uses processedData
                 dataColumn={dataColumn}
                 duplicateValueHandling={duplicateValueHandling}
             />
@@ -76,7 +97,7 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
         return (
             <RadarChartComponent
                 title={title}
-                chartData={chartData}
+                chartData={chartData} // Needs update
                 xAxisColumn={xAxisColumn || columns[0]}
                 yAxisColumn={yAxisColumn || columns[1]}
                 columns={columns}
@@ -89,7 +110,7 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
         return (
             <ChartComponent
                 title={title}
-                chartData={chartData}
+                chartData={chartData} // Needs update
                 xAxisColumn={xAxisColumn}
                 yAxisColumn={yAxisColumn}
             />
@@ -104,6 +125,7 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
             </CardContent>
         </Card>
     );
+    */
 };
 
 export default ChartRenderer; 

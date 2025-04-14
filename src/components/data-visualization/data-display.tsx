@@ -10,7 +10,13 @@ import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
 import { ColumnVisualizableConfig } from "@/store/dataVisualizationStore";
 import { ChartDataItem, CHART_TYPES } from "@/types/chart-types";
 import { getChartColor } from "@/constants/chart-colors";
-import { processFileData, CellValue, FileRow, FileData, analyzeColumnData } from "@/utils/data-processing";
+import {
+  processFileData,
+  CellValue,
+  FileRow,
+  FileData,
+  analyzeColumnData,
+} from "@/utils/data-processing";
 import ChartRenderer from "./charts/chart-renderer";
 import AddChartModal from "./components/add-chart-modal";
 
@@ -36,8 +42,6 @@ export default function DataDisplay({
 }: DataDisplayProps) {
   // Get state from Zustand store
   const {
-    chartData,
-    setChartData,
     userCharts,
     addChart,
     removeChart,
@@ -54,7 +58,9 @@ export default function DataDisplay({
     processedFile,
     setProcessedFile,
     columnsVisualizableStatus,
-    setColumnsVisualizableStatus
+    setColumnsVisualizableStatus,
+    rawFileData,
+    setRawFileData,
   } = useDataVisualizationStore();
 
   // Local state
@@ -64,7 +70,7 @@ export default function DataDisplay({
 
   // 当选择的文件改变时处理数据
   useEffect(() => {
-    if (file && selectedColumns.length > 0) {
+    if (file) {
       // 检查文件是否已经处理过
       const fileSignature = `${file.name}-${file.size}`;
       const processedSignature = processedFile
@@ -75,101 +81,106 @@ export default function DataDisplay({
         setProcessedFile({ name: file.name, size: file.size });
         setLoading(true);
         setError(null);
+        setRawFileData(null);
 
-        // Use the shared processFileData utility
+        // Use the shared processFileData utility to get raw data
         processFileData(
           file,
-          selectedColumns,
-          (chartData) => {
-            setChartData(chartData);
+          (rawData) => {
+            setRawFileData(rawData);
             setLoading(false);
+            if (availableColumns.length > 0) {
+              checkColumnsVisualizable(rawData.headers, rawData.rows as any[]);
+            }
           },
           (errorMsg) => {
             setError(errorMsg);
             setLoading(false);
+            setRawFileData(null);
           }
         );
       }
+    } else {
+      setRawFileData(null);
+      setProcessedFile(null);
+      setColumnsVisualizableStatus([]);
     }
-  }, [file, selectedColumns, processedFile, setProcessedFile, setChartData]);
+  }, [file, processedFile, setProcessedFile, setRawFileData, availableColumns]);
 
   /**
    * 检查列是否适合可视化
    * 分析数据分布特征，确定列是否适合可视化
    */
-  const checkColumnsVisualizable = React.useCallback(async () => {
-    if (!file || selectedColumns.length === 0) return;
+  const checkColumnsVisualizable = React.useCallback(async (
+    headers: string[],
+    rows: any[]
+  ) => {
+    if (!headers || headers.length === 0 || !rows || rows.length === 0 || availableColumns.length === 0) return;
 
     try {
-      const fileExtension = file.name.split(".").pop()?.toLowerCase();
       const newStatus: ColumnVisualizableConfig[] = [];
-
-      if (fileExtension === "csv") {
-        const text = await file.text();
-        const result = Papa.parse(text);
-        const headers = result.data[0] as string[];
-        const rows = result.data.slice(1) as string[][];
-
-        analyzeColumnsForVisualization(headers, rows, newStatus);
-      } else if (fileExtension === "xlsx" || fileExtension === "xls") {
-        const arrayBuffer = await file.arrayBuffer();
-        const XLSX = await import('xlsx');
-        const workbook = XLSX.read(arrayBuffer);
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-        const headers = jsonData[0] as string[];
-        const rows = jsonData.slice(1) as FileData;
-
-        analyzeColumnsForVisualization(headers, rows, newStatus);
-      }
+      analyzeColumnsForVisualization(headers, rows, newStatus, availableColumns);
+      setColumnsVisualizableStatus(newStatus);
     } catch (err) {
       console.error("分析列可视化状态失败:", err);
+      setError("Failed to analyze column visualization status.");
     }
-  }, [file, selectedColumns, setColumnsVisualizableStatus]);
+  }, [setColumnsVisualizableStatus, availableColumns]);
 
   /**
    * 分析列数据分布特征
    */
-  const analyzeColumnsForVisualization = (headers: string[], rows: any[], newStatus: ColumnVisualizableConfig[]) => {
+  const analyzeColumnsForVisualization = (
+    headers: string[],
+    rows: any[],
+    newStatus: ColumnVisualizableConfig[],
+    columnsToAnalyze: string[]
+  ) => {
     // 分析每一列
-    for (const colName of selectedColumns) {
+    for (const colName of columnsToAnalyze) {
       const colIndex = headers.indexOf(colName);
       if (colIndex === -1) continue;
 
       // 提取该列所有值
-      const columnData = rows.map(row => row[colIndex]).filter(v => v !== undefined && v !== null && v !== "");
+      const columnData = rows.map(row => row[colIndex]);
 
       // Use the shared analyzeColumnData utility
-      const analysis = analyzeColumnData(columnData);
+      const analysis = analyzeColumnData(columnData, colName);
 
       newStatus.push({
         column: colName,
-        isVisualizable: analysis.isValidForVisualization,
+        isVisualizable: analysis.isCategorical || analysis.isNumeric,
         uniqueValues: analysis.uniqueValues,
-        totalValues: columnData.length,
+        totalValues: analysis.totalValues,
         reason: !analysis.isValidForVisualization
           ? analysis.uniqueValues <= 1
-            ? "数据值过少，不适合可视化"
-            : "唯一值占比过高，不适合可视化"
+            ? "数据值单一或过少"
+            : "唯一值占比过高，可能为ID列"
           : undefined
       });
     }
-
-    setColumnsVisualizableStatus(newStatus);
   };
+
+  // 当 availableColumns 更新时，如果 rawFileData 存在，重新检查可视化状态
+  useEffect(() => {
+    if (rawFileData && availableColumns.length > 0) {
+      checkColumnsVisualizable(rawFileData.headers, rawFileData.rows as any[]);
+    }
+  }, [availableColumns, rawFileData, checkColumnsVisualizable]);
 
   // 打开添加图表对话框
   const openAddChartModal = () => {
+    if (!rawFileData) {
+      setError("Please wait for the data to be processed before adding charts.");
+      return;
+    }
     setAddChartModalOpen(true);
     setSelectedColumnsForChart([]);
     setSelectedChartType("bar");
     setChartTitle("");
     setXAxisColumn("");
     setYAxisColumn("");
-    // 检查列是否可视化
-    checkColumnsVisualizable();
+    checkColumnsVisualizable(rawFileData.headers, rawFileData.rows as any[]);
   };
 
   // Render loading and error states
@@ -266,7 +277,6 @@ export default function DataDisplay({
               <div key={chart.id} className="relative">
                 <ChartRenderer
                   chartConfig={chart}
-                  chartData={chartData}
                   onRemoveChart={removeChart}
                 />
                 <Button
@@ -289,7 +299,6 @@ export default function DataDisplay({
         open={addChartModalOpen}
         onOpenChange={setAddChartModalOpen}
         availableColumns={selectedColumns}
-        onCheckColumnsVisualizable={checkColumnsVisualizable}
       />
     </div>
   );

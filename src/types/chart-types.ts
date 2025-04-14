@@ -12,12 +12,17 @@ export interface ChartProps {
 // Chart configuration type definitions
 export interface ChartConfig {
 	id: string;
-	columns: string[];
-	chartType: string;
+	// columns: string[]; // Keep track of originally selected columns if needed elsewhere
+	chartType: string; // e.g., 'bar', 'line'
 	title: string;
-	xAxisColumn?: string;
-	yAxisColumn?: string;
-	duplicateValueHandling?: "merge" | "keep";
+	xAxisColumn?: string; // Original selected X column name
+	yAxisColumn?: string; // Original selected Y column name
+	// Processed data and layout specific to this chart instance
+	processedData?: ChartDataItem[];
+	layout?: "stacked" | "simple" | "grouped"; // Layout for bar charts
+	yCategories?: string[]; // Keys for stacked bar chart data
+	yKey?: string; // Key for simple/grouped bar chart data (e.g., 'count')
+	// duplicateValueHandling?: "merge" | "keep"; // Keep if relevant for other chart types
 }
 
 // Supported chart types

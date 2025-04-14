@@ -1,199 +1,255 @@
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { ChartDataItem } from "@/types/chart-types";
+import { ChartDataItem, ChartConfig } from "@/types/chart-types";
 
 /**
  * Type definitions for file data
  */
-export type CellValue = string | number;
+// export type CellValue = string | number; // Defined below now to avoid circular dep issue if separated
+// export type FileRow = CellValue[];
+// export type FileData = FileRow[];
+
+/**
+ * Type definitions needed within this file
+ */
+export type CellValue = string | number | null | undefined;
 export type FileRow = CellValue[];
 export type FileData = FileRow[];
 
 /**
- * Process file data from a CSV or Excel file
+ * Analyze column data to determine its characteristics
+ * @param columnData Data for a single column
+ * @param columnName The name of the column
+ * @returns Analysis results including type, uniqueness, and visualization suitability
+ */
+export const analyzeColumnData = (
+	columnData: CellValue[],
+	columnName: string,
+) => {
+	const cleanedData = columnData.filter(
+		(v) => v !== undefined && v !== null && String(v).trim() !== "",
+	);
+	if (cleanedData.length === 0) {
+		return {
+			column: columnName,
+			isEmpty: true,
+			uniqueValues: 0,
+			isNumeric: false,
+			isCategorical: false,
+			isValidForVisualization: false,
+			frequencies: {},
+			uniqueValueList: [],
+			totalValues: 0,
+		};
+	}
+
+	const freqMap: { [key: string]: number } = {};
+	let allNumeric = true;
+	const uniqueSet = new Set<string>();
+
+	for (const value of cleanedData) {
+		const stringValue = String(value).trim();
+		freqMap[stringValue] = (freqMap[stringValue] || 0) + 1;
+		uniqueSet.add(stringValue);
+
+		if (allNumeric && isNaN(Number(stringValue))) {
+			allNumeric = false;
+		}
+	}
+
+	const uniqueCount = uniqueSet.size;
+	const totalValues = cleanedData.length;
+
+	// Heuristics for determining categorical vs. continuous/high-cardinality
+	// Consider a column categorical if it's not all numeric OR if it is numeric but has relatively few unique values.
+	const isCategorical =
+		!allNumeric ||
+		(allNumeric && uniqueCount <= Math.max(15, totalValues * 0.1)); // Adjust threshold as needed
+	const isValidForVisualization =
+		uniqueCount > 1 && uniqueCount < totalValues * 0.9; // Generally, avoid constant or unique-per-row columns
+
+	return {
+		column: columnName,
+		isEmpty: false,
+		uniqueValues: uniqueCount,
+		isNumeric: allNumeric,
+		isCategorical,
+		isValidForVisualization,
+		frequencies: freqMap,
+		uniqueValueList: Array.from(uniqueSet),
+		totalValues,
+	};
+};
+
+/**
+ * Process file data from a CSV or Excel file and store raw data
  * @param file File to process
- * @param selectedColumns Columns to include in the chart data
- * @param onSuccess Callback for successful data processing
+ * @param onSuccess Callback with raw headers and rows
  * @param onError Callback for processing errors
  */
 export const processFileData = async (
 	file: File,
-	selectedColumns: string[],
-	onSuccess: (chartData: ChartDataItem[]) => void,
+	onSuccess: (data: { headers: string[]; rows: FileData }) => void,
 	onError: (error: string) => void,
 ) => {
-	if (!file || selectedColumns.length === 0) {
-		onError("No file or columns selected");
+	if (!file) {
+		onError("No file selected");
 		return;
 	}
 
 	try {
 		const fileExtension = file.name.split(".").pop()?.toLowerCase();
+		let headers: string[] = [];
+		let rows: FileData = [];
 
 		if (fileExtension === "csv") {
-			// Parse CSV file
 			const text = await file.text();
-			Papa.parse(text, {
-				complete: (results) => {
-					const headers = results.data[0] as string[];
-					const rows = results.data.slice(1) as string[][];
-
-					// Create chart data
-					const chartData = createChartData(
-						headers,
-						rows as FileData,
-						selectedColumns,
-					);
-					onSuccess(chartData);
-				},
-				error: (error: { message: string }) => {
-					console.error("Failed to parse CSV file:", error);
-					onError(`Failed to parse CSV file: ${error.message}`);
-				},
+			const results = Papa.parse<string[]>(text, {
+				skipEmptyLines: true,
 			});
+			if (results.errors.length > 0) {
+				throw new Error(
+					`CSV Parsing Error: ${results.errors[0].message} on row ${results.errors[0].row}`,
+				);
+			}
+			if (results.data.length > 0) {
+				headers = results.data[0];
+				rows = results.data.slice(1);
+			} else {
+				throw new Error("CSV file is empty or invalid");
+			}
 		} else if (fileExtension === "xlsx" || fileExtension === "xls") {
-			// Parse Excel file
 			const arrayBuffer = await file.arrayBuffer();
 			const workbook = XLSX.read(arrayBuffer);
 			const firstSheetName = workbook.SheetNames[0];
 			const worksheet = workbook.Sheets[firstSheetName];
-
-			// Convert to JSON
 			const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-			// Extract headers and data
-			const headers = jsonData[0] as string[];
-			const rows = jsonData.slice(1) as FileData;
-
-			// Create chart data
-			const chartData = createChartData(headers, rows, selectedColumns);
-			onSuccess(chartData);
-		} else {
-			console.error("Unsupported file type");
-			onError("Unsupported file type. Please upload a CSV or Excel file.");
-		}
-	} catch (err) {
-		console.error("File parsing error:", err);
-		onError(`Error processing file: ${err}`);
-	}
-};
-
-/**
- * Create chart data from parsed file data
- * @param headers Column headers
- * @param rows Data rows
- * @param selectedColumns Columns to include in the chart data
- * @returns Formatted chart data for visualization
- */
-export const createChartData = (
-	headers: string[],
-	rows: FileData,
-	selectedColumns: string[],
-): ChartDataItem[] => {
-	// Use mock data if rows are empty
-	if (rows.length === 0) {
-		return createMockChartData(selectedColumns);
-	}
-
-	return rows.slice(0, 20).map((row, index) => {
-		const rowData: ChartDataItem = { name: `Item ${index + 1}` };
-
-		// Use first column as name if available
-		if (headers[0] && row[0]) {
-			rowData.name = String(row[0] || "").slice(0, 10); // Truncate long names
-		}
-
-		// Add selected column data
-		for (const column of selectedColumns) {
-			const colIndex = headers.indexOf(column);
-			if (colIndex !== -1 && colIndex < row.length) {
-				// Try to convert value to number
-				const strValue = String(row[colIndex]);
-				const numValue = Number.parseFloat(strValue);
-				rowData[column] = Number.isNaN(numValue)
-					? Math.floor(Math.random() * 100) // Use random number if conversion fails
-					: numValue;
+			if (jsonData.length > 0) {
+				headers = (jsonData[0] as any[]).map(String); // Ensure headers are strings
+				rows = jsonData.slice(1) as FileData;
 			} else {
-				// If no data, use random value
-				rowData[column] = Math.floor(Math.random() * 100);
+				throw new Error("Excel file is empty or invalid");
 			}
+		} else {
+			onError("Unsupported file type. Please upload a CSV or Excel file.");
+			return;
 		}
 
-		return rowData;
-	});
+		// Clean data: trim strings, handle potential nulls/undefined explicitly
+		const cleanedRows = rows.map((row) =>
+			row.map((cell) =>
+				typeof cell === "string"
+					? cell.trim()
+					: cell !== null && cell !== undefined
+						? cell
+						: null,
+			),
+		);
+
+		onSuccess({ headers, rows: cleanedRows });
+	} catch (err: any) {
+		console.error("File parsing error:", err);
+		onError(`Error processing file: ${err.message || err}`);
+	}
 };
 
 /**
- * Create mock chart data when no real data is available
- * @param selectedColumns Columns to include in the mock data
- * @returns Mock chart data for visualization
+ * Process raw data specifically for generating bar charts (stacked or simple/grouped)
+ * @param rawData The raw headers and rows from the file
+ * @param config Basic chart config with xAxisColumn and yAxisColumn selected
+ * @returns An object containing processed data, layout type, and relevant keys for Recharts
  */
-export const createMockChartData = (
-	selectedColumns: string[],
-): ChartDataItem[] => {
-	const mockData: ChartDataItem[] = [];
-	for (let i = 0; i < 10; i++) {
-		const item: ChartDataItem = { name: `Item ${i + 1}` };
-		for (const col of selectedColumns) {
-			item[col] = Math.floor(Math.random() * 100);
+export const processBarChartData = (
+	rawData: { headers: string[]; rows: FileData },
+	config: Pick<ChartConfig, "xAxisColumn" | "yAxisColumn">,
+): Pick<ChartConfig, "processedData" | "layout" | "yCategories" | "yKey"> & {
+	error?: string;
+} => {
+	const { headers, rows } = rawData;
+	const { xAxisColumn, yAxisColumn } = config;
+
+	if (!xAxisColumn || !yAxisColumn) {
+		return { error: "X and Y axes must be selected for bar charts." };
+	}
+
+	const xAxisIndex = headers.indexOf(xAxisColumn);
+	const yAxisIndex = headers.indexOf(yAxisColumn);
+
+	if (xAxisIndex === -1 || yAxisIndex === -1) {
+		return { error: "Selected axis column(s) not found in data." };
+	}
+
+	// Analyze the Y-axis column to determine its type
+	const yColumnData = rows.map((row) => row[yAxisIndex]);
+	const yAxisAnalysis = analyzeColumnData(yColumnData, yAxisColumn);
+
+	if (yAxisAnalysis.isEmpty) {
+		return { error: `Y-axis column '${yAxisColumn}' contains no valid data.` };
+	}
+
+	// Group data by X-axis values
+	const groupedData: { [xValue: string]: FileData } = {};
+	for (const row of rows) {
+		const xValue = String(row[xAxisIndex] ?? "").trim(); // Handle potential null/undefined
+		if (xValue === "") continue; // Skip rows with empty X-axis value
+
+		if (!groupedData[xValue]) {
+			groupedData[xValue] = [];
 		}
-		mockData.push(item);
-	}
-	return mockData;
-};
-
-/**
- * Analyze column data to determine if it's suitable for visualization
- * @param columnData Data for a single column
- * @returns Analysis results including uniqueness and visualization suitability
- */
-export const analyzeColumnData = (columnData: CellValue[]) => {
-	if (!columnData || columnData.length === 0) {
-		return {
-			isEmpty: true,
-			uniqueValues: 0,
-			isValidForVisualization: false,
-			frequencies: {},
-			processedData: [],
-		};
+		groupedData[xValue].push(row);
 	}
 
-	// Count frequency of each value
-	const freqMap: { [key: string]: number } = {};
+	const processedData: ChartDataItem[] = [];
+	let layout: "stacked" | "simple" = "simple";
+	let yCategories: string[] = [];
+	const yKey = "count"; // Use 'count' for simple bars
 
-	for (const value of columnData) {
-		const key = String(value).trim();
-		// Skip empty values
-		if (!key) continue;
-		freqMap[key] = (freqMap[key] || 0) + 1;
+	// Decide on layout based on Y-axis analysis
+	if (yAxisAnalysis.isCategorical && yAxisAnalysis.uniqueValues > 1) {
+		layout = "stacked";
+		yCategories = yAxisAnalysis.uniqueValueList.sort(); // Use sorted unique values as categories
+
+		// Process for stacked bar chart
+		for (const xValue of Object.keys(groupedData).sort()) {
+			const groupRows = groupedData[xValue];
+			const counts: { [yCategory: string]: number } = {};
+			yCategories.forEach((cat) => (counts[cat] = 0)); // Initialize counts for all categories
+
+			for (const row of groupRows) {
+				const yValue = String(row[yAxisIndex] ?? "").trim();
+				if (yValue !== "" && counts.hasOwnProperty(yValue)) {
+					counts[yValue]++;
+				}
+			}
+
+			processedData.push({ name: xValue, ...counts });
+		}
+	} else {
+		// Process for simple bar chart (counting occurrences per X-category)
+		layout = "simple";
+		for (const xValue of Object.keys(groupedData).sort()) {
+			// Count non-empty Y values within this X group
+			const count = groupedData[xValue].filter(
+				(row) =>
+					row[yAxisIndex] !== null &&
+					row[yAxisIndex] !== undefined &&
+					String(row[yAxisIndex]).trim() !== "",
+			).length;
+			processedData.push({ name: xValue, [yKey]: count });
+		}
 	}
 
-	// Count unique values
-	const uniqueCount = Object.keys(freqMap).length;
-
-	// Check if data is empty
-	const nonEmptyCount = Object.keys(freqMap).filter(
-		(key) => key.trim() !== "",
-	).length;
-	const isEmpty = nonEmptyCount === 0;
-
-	// Check if data is valid for visualization
-	const isValid = uniqueCount < columnData.length * 0.9 && !isEmpty;
-
-	// Process data for charts
-	const chartData = Object.entries(freqMap).map(([name, value]) => ({
-		name,
-		value,
-	}));
-
-	// Sort by frequency for better visualization
-	chartData.sort((a, b) => b.value - a.value);
+	// Limit data points for performance/readability if necessary (optional)
+	// const MAX_POINTS = 50;
+	// if (processedData.length > MAX_POINTS) {
+	// 	processedData = processedData.slice(0, MAX_POINTS);
+	// 	// Consider adding a notification that data was truncated
+	// }
 
 	return {
-		isEmpty,
-		uniqueValues: uniqueCount,
-		isValidForVisualization: isValid,
-		frequencies: freqMap,
-		processedData: chartData.slice(0, 10), // Limit to top 10
+		processedData,
+		layout,
+		...(layout === "stacked" ? { yCategories } : { yKey }),
 	};
 };

@@ -4,9 +4,17 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
-import { CHART_TYPES, ChartType } from "@/types/chart-types";
+import { CHART_TYPES, ChartType, ChartConfig } from "@/types/chart-types";
+import { processBarChartData } from "@/utils/data-processing";
 import ColumnSelector from "./column-selector";
 import AxisSelector from "./axis-selector";
 import ChartTypeSelector from "./chart-type-selector";
@@ -15,7 +23,6 @@ interface AddChartModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     availableColumns: string[];
-    onCheckColumnsVisualizable: () => void;
 }
 
 /**
@@ -26,7 +33,6 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
     open,
     onOpenChange,
     availableColumns,
-    onCheckColumnsVisualizable,
 }) => {
     const {
         selectedChartType, setSelectedChartType,
@@ -35,98 +41,80 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
         xAxisColumn, setXAxisColumn,
         yAxisColumn, setYAxisColumn,
         columnsVisualizableStatus,
-        addChart
+        addChart,
+        rawFileData,
     } = useDataVisualizationStore();
 
     const [validationError, setValidationError] = useState<string>("");
-    const [duplicateValueHandling, setDuplicateValueHandling] = useState<"merge" | "keep">("merge");
-    const [maxColumns, setMaxColumns] = useState<number>(2);
 
-    // 获取当前选择的图表类型定义
-    const currentChartType = CHART_TYPES.find(type => type.id === selectedChartType);
-    const requiresAxis = currentChartType?.requiresAxis || false;
+    // Get current chart type definition
+    const currentChartType = CHART_TYPES.find((type) => type.id === selectedChartType);
+    const requiresAxis = currentChartType?.requiresAxis ?? false;
+    const requiredColumnsCount = currentChartType?.requiresColumns ?? 1;
 
-    // 当图表类型改变时，更新最大列数
-    useEffect(() => {
-        const chartTypeDef = CHART_TYPES.find(type => type.id === selectedChartType);
-        if (chartTypeDef) {
-            setMaxColumns(chartTypeDef.requiresColumns);
+    // Filter suitable columns for axes based on visualization status
+    const visualizableColumns = availableColumns.filter((col) => {
+        const status = columnsVisualizableStatus.find((s) => s.column === col);
+        return status?.isVisualizable ?? false;
+    });
 
-            // 如果已选择的列超过了当前图表类型允许的列数，则裁剪选择
-            if (selectedColumnsForChart.length > chartTypeDef.requiresColumns) {
-                setSelectedColumnsForChart(
-                    selectedColumnsForChart.slice(0, chartTypeDef.requiresColumns)
-                );
-            }
-        }
-    }, [selectedChartType, selectedColumnsForChart, setSelectedColumnsForChart]);
-
-    // 当选择的列发生变化时，自动选择x轴和y轴
-    useEffect(() => {
-        // 如果是饼图或不需要坐标轴的图表，不需要设置
-        const chartTypeDef = CHART_TYPES.find(type => type.id === selectedChartType);
-        if (!chartTypeDef || !chartTypeDef.requiresAxis) {
-            return;
-        }
-
-        // 如果有足够的列进行选择
-        if (selectedColumnsForChart.length >= 2) {
-            // 重置或初始设置X轴和Y轴
-            if (!xAxisColumn || !selectedColumnsForChart.includes(xAxisColumn)) {
-                setXAxisColumn(selectedColumnsForChart[0]);
-            }
-
-            // 为Y轴选择一个不同于X轴的列
-            if (!yAxisColumn || !selectedColumnsForChart.includes(yAxisColumn) || yAxisColumn === xAxisColumn) {
-                const otherColumn = selectedColumnsForChart.find(col => col !== xAxisColumn);
-                if (otherColumn) {
-                    setYAxisColumn(otherColumn);
-                }
-            }
-        } else {
-            // 如果列不足，清除坐标轴选择
-            setXAxisColumn("");
-            setYAxisColumn("");
-        }
-    }, [selectedColumnsForChart, selectedChartType, xAxisColumn, yAxisColumn, setXAxisColumn, setYAxisColumn]);
-
-    // 处理打开对话框
+    // Reset form when modal opens
     useEffect(() => {
         if (open) {
             resetForm();
-            onCheckColumnsVisualizable();
         }
-    }, [open, onCheckColumnsVisualizable]);
+    }, [open]);
 
-    /**
-     * 处理列选择
-     * 添加或移除选中的数据列
-     */
-    const handleColumnToggle = (column: string) => {
-        if (selectedColumnsForChart.includes(column)) {
-            // 移除列
-            setSelectedColumnsForChart(
-                selectedColumnsForChart.filter(col => col !== column)
-            );
-
-            // 如果是X轴或Y轴列，也要清除
-            if (xAxisColumn === column) setXAxisColumn("");
-            if (yAxisColumn === column) setYAxisColumn("");
-        } else {
-            const chartTypeDef = CHART_TYPES.find(type => type.id === selectedChartType);
-            const requiredColumns = chartTypeDef?.requiresColumns || 2;
-
-            // 如果已选择的列达到了最大数量，则不再添加
-            if (selectedColumnsForChart.length >= requiredColumns) {
-                return;
+    // Auto-select axes for bar charts when X or Y changes, ensuring they are different
+    useEffect(() => {
+        if (selectedChartType === "bar") {
+            // If X is selected, try to select a different Y
+            if (xAxisColumn && (!yAxisColumn || yAxisColumn === xAxisColumn)) {
+                const possibleY = visualizableColumns.find(col => col !== xAxisColumn);
+                if (possibleY) setYAxisColumn(possibleY);
+                else setYAxisColumn(""); // Clear Y if no other option
             }
-
-            // 添加列
-            setSelectedColumnsForChart([...selectedColumnsForChart, column]);
+            // If Y is selected, try to select a different X
+            else if (yAxisColumn && (!xAxisColumn || xAxisColumn === yAxisColumn)) {
+                const possibleX = visualizableColumns.find(col => col !== yAxisColumn);
+                if (possibleX) setXAxisColumn(possibleX);
+                else setXAxisColumn(""); // Clear X if no other option
+            }
+            // If neither is selected, try setting defaults
+            else if (!xAxisColumn && !yAxisColumn && visualizableColumns.length >= 2) {
+                setXAxisColumn(visualizableColumns[0]);
+                setYAxisColumn(visualizableColumns[1]);
+            }
         }
+    }, [selectedChartType, xAxisColumn, yAxisColumn, visualizableColumns, setXAxisColumn, setYAxisColumn]);
 
-        // 清除任何验证错误
+    // Handler for selecting X axis (specific for bar charts)
+    const handleXAxisChange = (value: string) => {
+        setXAxisColumn(value);
         setValidationError("");
+    };
+
+    // Handler for selecting Y axis (specific for bar charts)
+    const handleYAxisChange = (value: string) => {
+        setYAxisColumn(value);
+        setValidationError("");
+    };
+
+    // Handler specifically for the ColumnSelector component (for non-bar charts)
+    const handleColumnSelectionToggle = (column: string) => {
+        const currentlySelected = selectedColumnsForChart;
+        const maxSelection = requiredColumnsCount;
+
+        if (currentlySelected.includes(column)) {
+            setSelectedColumnsForChart(currentlySelected.filter(col => col !== column));
+        } else {
+            if (currentlySelected.length < maxSelection) {
+                setSelectedColumnsForChart([...currentlySelected, column]);
+            }
+        }
+        setValidationError(""); // Clear validation on change
+        // Note: Axis selection logic for non-bar charts would need to be handled
+        // based on `selectedColumnsForChart` changes if needed.
     };
 
     /**
@@ -134,52 +122,55 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
      * 检查图表配置的有效性
      */
     const validateForm = (): boolean => {
-        // 验证图表类型
-        if (selectedChartType === "") {
-            setValidationError("请选择图表类型");
+        if (!currentChartType) {
+            setValidationError("请选择有效的图表类型");
             return false;
         }
 
-        // 验证选择的列
-        if (selectedColumnsForChart.length === 0) {
-            setValidationError("请选择至少一列数据");
-            return false;
-        }
+        if (currentChartType.id === "bar") {
+            if (!xAxisColumn) {
+                setValidationError("柱状图需要选择X轴");
+                return false;
+            }
+            if (!yAxisColumn) {
+                setValidationError("柱状图需要选择Y轴");
+                return false;
+            }
+            if (xAxisColumn === yAxisColumn) {
+                setValidationError("X轴和Y轴不能选择同一列");
+                return false;
+            }
+        } else {
+            // Validation for other chart types (using ColumnSelector)
+            if (selectedColumnsForChart.length < requiredColumnsCount) {
+                setValidationError(
+                    `${currentChartType.name}需要选择${requiredColumnsCount}列数据`,
+                );
+                return false;
+            }
 
-        // 获取图表类型定义
-        const chartTypeDef = CHART_TYPES.find(type => type.id === selectedChartType);
-        if (!chartTypeDef) {
-            setValidationError("未知的图表类型");
-            return false;
-        }
+            // Add validation for axis requirements if applicable for other types
+            if (requiresAxis && selectedColumnsForChart.length >= 2 /* && needs specific axis validation */) {
+                // Placeholder for future axis validation for other types
+            }
 
-        // 验证列数
-        if (selectedColumnsForChart.length < chartTypeDef.requiresColumns) {
-            setValidationError(
-                `${chartTypeDef.name}需要选择${chartTypeDef.requiresColumns}列数据`
-            );
-            return false;
-        }
-
-        // 验证坐标轴
-        if (chartTypeDef.requiresAxis && selectedColumnsForChart.length >= 2 && (!xAxisColumn || !yAxisColumn)) {
-            setValidationError("此类型图表需要指定X轴和Y轴");
-            return false;
-        }
-
-        // 验证可视化状态（散点图可以不受此限制）
-        if (selectedChartType !== "scatter") {
-            for (const column of selectedColumnsForChart) {
-                const statusItem = columnsVisualizableStatus.find(status => status.column === column);
-                if (statusItem && !statusItem.isVisualizable) {
-                    setValidationError(
-                        `列 "${column}" 不适合可视化。${statusItem.reason}`
+            // Validate visualizability for non-scatter types (using selectedColumnsForChart)
+            if (selectedChartType !== "scatter") {
+                for (const column of selectedColumnsForChart) {
+                    const statusItem = columnsVisualizableStatus.find(
+                        (status) => status.column === column,
                     );
-                    return false;
+                    if (statusItem && !statusItem.isVisualizable) {
+                        setValidationError(
+                            `列 "${column}" 不适合可视化。${statusItem.reason}`,
+                        );
+                        return false;
+                    }
                 }
             }
         }
 
+        setValidationError("");
         return true;
     };
 
@@ -188,24 +179,50 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
      * 验证数据并创建新图表
      */
     const handleAddChart = () => {
-        if (!validateForm()) {
+        if (!validateForm() || !rawFileData) {
+            if (!rawFileData) setValidationError("Raw data not available.");
             return;
         }
 
-        // 所有验证通过，添加图表
-        const newChart = {
-            id: `chart-${Math.random().toString(36).substr(2, 9)}`,
-            columns: selectedColumnsForChart,
+        let processedResult: Pick<
+            ChartConfig,
+            "processedData" | "layout" | "yCategories" | "yKey"
+        > & { error?: string } = {};
+
+        if (selectedChartType === "bar") {
+            processedResult = processBarChartData(rawFileData, {
+                xAxisColumn,
+                yAxisColumn,
+            });
+
+            if (processedResult.error) {
+                setValidationError(`Data Processing Error: ${processedResult.error}`);
+                return;
+            }
+        } else {
+            // TODO: Add processing logic for other chart types here
+            // For now, we'll just pass basic config
+            setValidationError("Processing for this chart type is not yet implemented.");
+            return; // Prevent adding unimplemented charts
+        }
+
+        // Construct the final chart config
+        const newChart: ChartConfig = {
+            id: `chart-${Math.random().toString(36).substring(2, 9)}`,
             chartType: selectedChartType,
-            title: chartTitle || `${selectedChartType.charAt(0).toUpperCase() + selectedChartType.slice(1)} 图表`,
-            xAxisColumn,
+            title: chartTitle || `${currentChartType?.name} 图表`,
+            xAxisColumn, // Store original selections
             yAxisColumn,
-            duplicateValueHandling,
+            processedData: processedResult.processedData,
+            layout: processedResult.layout,
+            yCategories: processedResult.yCategories,
+            yKey: processedResult.yKey,
+            // columns: selectedColumnsForChart, // Store if needed for other types
         };
 
         addChart(newChart);
         onOpenChange(false);
-        resetForm();
+        // resetForm() is called by useEffect when modal opens
     };
 
     /**
@@ -219,7 +236,6 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
         setXAxisColumn("");
         setYAxisColumn("");
         setValidationError("");
-        setDuplicateValueHandling("merge");
     };
 
     return (
@@ -228,110 +244,130 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
                 <DialogHeader>
                     <DialogTitle>添加可视化图表</DialogTitle>
                     <DialogDescription>
-                        选择需要可视化的数据列和图表类型
+                        选择图表类型和配置数据轴
                         {currentChartType && (
                             <span className="ml-1">
-                                （{currentChartType.name}需要选择{currentChartType.requiresColumns}列数据）
+                                ({currentChartType.name})
                             </span>
                         )}
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-6 py-4">
+                    {/* Chart Title Input */}
                     <div className="space-y-2">
                         <Label htmlFor="chart-title">图表标题</Label>
                         <Input
                             id="chart-title"
                             value={chartTitle}
                             onChange={(e) => setChartTitle(e.target.value)}
-                            placeholder="输入图表标题（可选）"
+                            placeholder={`输入图表标题（默认为 ${currentChartType?.name} 图表）`}
                         />
                     </div>
 
-                    <ChartTypeSelector
-                        selectedChartType={selectedChartType}
-                        onChartTypeChange={setSelectedChartType}
-                    />
-
-                    {/* 添加重复值处理选项 */}
+                    {/* Chart Type Selector */}
                     <div className="space-y-2">
-                        <Label>重复值处理</Label>
-                        <RadioGroup
-                            value={duplicateValueHandling}
-                            onValueChange={(value) => setDuplicateValueHandling(value as "merge" | "keep")}
-                            className="flex flex-col space-y-1"
-                        >
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="merge" id="merge-duplicates" />
-                                <Label htmlFor="merge-duplicates">合并重复值（推荐）</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="keep" id="keep-duplicates" />
-                                <Label htmlFor="keep-duplicates">保留重复值</Label>
-                            </div>
-                        </RadioGroup>
-                        <p className="text-xs text-muted-foreground">
-                            {duplicateValueHandling === "merge"
-                                ? "合并重复值会将相同值的数据点合并，适合展示频率分布"
-                                : "保留重复值将显示原始数据中的每个值，适合展示时间序列等"}
-                        </p>
+                        <Label>图表类型</Label>
+                        <ChartTypeSelector
+                            selectedChartType={selectedChartType}
+                            onChartTypeChange={setSelectedChartType}
+                        />
                     </div>
 
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <Label>选择数据列 {selectedColumnsForChart.length > 0 && `(已选择 ${selectedColumnsForChart.length}/${maxColumns})`}</Label>
-                            {columnsVisualizableStatus.some(col => !col.isVisualizable) && (
-                                <div className="flex items-center text-amber-500 text-xs">
-                                    <AlertCircle size={14} className="mr-1" />
-                                    部分列不适合可视化
-                                </div>
-                            )}
+                    {/* --- Bar Chart Specific Configuration --- */}
+                    {selectedChartType === "bar" && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* X-Axis Selector */}
+                            <div className="space-y-2">
+                                <Label htmlFor="x-axis-select">X轴（分类轴）</Label>
+                                <Select
+                                    onValueChange={handleXAxisChange}
+                                    value={xAxisColumn}
+                                    disabled={visualizableColumns.length === 0}
+                                >
+                                    <SelectTrigger id="x-axis-select">
+                                        <SelectValue placeholder="选择X轴" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {visualizableColumns.length > 0 ? (
+                                            visualizableColumns.map((col) => (
+                                                <SelectItem key={col} value={col}>
+                                                    {col}
+                                                </SelectItem>
+                                            ))
+                                        ) : (
+                                            <SelectItem value="" disabled>
+                                                无可用的可视化列
+                                            </SelectItem>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Y-Axis Selector */}
+                            <div className="space-y-2">
+                                <Label htmlFor="y-axis-select">Y轴（计数/分类轴）</Label>
+                                <Select
+                                    onValueChange={handleYAxisChange}
+                                    value={yAxisColumn}
+                                    disabled={visualizableColumns.length === 0}
+                                >
+                                    <SelectTrigger id="y-axis-select">
+                                        <SelectValue placeholder="选择Y轴" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {visualizableColumns.length > 0 ? (
+                                            visualizableColumns.map((col) => (
+                                                <SelectItem
+                                                    key={col}
+                                                    value={col}
+                                                    disabled={col === xAxisColumn} // Disable selecting the same as X axis
+                                                >
+                                                    {col}
+                                                </SelectItem>
+                                            ))
+                                        ) : (
+                                            <SelectItem value="" disabled>
+                                                无可用的可视化列
+                                            </SelectItem>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
+                    )}
 
-                        <ColumnSelector
-                            columns={availableColumns}
-                            selectedColumns={selectedColumnsForChart}
-                            onColumnToggle={handleColumnToggle}
-                            maxColumns={maxColumns}
-                            columnsVisualizableStatus={columnsVisualizableStatus}
-                        />
-
-                        {validationError && (
-                            <p className="text-red-500 text-xs flex items-center">
-                                <AlertCircle size={14} className="mr-1" />
-                                {validationError}
+                    {/* --- Column Selector for OTHER Chart Types --- */}
+                    {selectedChartType !== "bar" && (
+                        <div className="space-y-2">
+                            <Label>选择数据列</Label>
+                            <ColumnSelector
+                                columns={availableColumns}
+                                selectedColumns={selectedColumnsForChart}
+                                onColumnToggle={handleColumnSelectionToggle}
+                                maxColumns={requiredColumnsCount}
+                                columnsVisualizableStatus={columnsVisualizableStatus}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                已选择 {selectedColumnsForChart.length} / {requiredColumnsCount} 列
                             </p>
-                        )}
-                    </div>
+                        </div>
+                    )}
 
-                    {/* X轴和Y轴选择器（仅在选择了两列或以上且需要坐标轴时显示） */}
-                    {selectedColumnsForChart.length >= 2 && requiresAxis && (
-                        <AxisSelector
-                            columns={selectedColumnsForChart}
-                            xAxisColumn={xAxisColumn}
-                            yAxisColumn={yAxisColumn}
-                            onXAxisChange={setXAxisColumn}
-                            onYAxisChange={setYAxisColumn}
-                        />
+                    {/* Validation Error Display */}
+                    {validationError && (
+                        <div className="flex items-center p-2 text-sm text-red-700 bg-red-100 rounded-md dark:bg-red-900/30 dark:text-red-400">
+                            <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+                            <span>{validationError}</span>
+                        </div>
                     )}
                 </div>
 
                 <DialogFooter>
-                    <Button
-                        variant="outline"
-                        onClick={() => {
-                            onOpenChange(false);
-                            resetForm();
-                        }}
-                    >
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
                         取消
                     </Button>
-                    <Button
-                        onClick={handleAddChart}
-                        disabled={selectedColumnsForChart.length === 0}
-                    >
-                        添加图表
-                    </Button>
+                    <Button onClick={handleAddChart}>添加图表</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
