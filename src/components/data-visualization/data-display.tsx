@@ -34,7 +34,7 @@ export default function DataDisplay({
     setSelectedColumnsForChart,
     setChartTitle,
     setXAxisColumn,
-    setYAxisColumn,
+    setYAxisColumns,
     processedFile,
     isFileLoading,
     fileError,
@@ -91,7 +91,8 @@ export default function DataDisplay({
     setSelectedChartType("bar");
     setChartTitle("");
     setXAxisColumn("");
-    setYAxisColumn("");
+    // Reset yAxisColumns to an empty array
+    setYAxisColumns([]);
     // No need to call checkColumnsVisualizable here, status is updated by the store action
   };
 

@@ -22,6 +22,12 @@ export interface ChartConfig {
 	layout?: "stacked" | "simple" | "grouped"; // Layout for bar charts
 	yCategories?: string[]; // Keys for stacked bar chart data
 	yKey?: string; // Key for simple/grouped bar chart data (e.g., 'count')
+
+	// Line Chart specific fields
+	yAxisColumns?: string[]; // Multiple Y-axes for numeric, single for categorical trend
+	categories?: string[]; // Categories for multi-line trend
+	numericYKey?: string; // The dataKey for a single numeric Y line
+
 	// duplicateValueHandling?: "merge" | "keep"; // Keep if relevant for other chart types
 }
 

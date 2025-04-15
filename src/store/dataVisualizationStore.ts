@@ -1,9 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { ChartConfig, ChartDataItem } from "@/types/chart-types";
-import {
-	FileData,
-} from "@/utils/data-processing";
+import { FileData } from "@/utils/data-processing";
 import { processAndAnalyzeFileData } from "@/utils/data-visualization-helpers";
 
 /**
@@ -50,8 +48,8 @@ interface DataVisualizationState {
 	xAxisColumn: string;
 	setXAxisColumn: (column: string) => void;
 
-	yAxisColumn: string;
-	setYAxisColumn: (column: string) => void;
+	yAxisColumns: string[];
+	setYAxisColumns: (columns: string[]) => void;
 
 	// Processed file info
 	processedFile: { name: string; size: number } | null;
@@ -111,8 +109,8 @@ export const useDataVisualizationStore = create<DataVisualizationState>()(
 			xAxisColumn: "",
 			setXAxisColumn: (column) => set({ xAxisColumn: column }),
 
-			yAxisColumn: "",
-			setYAxisColumn: (column) => set({ yAxisColumn: column }),
+			yAxisColumns: [],
+			setYAxisColumns: (columns) => set({ yAxisColumns: columns }),
 
 			// Processed file info
 			processedFile: null,

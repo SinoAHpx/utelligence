@@ -205,7 +205,7 @@ export const processBarChartData = (
 	for (const row of rows) {
 		const xValue = String(row[xAxisIndex] ?? "").trim(); // Handle potential null/undefined
 		if (xValue === "") continue; // Skip rows with empty X-axis value
-		if (headers.indexOf(xValue) !== -1) continue
+		if (headers.indexOf(xValue) !== -1) continue;
 		if (!groupedData[xValue]) {
 			groupedData[xValue] = [];
 		}
@@ -264,4 +264,201 @@ export const processBarChartData = (
 		layout,
 		...(layout === "stacked" ? { yCategories } : { yKey }),
 	};
+};
+
+/**
+ * Process raw data specifically for generating line charts
+ * Handles both single numeric lines and multi-line trends based on a categorical Y-axis.
+ * @param rawData The raw headers and rows from the file
+ * @param config Basic chart config with xAxisColumn and yAxisColumns selected
+ * @returns An object containing processed data, categories (for multi-line), and relevant keys for Recharts
+ */
+export const processLineChartData = (
+	rawData: { headers: string[]; rows: FileData },
+	config: Pick<ChartConfig, "xAxisColumn" | "yAxisColumns">,
+): Pick<ChartConfig, "processedData" | "categories" | "numericYKey"> & {
+	error?: string;
+} => {
+	const { headers, rows } = rawData;
+	const { xAxisColumn, yAxisColumns = [] } = config; // Default yAxisColumns to empty array
+
+	if (!xAxisColumn || yAxisColumns.length === 0) {
+		// Return default structure on error
+		return {
+			processedData: [],
+			categories: [],
+			numericYKey: undefined,
+			error: "X-axis and at least one Y-axis must be selected for line charts.",
+		};
+	}
+
+	const xAxisIndex = headers.indexOf(xAxisColumn);
+	if (xAxisIndex === -1) {
+		// Return default structure on error
+		return {
+			processedData: [],
+			categories: [],
+			numericYKey: undefined,
+			error: `Selected X-axis column '${xAxisColumn}' not found.`,
+		};
+	}
+
+	// --- Analyze the *first* Y-axis column to decide the mode ---
+	const primaryYAxisColumn = yAxisColumns[0];
+	const primaryYAxisIndex = headers.indexOf(primaryYAxisColumn);
+	if (primaryYAxisIndex === -1) {
+		// Return default structure on error
+		return {
+			processedData: [],
+			categories: [],
+			numericYKey: undefined,
+			error: `Selected Y-axis column '${primaryYAxisColumn}' not found.`,
+		};
+	}
+
+	const primaryYColumnData = rows.map((row) => row[primaryYAxisIndex]);
+	const yAxisAnalysis = analyzeColumnData(
+		primaryYColumnData,
+		primaryYAxisColumn,
+	);
+
+	if (yAxisAnalysis.isEmpty) {
+		// Return default structure on error
+		return {
+			processedData: [],
+			categories: [],
+			numericYKey: undefined,
+			error: `Primary Y-axis column '${primaryYAxisColumn}' contains no valid data.`,
+		};
+	}
+
+	// Group data by X-axis values, ensuring consistent typing for grouping key
+	const groupedData: { [xValueKey: string]: FileData } = {};
+	let allXAreNumeric = true;
+	const xValuesSet = new Set<string | number>();
+
+	for (const row of rows) {
+		let xValue: string | number | null | undefined = row[xAxisIndex];
+
+		// Attempt to convert X value to number if possible, otherwise use string
+		const numXValue = Number(xValue);
+		if (
+			xValue !== null &&
+			xValue !== undefined &&
+			String(xValue).trim() !== "" &&
+			!isNaN(numXValue)
+		) {
+			xValue = numXValue;
+		} else {
+			allXAreNumeric = false;
+			xValue = String(xValue ?? "").trim(); // Use trimmed string for non-numeric or empty
+		}
+
+		if (xValue === "" || xValue === null || xValue === undefined) continue; // Skip rows with empty X-axis value
+
+		xValuesSet.add(xValue); // Add the potentially numeric or string value
+
+		const xValueKey = String(xValue); // Use string for object key
+		if (!groupedData[xValueKey]) {
+			groupedData[xValueKey] = [];
+		}
+		groupedData[xValueKey].push(row);
+	}
+
+	// Sort X values numerically if possible, otherwise alphabetically
+	const sortedXValues = Array.from(xValuesSet).sort((a, b) => {
+		if (allXAreNumeric) {
+			return (a as number) - (b as number);
+		}
+		return String(a).localeCompare(String(b));
+	});
+
+	const processedData: ChartDataItem[] = [];
+	let categories: string[] = [];
+	let numericYKey: string | undefined = undefined;
+
+	// Decide mode: Categorical Trend or Numeric Value
+	if (yAxisAnalysis.isCategorical && yAxisAnalysis.uniqueValues > 1) {
+		// --- Multi-line Trend Mode (Categorical Y-axis) ---
+		categories = yAxisAnalysis.uniqueValueList.sort();
+
+		// Limit categories to avoid overly crowded charts (optional)
+		const MAX_TREND_CATEGORIES = 10;
+		if (categories.length > MAX_TREND_CATEGORIES) {
+			console.warn(
+				`Too many categories (${categories.length}) for trend line chart. Limiting to ${MAX_TREND_CATEGORIES}.`,
+			);
+			// Return default structure on error
+			return {
+				processedData: [],
+				categories: [],
+				numericYKey: undefined,
+				error: `Too many categories (${categories.length}) in '${primaryYAxisColumn}' for a trend line chart. Maximum allowed is ${MAX_TREND_CATEGORIES}.`,
+			};
+		}
+
+		for (const xValue of sortedXValues) {
+			const xValueKey = String(xValue);
+			const groupRows = groupedData[xValueKey] || [];
+			const counts: { [yCategory: string]: number } = {};
+			categories.forEach((cat) => (counts[cat] = 0)); // Initialize counts
+
+			for (const row of groupRows) {
+				const yValue = String(row[primaryYAxisIndex] ?? "").trim();
+				if (yValue !== "" && counts.hasOwnProperty(yValue)) {
+					counts[yValue]++;
+				}
+			}
+			// The structure for Recharts: x-axis key + one key per category
+			processedData.push({ [xAxisColumn]: xValue, ...counts });
+		}
+	} else if (yAxisAnalysis.isNumeric) {
+		// --- Simple Numeric Line Mode ---
+		// Use the *first* selected numeric Y-axis.
+		numericYKey = primaryYAxisColumn; // The key in the data object will be the column name
+
+		for (const xValue of sortedXValues) {
+			const xValueKey = String(xValue);
+			const groupRows = groupedData[xValueKey] || [];
+
+			// Average Y values for the same X point
+			let sum = 0;
+			let count = 0;
+			for (const row of groupRows) {
+				const yValue = row[primaryYAxisIndex];
+				const numYValue = Number(yValue);
+				if (yValue !== null && yValue !== undefined && !isNaN(numYValue)) {
+					sum += numYValue;
+					count++;
+				}
+			}
+			const averageY = count > 0 ? sum / count : 0;
+
+			// Ensure the xAxisColumn key is correctly added along with the numeric Y key
+			if (numericYKey) {
+				// Type guard for numericYKey
+				processedData.push({
+					[xAxisColumn]: xValue, // X value (original type)
+					[numericYKey]: averageY, // Y value
+				});
+			} else {
+				// This case should theoretically not happen if yAxisAnalysis.isNumeric is true
+				// Add fallback or error handling if needed
+				console.error("Numeric Y key is undefined despite numeric analysis");
+			}
+		}
+	} else {
+		// Neither clearly categorical nor numeric
+		// Return default structure on error
+		return {
+			processedData: [],
+			categories: [],
+			numericYKey: undefined,
+			error: `Y-axis column '${primaryYAxisColumn}' is not suitable for a line chart (neither numeric nor sufficiently categorical).`,
+		};
+	}
+
+	// Ensure xAxisColumn is explicitly added as a property in the final data if somehow missing (should be handled above)
+	// Return the successful processing result
+	return { processedData, categories, numericYKey };
 };
