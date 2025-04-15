@@ -3,8 +3,6 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { ChartConfig, ChartDataItem } from "@/types/chart-types";
 import {
 	FileData,
-	processFileData,
-	analyzeColumnData,
 } from "@/utils/data-processing";
 import { processAndAnalyzeFileData } from "@/utils/data-visualization-helpers";
 

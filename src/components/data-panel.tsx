@@ -9,7 +9,6 @@ export default function DataPanel() {
   const handleFileChange = (file: File) => {
     setUploadedFile(file);
     setShowVisualization(true);
-    console.log("File uploaded:", file.name);
   };
 
   return (

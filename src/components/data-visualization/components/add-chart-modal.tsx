@@ -194,6 +194,7 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
                 xAxisColumn,
                 yAxisColumn,
             });
+            
 
             if (processedResult.error) {
                 setValidationError(`Data Processing Error: ${processedResult.error}`);

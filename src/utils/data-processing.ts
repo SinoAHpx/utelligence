@@ -201,10 +201,11 @@ export const processBarChartData = (
 
 	// Group data by X-axis values
 	const groupedData: { [xValue: string]: FileData } = {};
+
 	for (const row of rows) {
 		const xValue = String(row[xAxisIndex] ?? "").trim(); // Handle potential null/undefined
 		if (xValue === "") continue; // Skip rows with empty X-axis value
-
+		if (headers.indexOf(xValue) !== -1) continue
 		if (!groupedData[xValue]) {
 			groupedData[xValue] = [];
 		}
