@@ -38,12 +38,6 @@ export const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
                     <>
                         <h4 className="text-sm font-medium mb-1">{selectedChartTypeDef.name}</h4>
                         <p className="text-xs text-muted-foreground mb-2">{selectedChartTypeDef.description}</p>
-                        {selectedChartTypeDef.colorDescription && (
-                            <div
-                                className="text-xs"
-                                dangerouslySetInnerHTML={{ __html: selectedChartTypeDef.colorDescription }}
-                            />
-                        )}
                     </>
                 ) : (
                     <p className="text-xs text-muted-foreground">请选择一个图表类型</p>
