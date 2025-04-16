@@ -1,46 +1,45 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartDataItem } from "@/types/chart-types";
-import { CHART_COLORS, getChartColor } from "@/constants/chart-colors";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ChartConfig } from "@/types/chart-types";
+import { getChartColor } from "@/constants/chart-colors";
 
-interface PieChartProps {
-    title: string;
-    chartData: ChartDataItem[];
-    dataColumn: string;
-    duplicateValueHandling?: "merge" | "keep";
+interface PieChartComponentProps {
+    chartConfig: ChartConfig;
 }
 
-export const PieChartComponent: React.FC<PieChartProps> = ({
-    title,
-    chartData,
-    dataColumn,
-    duplicateValueHandling
-}) => {
-    // 构建饼图数据：计算每个值的频率
-    const pieData = chartData.reduce((acc: { name: string, value: number }[], item) => {
-        const value = String(item[dataColumn] || "未知");
+export const PieChartComponent: React.FC<PieChartComponentProps> = ({ chartConfig }) => {
+    const {
+        title = "Pie Chart",
+        processedData = [],
+        yAxisColumns = [],
+    } = chartConfig;
 
-        // 根据重复值处理选项处理数据
-        if (duplicateValueHandling === "merge") {
-            const existingItem = acc.find(a => a.name === value);
-            if (existingItem) {
-                existingItem.value += 1;
-            } else {
-                acc.push({ name: value, value: 1 });
-            }
-        } else {
-            // 保留所有值
-            acc.push({ name: value, value: 1 });
-        }
+    const dataColumn = yAxisColumns.length > 0 ? yAxisColumns[0] : "(未指定列)";
 
-        return acc;
-    }, []);
+    const pieData = processedData;
+
+    if (!pieData || pieData.length === 0) {
+        return (
+            <Card className="h-[400px]">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{title}</CardTitle>
+                    <CardDescription className="text-xs">正在等待数据...</CardDescription>
+                </CardHeader>
+                <CardContent className="flex items-center justify-center h-[340px]">
+                    <p className="text-muted-foreground">没有可用于饼图的数据。</p>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card className="h-[400px]">
             <CardHeader className="pb-2">
                 <CardTitle className="text-sm">{title}</CardTitle>
+                <CardDescription className="text-xs">
+                    显示列: {dataColumn}
+                </CardDescription>
             </CardHeader>
             <CardContent className="h-[340px]">
                 <ResponsiveContainer width="100%" height="100%">

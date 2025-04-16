@@ -355,6 +355,7 @@ export const processLineChartData = (
 		}
 
 		if (xValue === "" || xValue === null || xValue === undefined) continue; // Skip rows with empty X-axis value
+		if (typeof xValue === "string" && headers.indexOf(xValue) !== -1) continue;
 
 		xValuesSet.add(xValue); // Add the potentially numeric or string value
 
@@ -461,4 +462,254 @@ export const processLineChartData = (
 	// Ensure xAxisColumn is explicitly added as a property in the final data if somehow missing (should be handled above)
 	// Return the successful processing result
 	return { processedData, categories, numericYKey };
+};
+
+/**
+ * Process raw data specifically for generating area charts.
+ * Handles both single numeric areas (summed) and multi-area trends based on a categorical Y-axis (stacked counts).
+ * @param rawData The raw headers and rows from the file
+ * @param config Basic chart config with xAxisColumn and yAxisColumns selected
+ * @returns An object containing processed data, categories (for stacked), and numericYKey (for single) for Recharts
+ */
+export const processAreaChartData = (
+	rawData: { headers: string[]; rows: FileData },
+	config: Pick<ChartConfig, "xAxisColumn" | "yAxisColumns">,
+): Pick<ChartConfig, "processedData" | "categories" | "numericYKey"> & {
+	error?: string;
+} => {
+	const { headers, rows } = rawData;
+	const { xAxisColumn, yAxisColumns = [] } = config;
+
+	if (!xAxisColumn || yAxisColumns.length === 0) {
+		return {
+			processedData: [],
+			categories: [],
+			numericYKey: undefined,
+			error: "X-axis and at least one Y-axis must be selected for area charts.",
+		};
+	}
+
+	const xAxisIndex = headers.indexOf(xAxisColumn);
+	if (xAxisIndex === -1) {
+		return {
+			processedData: [],
+			categories: [],
+			numericYKey: undefined,
+			error: `Selected X-axis column '${xAxisColumn}' not found.`,
+		};
+	}
+
+	// Analyze the primary Y-axis column to determine the mode
+	const primaryYAxisColumn = yAxisColumns[0];
+	const primaryYAxisIndex = headers.indexOf(primaryYAxisColumn);
+	if (primaryYAxisIndex === -1) {
+		return {
+			processedData: [],
+			categories: [],
+			numericYKey: undefined,
+			error: `Selected Y-axis column '${primaryYAxisColumn}' not found.`,
+		};
+	}
+
+	const primaryYColumnData = rows.map((row) => row[primaryYAxisIndex]);
+	const yAxisAnalysis = analyzeColumnData(
+		primaryYColumnData,
+		primaryYAxisColumn,
+	);
+
+	if (yAxisAnalysis.isEmpty) {
+		return {
+			processedData: [],
+			categories: [],
+			numericYKey: undefined,
+			error: `Primary Y-axis column '${primaryYAxisColumn}' contains no valid data.`,
+		};
+	}
+
+	// Group data by X-axis value
+	const groupedData: { [xValueKey: string]: FileData } = {};
+	let allXAreNumeric = true;
+	const xValuesSet = new Set<string | number>();
+
+	for (const row of rows) {
+		let xValue: string | number | null | undefined = row[xAxisIndex];
+		const numXValue = Number(xValue);
+		if (
+			xValue !== null &&
+			xValue !== undefined &&
+			String(xValue).trim() !== "" &&
+			!isNaN(numXValue)
+		) {
+			xValue = numXValue;
+		} else {
+			allXAreNumeric = false;
+			xValue = String(xValue ?? "").trim();
+		}
+		if (xValue === "" || xValue === null || xValue === undefined) continue;
+		if (typeof xValue === "string" && headers.indexOf(xValue) !== -1) continue;
+
+		xValuesSet.add(xValue);
+		const xValueKey = String(xValue);
+		if (!groupedData[xValueKey]) {
+			groupedData[xValueKey] = [];
+		}
+		groupedData[xValueKey].push(row);
+	}
+
+	// Sort X values
+	const sortedXValues = Array.from(xValuesSet).sort((a, b) => {
+		if (allXAreNumeric) {
+			return (a as number) - (b as number);
+		}
+		return String(a).localeCompare(String(b));
+	});
+
+	const processedData: ChartDataItem[] = [];
+	let categories: string[] = [];
+	let numericYKey: string | undefined = undefined;
+
+	// Decide mode: Stacked Categorical Counts or Single Numeric Sum
+	if (yAxisAnalysis.isCategorical && yAxisAnalysis.uniqueValues > 1) {
+		// --- Stacked Area Mode (Categorical Y-axis) ---
+		categories = yAxisAnalysis.uniqueValueList.sort();
+
+		const MAX_STACK_CATEGORIES = 10;
+		if (categories.length > MAX_STACK_CATEGORIES) {
+			return {
+				processedData: [],
+				categories: [],
+				numericYKey: undefined,
+				error: `Too many categories (${categories.length}) in '${primaryYAxisColumn}' for a stacked area chart. Maximum allowed is ${MAX_STACK_CATEGORIES}.`,
+			};
+		}
+
+		for (const xValue of sortedXValues) {
+			const xValueKey = String(xValue);
+			const groupRows = groupedData[xValueKey] || [];
+			const counts: { [yCategory: string]: number } = {};
+			categories.forEach((cat) => (counts[cat] = 0));
+
+			for (const row of groupRows) {
+				const yValue = String(row[primaryYAxisIndex] ?? "").trim();
+				if (yValue !== "" && counts.hasOwnProperty(yValue)) {
+					counts[yValue]++;
+				}
+			}
+			processedData.push({ [xAxisColumn]: xValue, ...counts });
+		}
+	} else if (yAxisAnalysis.isNumeric) {
+		// --- Single Area Mode (Numeric Y-axis - Sum) ---
+		numericYKey = primaryYAxisColumn; // Data key is the column name
+
+		for (const xValue of sortedXValues) {
+			const xValueKey = String(xValue);
+			const groupRows = groupedData[xValueKey] || [];
+
+			// Calculate the SUM of Y values for the same X point
+			let sum = 0;
+			for (const row of groupRows) {
+				const yValue = row[primaryYAxisIndex];
+				const numYValue = Number(yValue);
+				if (yValue !== null && yValue !== undefined && !isNaN(numYValue)) {
+					sum += numYValue;
+				}
+			}
+
+			if (numericYKey) {
+				processedData.push({
+					[xAxisColumn]: xValue,
+					[numericYKey]: sum, // Use sum for area chart aggregation
+				});
+			} else {
+				console.error("Numeric Y key is undefined despite numeric analysis");
+			}
+		}
+	} else {
+		// Neither suitable category
+		return {
+			processedData: [],
+			categories: [],
+			numericYKey: undefined,
+			error: `Y-axis column '${primaryYAxisColumn}' is not suitable for an area chart (neither numeric nor sufficiently categorical).`,
+		};
+	}
+
+	return { processedData, categories, numericYKey };
+};
+
+/**
+ * Process raw data specifically for generating pie charts.
+ * Calculates the frequency of unique values in a single selected column.
+ * @param rawData The raw headers and rows from the file
+ * @param config Basic chart config containing the valueColumn to analyze
+ * @returns An object containing processed data [{ name: category, value: count }, ...] for Recharts
+ */
+export const processPieChartData = (
+	rawData: { headers: string[]; rows: FileData },
+	config: { valueColumn: string },
+): Pick<ChartConfig, "processedData"> & { error?: string } => {
+	const { headers, rows } = rawData;
+	const { valueColumn } = config;
+
+	if (!valueColumn) {
+		return {
+			processedData: [],
+			error: "A column must be selected for pie charts.",
+		};
+	}
+
+	const valueColumnIndex = headers.indexOf(valueColumn);
+	if (valueColumnIndex === -1) {
+		return {
+			processedData: [],
+			error: `Selected column '${valueColumn}' not found.`,
+		};
+	}
+
+	// Analyze the selected column directly using analyzeColumnData
+	const columnData = rows.map((row) => row[valueColumnIndex]);
+	const analysis = analyzeColumnData(columnData, valueColumn);
+
+	if (analysis.isEmpty) {
+		return {
+			processedData: [],
+			error: `Selected column '${valueColumn}' contains no valid data.`,
+		};
+	}
+
+	// Limit categories for readability (optional, but good practice for pies)
+	const MAX_PIE_SLICES = 15;
+	if (analysis.uniqueValues > MAX_PIE_SLICES) {
+		// Option 1: Return error
+		// return { processedData: [], error: `Too many unique values (${analysis.uniqueValues}) in '${valueColumn}' for a pie chart. Maximum allowed is ${MAX_PIE_SLICES}. Consider grouping data.` };
+
+		// Option 2: Group smallest slices into "Other"
+		console.warn(
+			`Too many unique values (${analysis.uniqueValues}) for pie chart. Grouping smallest slices.`,
+		);
+		const sortedFrequencies = Object.entries(analysis.frequencies).sort(
+			([, countA], [, countB]) => countB - countA,
+		); // Sort descending by count
+
+		const topSlices = sortedFrequencies.slice(0, MAX_PIE_SLICES - 1);
+		const otherSliceCount = sortedFrequencies
+			.slice(MAX_PIE_SLICES - 1)
+			.reduce((sum, [, count]) => sum + count, 0);
+
+		const processedData: ChartDataItem[] = topSlices.map(([name, value]) => ({
+			name,
+			value,
+		}));
+		if (otherSliceCount > 0) {
+			processedData.push({ name: "Other", value: otherSliceCount });
+		}
+		return { processedData };
+	} else {
+		// Convert frequency map directly to the required format [{ name, value }]
+		const processedData = Object.entries(analysis.frequencies)
+			.map(([name, value]) => ({ name, value }))
+			// Optional: Sort slices by value descending for better visualization
+			.sort((a, b) => b.value - a.value);
+		return { processedData };
+	}
 };
