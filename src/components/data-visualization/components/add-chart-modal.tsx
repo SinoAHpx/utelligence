@@ -46,9 +46,8 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
     // Determine chart properties based on selected type
     const currentChartType = useMemo(() => CHART_TYPES.find((type) => type.id === selectedChartType), [selectedChartType]);
     const requiresAxis = currentChartType?.requiresAxis ?? false;
-    // Pie charts don't require axes but need 1 column (handled by yAxisColumns check)
-    const minRequiredYColumns = requiresAxis ? 1 : 1; // Pie needs 1 column selected via Y-axis selector
-    const allowMultipleY = selectedChartType === 'line' || selectedChartType === 'area';
+    // Each chart type should only have one y-axis, removing allowMultipleY
+    const minRequiredYColumns = requiresAxis ? 1 : 1;
 
     // Filter visualizable columns
     const visualizableColumns = useMemo(() => availableColumns.filter((col) => {
@@ -89,40 +88,18 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
 
     const handleXAxisChange = (value: string) => {
         setXAxisColumn(value);
-        setYAxisColumns(yAxisColumns.filter(col => col !== value));
-        setValidationError("");
-    };
-
-    const addYAxis = () => {
-        const nextAvailable = visualizableColumns.find(
-            col => col !== xAxisColumn && !yAxisColumns.includes(col)
-        );
-        if (nextAvailable) {
-            // For single-column charts like Pie, replace the selection
-            if (!requiresAxis) {
-                setYAxisColumns([nextAvailable]);
-            } else {
-                setYAxisColumns([...yAxisColumns, nextAvailable]);
-            }
-            setValidationError("");
+        // If Y axis is the same as the selected X axis, clear it
+        if (yAxisColumns.length > 0 && yAxisColumns[0] === value) {
+            setYAxisColumns([]);
         }
-    };
-
-    const removeYAxis = (indexToRemove: number) => {
-        setYAxisColumns(yAxisColumns.filter((_, index) => index !== indexToRemove));
         setValidationError("");
     };
 
-    // Handle change for Y axis (or the single column for Pie)
-    const handleYAxisChange = (indexToChange: number, newValue: string) => {
+    // Update Y axis handler to only handle a single Y axis
+    const handleYAxisChange = (value: string) => {
         // Prevent selecting the same column as X if axes are required
-        if (requiresAxis && newValue === xAxisColumn) return;
-        // Prevent duplicates if multiple Y are allowed
-        if (allowMultipleY && yAxisColumns.some((col, idx) => idx !== indexToChange && col === newValue)) return;
-
-        const newYAxes = [...yAxisColumns];
-        newYAxes[indexToChange] = newValue;
-        setYAxisColumns(newYAxes);
+        if (requiresAxis && value === xAxisColumn) return;
+        setYAxisColumns([value]);
         setValidationError("");
     };
 
@@ -133,7 +110,7 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
     };
 
     /**
-     * 验证表单数据 - Updated for Pie Chart
+     * 验证表单数据 - Updated for single Y axis
      */
     const validateForm = (): boolean => {
         if (!currentChartType) {
@@ -148,20 +125,11 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
                 return false;
             }
             if (yAxisColumns.length < minRequiredYColumns) {
-                setValidationError(`${currentChartType.name} 至少需要 ${minRequiredYColumns} 个 Y 轴`);
-                return false;
-            }
-            if (!allowMultipleY && yAxisColumns.length > 1) {
-                setValidationError(`${currentChartType.name} 只支持一个 Y 轴`);
+                setValidationError(`${currentChartType.name} 需要选择 Y 轴`);
                 return false;
             }
             if (yAxisColumns.includes(xAxisColumn)) {
                 setValidationError("X 轴和 Y 轴不能选择同一列");
-                return false;
-            }
-            const uniqueYAxes = new Set(yAxisColumns);
-            if (uniqueYAxes.size !== yAxisColumns.length) {
-                setValidationError("Y 轴不能选择重复的列");
                 return false;
             }
             const allAxes = [xAxisColumn, ...yAxisColumns];
@@ -197,7 +165,7 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
     };
 
     /**
-     * 处理添加图表 - Updated for Pie Chart
+     * 处理添加图表 - Updated for single Y Axis
      */
     const handleAddChart = () => {
         if (!validateForm() || !rawFileData) {
@@ -207,14 +175,15 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
 
         let processedResult: Partial<ChartConfig> & { error?: string } = {};
         const valueColumnForPie = yAxisColumns[0]; // Use the first selected Y column for Pie
+        const yAxisColumn = yAxisColumns[0]; // Use the single Y axis
 
         try {
             switch (selectedChartType) {
                 case "bar":
-                    if (!yAxisColumns[0]) throw new Error("柱状图需要一个 Y 轴。");
+                    if (!yAxisColumn) throw new Error("柱状图需要一个 Y 轴。");
                     processedResult = processBarChartData(rawFileData, {
                         xAxisColumn: xAxisColumn,
-                        yAxisColumn: yAxisColumns[0],
+                        yAxisColumn: yAxisColumn,
                     });
                     break;
                 case "line":
@@ -252,7 +221,8 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
                 // Adjust title based on axes/no axes
                 title: chartTitle || `${currentChartType?.name || 'Chart'} ${requiresAxis ? `for ${xAxisColumn} vs ${yAxisColumns.join(', ')}` : `of ${yAxisColumns[0]}`}`,
                 xAxisColumn: requiresAxis ? xAxisColumn : undefined, // Only set xAxis if required
-                yAxisColumns: yAxisColumns, // Store all selected Y columns (even for Pie, it's in yAxisColumns[0])
+                yAxisColumn: yAxisColumn, // Store single Y column
+                yAxisColumns: yAxisColumns, // Keep compatibility with old code
                 ...processedResult,
                 processedData: processedResult.processedData || [],
             };
@@ -298,69 +268,53 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
                     {requiresAxis && (
                         <div className="space-y-4 p-4 border rounded-md">
                             <h4 className="text-sm font-medium mb-2">配置坐标轴</h4>
-                            {/* X Axis Selector */}
-                            <div className="space-y-2">
-                                <Label>X 轴</Label>
-                                <Select
-                                    value={xAxisColumn}
-                                    onValueChange={handleXAxisChange}
-                                    disabled={visualizableColumns.length === 0}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="选择 X 轴" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {visualizableColumns.map((col) => (
-                                            <SelectItem key={`x-${col}`} value={col} disabled={yAxisColumns.includes(col)}>
-                                                {col}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            {/* Y Axis Selector(s) */}
-                            <div className="space-y-2">
-                                <Label>Y 轴</Label>
-                                {yAxisColumns.map((yCol, index) => (
-                                    <div key={`y-axis-${index}`} className="flex items-center gap-2">
-                                        <Select
-                                            value={yCol}
-                                            onValueChange={(value) => handleYAxisChange(index, value)}
-                                            disabled={visualizableColumns.length === 0}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder={`选择 Y 轴 ${index + 1}`} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {visualizableColumns.map((col) => (
-                                                    <SelectItem
-                                                        key={`y${index}-${col}`}
-                                                        value={col}
-                                                        disabled={col === xAxisColumn || yAxisColumns.some((otherY, i) => i !== index && otherY === col)}
-                                                    >
-                                                        {col}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {(allowMultipleY || yAxisColumns.length > minRequiredYColumns) && (
-                                            <Button variant="ghost" size="icon" onClick={() => removeYAxis(index)} className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0" aria-label="移除 Y 轴">
-                                                <MinusCircle size={14} />
-                                            </Button>
-                                        )}
-                                    </div>
-                                ))}
-                                {/* Add Y axis button */}
-                                {allowMultipleY && (
-                                    <Button variant="outline" size="sm" onClick={addYAxis} className="mt-2 flex items-center gap-1 text-xs" disabled={visualizableColumns.length <= yAxisColumns.length + (xAxisColumn ? 1 : 0)}>
-                                        <PlusCircle size={12} /> 添加 Y 轴
-                                    </Button>
-                                )}
-                                {yAxisColumns.length === 0 && requiresAxis && (
-                                    <Button variant="outline" size="sm" onClick={addYAxis} className="mt-2 flex items-center gap-1 text-xs" disabled={visualizableColumns.length <= (xAxisColumn ? 1 : 0)}>
-                                        <PlusCircle size={12} /> 添加 Y 轴
-                                    </Button>
-                                )}
+                            {/* X and Y Axis Selectors in a horizontal layout */}
+                            <div className="flex flex-row gap-4">
+                                {/* X Axis Selector */}
+                                <div className="space-y-2 flex-1">
+                                    <Label>X 轴</Label>
+                                    <Select
+                                        value={xAxisColumn}
+                                        onValueChange={handleXAxisChange}
+                                        disabled={visualizableColumns.length === 0}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="选择 X 轴" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {visualizableColumns.map((col) => (
+                                                <SelectItem key={`x-${col}`} value={col} disabled={yAxisColumns.includes(col)}>
+                                                    {col}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Y Axis Selector - Always show a single Y axis selector */}
+                                <div className="space-y-2 flex-1">
+                                    <Label>Y 轴</Label>
+                                    <Select
+                                        value={yAxisColumns[0] || ""}
+                                        onValueChange={handleYAxisChange}
+                                        disabled={visualizableColumns.length === 0}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="选择 Y 轴" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {visualizableColumns.map((col) => (
+                                                <SelectItem
+                                                    key={`y-${col}`}
+                                                    value={col}
+                                                    disabled={col === xAxisColumn}
+                                                >
+                                                    {col}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         </div>
                     )}

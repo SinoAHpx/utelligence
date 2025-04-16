@@ -160,7 +160,7 @@ export const processFileData = async (
  * @param config Basic chart config with xAxisColumn and yAxisColumn selected
  * @returns An object containing processed data, layout type, and relevant keys for Recharts
  */
-const MAX_Y_CATEGORIES_FOR_BAR_CHART = 10; // Define a threshold
+const MAX_Y_CATEGORIES_FOR_BAR_CHART = 15; // Define a threshold
 
 export const processBarChartData = (
 	rawData: { headers: string[]; rows: FileData },
@@ -384,7 +384,7 @@ export const processLineChartData = (
 		categories = yAxisAnalysis.uniqueValueList.sort();
 
 		// Limit categories to avoid overly crowded charts (optional)
-		const MAX_TREND_CATEGORIES = 10;
+		const MAX_TREND_CATEGORIES = 15;
 		if (categories.length > MAX_TREND_CATEGORIES) {
 			console.warn(
 				`Too many categories (${categories.length}) for trend line chart. Limiting to ${MAX_TREND_CATEGORIES}.`,
@@ -573,7 +573,7 @@ export const processAreaChartData = (
 		// --- Stacked Area Mode (Categorical Y-axis) ---
 		categories = yAxisAnalysis.uniqueValueList.sort();
 
-		const MAX_STACK_CATEGORIES = 10;
+		const MAX_STACK_CATEGORIES = 12;
 		if (categories.length > MAX_STACK_CATEGORIES) {
 			return {
 				processedData: [],
