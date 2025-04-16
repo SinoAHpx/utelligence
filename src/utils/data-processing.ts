@@ -667,7 +667,9 @@ export const processPieChartData = (
 	}
 
 	// Analyze the selected column directly using analyzeColumnData
-	const columnData = rows.map((row) => row[valueColumnIndex]);
+	const columnData = rows
+		.map((row) => row[valueColumnIndex])
+		.filter((row) => headers.indexOf(row?.toString()!) === -1);
 	const analysis = analyzeColumnData(columnData, valueColumn);
 
 	if (analysis.isEmpty) {
