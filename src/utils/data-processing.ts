@@ -290,7 +290,7 @@ export const processLineChartData = (
 	config: Pick<ChartConfig, "xAxisColumn" | "yAxisColumn">,
 ): Pick<
 	ChartConfig,
-	"processedData" | "categories" | "numericYKey" | "isTruncated"
+	"processedData" | "yCategories" | "numericYKey" | "isTruncated"
 > & {
 	error?: string;
 } => {
@@ -300,7 +300,7 @@ export const processLineChartData = (
 	if (!xAxisColumn || !yAxisColumn) {
 		return {
 			processedData: [],
-			categories: [],
+			yCategories: [],
 			numericYKey: undefined,
 			error: "X 轴和 Y 轴都必须为线形图选择。",
 			isTruncated: false,
@@ -311,7 +311,7 @@ export const processLineChartData = (
 	if (xAxisIndex === -1) {
 		return {
 			processedData: [],
-			categories: [],
+			yCategories: [],
 			numericYKey: undefined,
 			error: `X 轴列 '${xAxisColumn}' 未找到。`,
 			isTruncated: false,
@@ -322,7 +322,7 @@ export const processLineChartData = (
 	if (primaryYAxisIndex === -1) {
 		return {
 			processedData: [],
-			categories: [],
+			yCategories: [],
 			numericYKey: undefined,
 			error: `Y 轴列 '${yAxisColumn}' 未找到。`,
 			isTruncated: false,
@@ -335,7 +335,7 @@ export const processLineChartData = (
 	if (yAxisAnalysis.isEmpty) {
 		return {
 			processedData: [],
-			categories: [],
+			yCategories: [],
 			numericYKey: undefined,
 			error: `Y 轴列 '${yAxisColumn}' 不包含有效数据。`,
 			isTruncated: false,
@@ -378,19 +378,19 @@ export const processLineChartData = (
 	});
 
 	let processedData: ChartDataItem[] = [];
-	let categories: string[] = [];
+	let yCategoriesResult: string[] = [];
 	let numericYKey: string | undefined = undefined;
 
 	if (yAxisAnalysis.isCategorical && yAxisAnalysis.uniqueValues > 1) {
-		categories = yAxisAnalysis.uniqueValueList.sort();
+		yCategoriesResult = yAxisAnalysis.uniqueValueList.sort();
 
 		const MAX_TREND_CATEGORIES = 10;
-		if (categories.length > MAX_TREND_CATEGORIES) {
+		if (yCategoriesResult.length > MAX_TREND_CATEGORIES) {
 			return {
 				processedData: [],
-				categories: [],
+				yCategories: [],
 				numericYKey: undefined,
-				error: `类别 (${categories.length}) 过多，位于 '${yAxisColumn}' 中，无法生成趋势线图。最大允许值为 ${MAX_TREND_CATEGORIES}。`,
+				error: `类别 (${yCategoriesResult.length}) 过多，位于 '${yAxisColumn}' 中，无法生成趋势线图。最大允许值为 ${MAX_TREND_CATEGORIES}。`,
 				isTruncated: false,
 			};
 		}
@@ -399,7 +399,7 @@ export const processLineChartData = (
 			const xValueKey = String(xValue);
 			const groupRows = groupedData[xValueKey] || [];
 			const counts: { [yCategory: string]: number } = {};
-			categories.forEach((cat) => (counts[cat] = 0));
+			yCategoriesResult.forEach((cat) => (counts[cat] = 0));
 			for (const row of groupRows) {
 				const yValue = String(row[primaryYAxisIndex] ?? "").trim();
 				if (yValue !== "" && counts.hasOwnProperty(yValue)) {
@@ -437,7 +437,7 @@ export const processLineChartData = (
 	} else {
 		return {
 			processedData: [],
-			categories: [],
+			yCategories: [],
 			numericYKey: undefined,
 			error: `Y 轴列 '${yAxisColumn}' 不适合线形图（既不是数字也不是充分分类）。`,
 			isTruncated: false,
@@ -453,7 +453,12 @@ export const processLineChartData = (
 		isTruncated = true;
 	}
 
-	return { processedData, categories, numericYKey, isTruncated };
+	return {
+		processedData,
+		yCategories: yCategoriesResult,
+		numericYKey,
+		isTruncated,
+	};
 };
 
 /**
@@ -468,7 +473,7 @@ export const processAreaChartData = (
 	config: Pick<ChartConfig, "xAxisColumn" | "yAxisColumn">,
 ): Pick<
 	ChartConfig,
-	"processedData" | "categories" | "numericYKey" | "isTruncated"
+	"processedData" | "yCategories" | "numericYKey" | "isTruncated"
 > & {
 	error?: string;
 } => {
@@ -478,7 +483,7 @@ export const processAreaChartData = (
 	if (!xAxisColumn || !yAxisColumn) {
 		return {
 			processedData: [],
-			categories: [],
+			yCategories: [],
 			numericYKey: undefined,
 			error: "X 轴和 Y 轴都必须为面积图选择。",
 			isTruncated: false,
@@ -489,7 +494,7 @@ export const processAreaChartData = (
 	if (xAxisIndex === -1) {
 		return {
 			processedData: [],
-			categories: [],
+			yCategories: [],
 			numericYKey: undefined,
 			error: `X 轴列 '${xAxisColumn}' 未找到。`,
 			isTruncated: false,
@@ -500,7 +505,7 @@ export const processAreaChartData = (
 	if (primaryYAxisIndex === -1) {
 		return {
 			processedData: [],
-			categories: [],
+			yCategories: [],
 			numericYKey: undefined,
 			error: `Y 轴列 '${yAxisColumn}' 未找到。`,
 			isTruncated: false,
@@ -513,7 +518,7 @@ export const processAreaChartData = (
 	if (yAxisAnalysis.isEmpty) {
 		return {
 			processedData: [],
-			categories: [],
+			yCategories: [],
 			numericYKey: undefined,
 			error: `Y 轴列 '${yAxisColumn}' 不包含有效数据。`,
 			isTruncated: false,
@@ -556,19 +561,19 @@ export const processAreaChartData = (
 	});
 
 	let processedData: ChartDataItem[] = [];
-	let categories: string[] = [];
+	let yCategoriesResult: string[] = [];
 	let numericYKey: string | undefined = undefined;
 
 	if (yAxisAnalysis.isCategorical && yAxisAnalysis.uniqueValues > 1) {
-		categories = yAxisAnalysis.uniqueValueList.sort();
+		yCategoriesResult = yAxisAnalysis.uniqueValueList.sort();
 
 		const MAX_STACK_CATEGORIES = 10;
-		if (categories.length > MAX_STACK_CATEGORIES) {
+		if (yCategoriesResult.length > MAX_STACK_CATEGORIES) {
 			return {
 				processedData: [],
-				categories: [],
+				yCategories: [],
 				numericYKey: undefined,
-				error: `类别 (${categories.length}) 过多，位于 '${yAxisColumn}' 中，无法生成堆叠面积图。最大允许值为 ${MAX_STACK_CATEGORIES}。`,
+				error: `类别 (${yCategoriesResult.length}) 过多，位于 '${yAxisColumn}' 中，无法生成堆叠面积图。最大允许值为 ${MAX_STACK_CATEGORIES}。`,
 				isTruncated: false,
 			};
 		}
@@ -577,7 +582,7 @@ export const processAreaChartData = (
 			const xValueKey = String(xValue);
 			const groupRows = groupedData[xValueKey] || [];
 			const counts: { [yCategory: string]: number } = {};
-			categories.forEach((cat) => (counts[cat] = 0));
+			yCategoriesResult.forEach((cat) => (counts[cat] = 0));
 			for (const row of groupRows) {
 				const yValue = String(row[primaryYAxisIndex] ?? "").trim();
 				if (yValue !== "" && counts.hasOwnProperty(yValue)) {
@@ -612,7 +617,7 @@ export const processAreaChartData = (
 	} else {
 		return {
 			processedData: [],
-			categories: [],
+			yCategories: [],
 			numericYKey: undefined,
 			error: `Y 轴列 '${yAxisColumn}' 不适合面积图（既不是数字也不是充分分类）。`,
 			isTruncated: false,
@@ -628,7 +633,12 @@ export const processAreaChartData = (
 		isTruncated = true;
 	}
 
-	return { processedData, categories, numericYKey, isTruncated };
+	return {
+		processedData,
+		yCategories: yCategoriesResult,
+		numericYKey,
+		isTruncated,
+	};
 };
 
 /**
