@@ -9,7 +9,9 @@ interface PieChartComponentProps {
     chartConfig: ChartConfig;
 }
 
-export const PieChartComponent: React.FC<PieChartComponentProps> = ({ chartConfig }) => {
+export const PieChartComponent: React.FC<PieChartComponentProps> = React.memo(({
+    chartConfig
+}) => {
     const {
         title = "Pie Chart",
         processedData = [],
@@ -78,6 +80,7 @@ export const PieChartComponent: React.FC<PieChartComponentProps> = ({ chartConfi
             </CardContent>
         </Card>
     );
-};
+});
+PieChartComponent.displayName = "PieChartComponent";
 
 export default PieChartComponent; 

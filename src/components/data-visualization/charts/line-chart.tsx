@@ -8,7 +8,9 @@ interface LineChartComponentProps {
     chartConfig: ChartConfig;
 }
 
-export const LineChartComponent: React.FC<LineChartComponentProps> = ({ chartConfig }) => {
+export const LineChartComponent: React.FC<LineChartComponentProps> = React.memo(({
+    chartConfig
+}) => {
     const {
         title = "Line Chart",
         processedData = [],
@@ -75,6 +77,8 @@ export const LineChartComponent: React.FC<LineChartComponentProps> = ({ chartCon
             </CardContent>
         </Card>
     );
-};
+});
+
+LineChartComponent.displayName = "LineChartComponent";
 
 export default LineChartComponent; 

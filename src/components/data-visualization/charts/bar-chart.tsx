@@ -24,9 +24,7 @@ interface BarChartComponentProps {
     chartConfig: ChartConfig;
 }
 
-export const BarChartComponent: React.FC<BarChartComponentProps> = ({
-    chartConfig,
-}) => {
+const BarChartComponent: React.FC<BarChartComponentProps> = ({ chartConfig }) => {
     const {
         title = "Bar Chart",
         processedData = [],
@@ -110,4 +108,6 @@ export const BarChartComponent: React.FC<BarChartComponentProps> = ({
     );
 };
 
-export default BarChartComponent; 
+BarChartComponent.displayName = "BarChartComponent";
+
+export default React.memo(BarChartComponent); 

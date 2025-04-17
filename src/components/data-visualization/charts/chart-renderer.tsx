@@ -1,4 +1,4 @@
-import type React from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { ChartConfig, ChartDataItem, ChartType } from "@/types/chart-types";
 import { Loader2 } from "lucide-react";
@@ -31,7 +31,7 @@ const CHART_COMPONENTS: Record<ChartType, React.FC<any>> = {
  * ChartRenderer - Renders the appropriate chart based on configuration
  * Handles different chart types and their specific data requirements
  */
-export const ChartRenderer: React.FC<ChartRendererProps> = ({
+export const ChartRenderer: React.FC<ChartRendererProps> = React.memo(({
     chartConfig
 }) => {
     const {
@@ -81,6 +81,9 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
     // --- Pass the full chartConfig to the specific component ---
     // The specific component (e.g., BarChartComponent) will handle its props
     return <ChartComponent chartConfig={chartConfig} />;
-};
+});
+
+// Assign display name for better debugging
+ChartRenderer.displayName = "ChartRenderer";
 
 export default ChartRenderer; 

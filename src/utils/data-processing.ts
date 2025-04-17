@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import { ChartDataItem, ChartConfig } from "@/types/chart-types";
 
 // Define a constant for max data points
-const MAX_DATA_POINTS = 1000; // Adjust as needed
+const MAX_DATA_POINTS = 500; // Adjust as needed
 
 /**
  * Type definitions for file data

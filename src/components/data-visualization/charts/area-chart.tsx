@@ -9,7 +9,9 @@ interface AreaChartComponentProps {
     chartConfig: ChartConfig;
 }
 
-export const AreaChartComponent: React.FC<AreaChartComponentProps> = ({ chartConfig }) => {
+export const AreaChartComponent: React.FC<AreaChartComponentProps> = React.memo(({
+    chartConfig
+}) => {
     const {
         title = "Area Chart",
         processedData = [],
@@ -102,6 +104,8 @@ export const AreaChartComponent: React.FC<AreaChartComponentProps> = ({ chartCon
             </CardContent>
         </Card>
     );
-};
+});
+
+AreaChartComponent.displayName = "AreaChartComponent";
 
 export default AreaChartComponent; 

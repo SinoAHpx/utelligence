@@ -9,7 +9,9 @@ interface ScatterChartComponentProps {
     chartConfig: ChartConfig;
 }
 
-export const ScatterChartComponent: React.FC<ScatterChartComponentProps> = ({ chartConfig }) => {
+export const ScatterChartComponent: React.FC<ScatterChartComponentProps> = React.memo(({
+    chartConfig
+}) => {
     const {
         title = "Scatter Plot",
         processedData = [],
@@ -78,6 +80,7 @@ export const ScatterChartComponent: React.FC<ScatterChartComponentProps> = ({ ch
             </CardContent>
         </Card>
     );
-};
+});
+ScatterChartComponent.displayName = "ScatterChartComponent";
 
 export default ScatterChartComponent; 
