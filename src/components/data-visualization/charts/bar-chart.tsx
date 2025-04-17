@@ -16,7 +16,8 @@ import {
     CardTitle,
     CardDescription,
 } from "@/components/ui/card";
-import { ChartConfig, ChartDataItem } from "@/types/chart-types";
+import { AlertTriangle } from "lucide-react";
+import { ChartConfig } from "@/types/chart-types";
 import { getChartColor } from "@/constants/chart-colors";
 
 interface BarChartComponentProps {
@@ -27,28 +28,31 @@ export const BarChartComponent: React.FC<BarChartComponentProps> = ({
     chartConfig,
 }) => {
     const {
-        title,
-        processedData,
-        layout,
-        yCategories,
-        yKey,
+        title = "Bar Chart",
+        processedData = [],
         xAxisColumn,
         yAxisColumn,
+        layout = "simple",
+        yCategories = [],
+        yKey = "count",
+        isTruncated = false,
     } = chartConfig;
 
-    const displayTitle = title || "Bar Chart";
+    const categoryDataKey = "name";
 
-    const dataToRender = processedData?.slice(0, 100) ?? [];
+    const description = `X: ${xAxisColumn || 'N/A'}, Y: ${yAxisColumn || 'N/A'} (${layout === 'stacked' ? 'Stacked' : 'Simple'} Count)`;
 
-    if (!processedData || dataToRender.length === 0) {
+    if (!processedData || processedData.length === 0) {
         return (
             <Card className="h-[400px]">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">{displayTitle}</CardTitle>
-                    <CardDescription className="text-xs">No data available for this configuration.</CardDescription>
+                    <CardTitle className="text-sm">{title}</CardTitle>
+                    <CardDescription className="text-xs">
+                        {description} - 正在等待数据...
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="flex items-center justify-center h-[340px]">
-                    No Data
+                    <p className="text-muted-foreground">没有可用于柱状图的数据。</p>
                 </CardContent>
             </Card>
         );
@@ -57,47 +61,48 @@ export const BarChartComponent: React.FC<BarChartComponentProps> = ({
     return (
         <Card className="h-[400px]">
             <CardHeader className="pb-2">
-                <CardTitle className="text-sm">{displayTitle}</CardTitle>
-                <CardDescription className="text-xs">
-                    X: {xAxisColumn} | Y: {yAxisColumn} {layout === "stacked" ? "(Stacked)" : "(Count)"}
+                <CardTitle className="text-sm">{title}</CardTitle>
+                <CardDescription className="text-xs flex items-center">
+                    {description}
+                    {isTruncated && (
+                        <span className="ml-2 flex items-center text-amber-600 dark:text-amber-400" title="数据点过多，已截断显示">
+                            <AlertTriangle size={12} className="mr-1" />
+                            (已截断)
+                        </span>
+                    )}
                 </CardDescription>
             </CardHeader>
             <CardContent className="h-[340px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                        data={dataToRender}
-                        margin={{ top: 10, right: 30, left: 10, bottom: 40 }}
+                        data={processedData}
+                        margin={{ top: 10, right: 30, left: 10, bottom: 50 }}
                     >
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis
-                            dataKey="name"
+                            dataKey={categoryDataKey}
+                            type="category"
                             angle={-45}
                             textAnchor="end"
                             interval={0}
                             height={60}
-                            tick={{ fontSize: 10 }}
                         />
-                        <YAxis />
+                        <YAxis type="number" />
                         <Tooltip />
                         <Legend />
-
-                        {layout === "stacked" && yCategories && yCategories.length > 0 ? (
-                            yCategories.map((category, index) => (
+                        {layout === 'stacked' ? (
+                            yCategories.map((category: string, index: number) => (
                                 <Bar
                                     key={category}
                                     dataKey={category}
                                     stackId="a"
                                     fill={getChartColor(index)}
-                                    name={category}
+                                    name={String(category)}
                                 />
                             ))
-                        ) : layout === "simple" && yKey ? (
-                            <Bar
-                                dataKey={yKey}
-                                fill={getChartColor(0)}
-                                name={yAxisColumn || yKey}
-                            />
-                        ) : null}
+                        ) : (
+                            <Bar dataKey={yKey} fill={getChartColor(0)} name={yAxisColumn || yKey} />
+                        )}
                     </BarChart>
                 </ResponsiveContainer>
             </CardContent>

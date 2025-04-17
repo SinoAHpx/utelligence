@@ -1,6 +1,7 @@
 import React from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { AlertTriangle } from "lucide-react";
 import { ChartConfig } from "@/types/chart-types";
 import { getChartColor } from "@/constants/chart-colors";
 
@@ -12,11 +13,11 @@ export const PieChartComponent: React.FC<PieChartComponentProps> = ({ chartConfi
     const {
         title = "Pie Chart",
         processedData = [],
-        yAxisColumns = [],
+        yAxisColumn,
+        isTruncated = false,
     } = chartConfig;
 
-    const dataColumn = yAxisColumns.length > 0 ? yAxisColumns[0] : "(未指定列)";
-
+    const dataColumn = yAxisColumn || "(未指定列)";
     const pieData = processedData;
 
     if (!pieData || pieData.length === 0) {
@@ -37,8 +38,14 @@ export const PieChartComponent: React.FC<PieChartComponentProps> = ({ chartConfi
         <Card className="h-[400px]">
             <CardHeader className="pb-2">
                 <CardTitle className="text-sm">{title}</CardTitle>
-                <CardDescription className="text-xs">
+                <CardDescription className="text-xs flex items-center">
                     显示列: {dataColumn}
+                    {isTruncated && (
+                        <span className="ml-2 flex items-center text-amber-600 dark:text-amber-400" title="类别过多，已将最小的组合为 'Other'">
+                            <AlertTriangle size={12} className="mr-1" />
+                            (已分组)
+                        </span>
+                    )}
                 </CardDescription>
             </CardHeader>
             <CardContent className="h-[340px]">

@@ -16,17 +16,25 @@ export interface ChartConfig {
 	chartType: string; // e.g., 'bar', 'line'
 	title: string;
 	xAxisColumn?: string; // Original selected X column name
-	yAxisColumn?: string; // Original selected Y column name
+	yAxisColumn?: string; // Original selected Y column name (single)
+	// yAxisColumns?: string[]; // Keep single yAxisColumn for config simplicity
+
 	// Processed data and layout specific to this chart instance
 	processedData?: ChartDataItem[];
 	layout?: "stacked" | "simple" | "grouped"; // Layout for bar charts
-	yCategories?: string[]; // Keys for stacked bar chart data
-	yKey?: string; // Key for simple/grouped bar chart data (e.g., 'count')
+	yCategories?: string[]; // Keys for stacked bar/area/line data
+	yKey?: string; // Key for simple/grouped bar chart data
+
+	// Line/Area/Scatter specific fields based on single yAxisColumn analysis
+	// categories?: string[]; // Categories for multi-line/area trend -> Handled by yCategories now?
+	numericYKey?: string; // The dataKey for a single numeric Y line/area -> Use yAxisColumn directly?
+
+	// Performance flag
+	isTruncated?: boolean; // Flag indicating if data was truncated
 
 	// Line Chart specific fields
-	yAxisColumns?: string[]; // Multiple Y-axes for numeric, single for categorical trend
-	categories?: string[]; // Categories for multi-line trend
-	numericYKey?: string; // The dataKey for a single numeric Y line
+	// categories?: string[]; // Categories for multi-line trend
+	// numericYKey?: string; // The dataKey for a single numeric Y line
 
 	// duplicateValueHandling?: "merge" | "keep"; // Keep if relevant for other chart types
 }

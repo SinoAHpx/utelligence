@@ -1,6 +1,7 @@
 import type React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { ChartConfig, ChartDataItem, ChartType } from "@/types/chart-types";
+import { Loader2 } from "lucide-react";
 import PieChartComponent from "./pie-chart";
 import BarChartComponent from "./bar-chart";
 import LineChartComponent from "./line-chart";
@@ -34,7 +35,11 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
     chartConfig
 }) => {
     const {
-        chartType
+        chartType,
+        processedData,
+        title,
+        xAxisColumn,
+        yAxisColumn
     } = chartConfig;
 
     // Get the appropriate chart component based on type
@@ -43,26 +48,31 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
     if (!ChartComponent) {
         return (
             <Card className="h-[400px]">
-                <CardContent className="flex items-center justify-center h-full p-4">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{title || chartType}</CardTitle>
+                    <CardDescription className="text-xs">错误</CardDescription>
+                </CardHeader>
+                <CardContent className="flex items-center justify-center h-[340px] p-4">
                     不支持的图表类型: {chartType}
                 </CardContent>
             </Card>
         );
     }
 
-    // Check if the chart has processed data
-    if (!chartConfig.processedData || chartConfig.processedData.length === 0) {
+    // Check if data is still processing (processedData might be undefined or empty array initially)
+    // Display a loading state
+    if (!processedData) {
         return (
             <Card className="h-[400px]">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">{chartConfig.title || chartType}</CardTitle>
+                    <CardTitle className="text-sm">{title || chartType}</CardTitle>
                     <CardDescription className="text-xs">
-                        Waiting for data or configuration...
+                        X: {xAxisColumn || '...'}, Y: {yAxisColumn || '...'} - 正在加载数据...
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="flex items-center justify-center h-full p-4">
-                    No data processed for this chart yet.
-                    {/* Optionally add a remove button here */}
+                <CardContent className="flex flex-col items-center justify-center h-[340px] p-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
+                    <p className="text-sm text-muted-foreground">正在处理图表数据</p>
                 </CardContent>
             </Card>
         );

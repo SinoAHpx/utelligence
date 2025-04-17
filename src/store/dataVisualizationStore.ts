@@ -48,8 +48,9 @@ interface DataVisualizationState {
 	xAxisColumn: string;
 	setXAxisColumn: (column: string) => void;
 
-	yAxisColumns: string[];
-	setYAxisColumns: (columns: string[]) => void;
+	// Revert back to single yAxisColumn
+	yAxisColumn: string;
+	setYAxisColumn: (column: string) => void;
 
 	// Processed file info
 	processedFile: { name: string; size: number } | null;
@@ -109,8 +110,9 @@ export const useDataVisualizationStore = create<DataVisualizationState>()(
 			xAxisColumn: "",
 			setXAxisColumn: (column) => set({ xAxisColumn: column }),
 
-			yAxisColumns: [],
-			setYAxisColumns: (columns) => set({ yAxisColumns: columns }),
+			// Revert back to single yAxisColumn
+			yAxisColumn: "",
+			setYAxisColumn: (column) => set({ yAxisColumn: column }),
 
 			// Processed file info
 			processedFile: null,
