@@ -6,11 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { useChatStore } from "@/store/chatStore";
 import { basePath } from "@/lib/utils";
-import {
-	fetchTokenLimit,
-	fetchAvailableModels,
-	saveChatMessages,
-} from "@/utils/chat-utils";
+import { fetchAvailableModels } from "@/utils/chat-utils";
 
 /**
  * Custom hook for all chat-related actions
@@ -21,8 +17,6 @@ export const useChatActions = () => {
 		chatOptions,
 		currentChatId,
 		setCurrentChatId,
-		fetchModels,
-		setTokenLimit,
 		messages: storedMessages,
 		setMessages,
 		getSystemPrompt,
@@ -66,14 +60,10 @@ export const useChatActions = () => {
 					});
 				}
 			}
-
-			// Fetch token limit
-			const limit = await fetchTokenLimit();
-			setTokenLimit(limit);
 		};
 
 		loadModelsAndLimits();
-	}, [chatOptions, setTokenLimit]);
+	}, [chatOptions]);
 
 	/**
 	 * Load messages from store when chat ID changes
