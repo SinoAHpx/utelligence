@@ -85,6 +85,126 @@ export const analyzeColumnData = (
 };
 
 /**
+ * Helper function to validate axis selections and extract necessary info.
+ * @param headers Array of column headers.
+ * @param rows The file data rows.
+ * @param xAxisColumn Selected X-axis column name.
+ * @param yAxisColumn Selected Y-axis column name.
+ * @param chartTypeName Name of the chart type for error messages.
+ * @returns Object with success status, indices, Y-axis analysis, or an error message.
+ */
+const validateAndExtractAxisInfo = (
+	headers: string[],
+	rows: FileData,
+	xAxisColumn: string | undefined,
+	yAxisColumn: string | undefined,
+	chartTypeName: string,
+):
+	| {
+			success: true;
+			xAxisIndex: number;
+			yAxisIndex: number;
+			yAxisAnalysis: ReturnType<typeof analyzeColumnData>;
+	  }
+	| { success: false; error: string } => {
+	if (!xAxisColumn || !yAxisColumn) {
+		return {
+			success: false,
+			error: `X and Y axes must be selected for ${chartTypeName}.`,
+		};
+	}
+
+	const xAxisIndex = headers.indexOf(xAxisColumn);
+	const yAxisIndex = headers.indexOf(yAxisColumn);
+
+	if (xAxisIndex === -1) {
+		return {
+			success: false,
+			error: `X-axis column '${xAxisColumn}' not found.`,
+		};
+	}
+	if (yAxisIndex === -1) {
+		return {
+			success: false,
+			error: `Y-axis column '${yAxisColumn}' not found.`,
+		};
+	}
+
+	const yColumnData = rows.map((row) => row[yAxisIndex]);
+	const yAxisAnalysis = analyzeColumnData(yColumnData, yAxisColumn);
+
+	if (yAxisAnalysis.isEmpty) {
+		return {
+			success: false,
+			error: `Y-axis column '${yAxisColumn}' contains no valid data.`,
+		};
+	}
+
+	return { success: true, xAxisIndex, yAxisIndex, yAxisAnalysis };
+};
+
+/**
+ * Groups data rows based on the value in the X-axis column.
+ * Also determines if X-axis values are numeric and returns sorted unique X values.
+ * @param rows The file data rows.
+ * @param xAxisIndex The index of the X-axis column.
+ * @param headers Array of column headers.
+ * @returns Object containing grouped data, sorted X values, and numeric flag.
+ */
+const groupDataByXAxis = (
+	rows: FileData,
+	xAxisIndex: number,
+	headers: string[],
+): {
+	groupedData: { [key: string]: FileData };
+	sortedXValues: (string | number)[];
+	allXAreNumeric: boolean;
+} => {
+	const groupedData: { [key: string]: FileData } = {};
+	let allXAreNumeric = true;
+	const xValuesSet = new Set<string | number>();
+
+	for (const row of rows) {
+		let xValue: string | number | null | undefined = row[xAxisIndex];
+		const numXValue = Number(xValue);
+
+		// Try converting to number if possible, otherwise treat as string
+		if (
+			xValue !== null &&
+			xValue !== undefined &&
+			String(xValue).trim() !== "" &&
+			!isNaN(numXValue)
+		) {
+			xValue = numXValue; // Keep as number if numeric
+		} else {
+			allXAreNumeric = false; // Mark as non-numeric if conversion fails or non-numeric chars found
+			xValue = String(xValue ?? "").trim(); // Treat as string
+		}
+
+		// Skip empty values or values that are actual headers
+		if (xValue === "" || xValue === null || xValue === undefined) continue;
+		if (typeof xValue === "string" && headers.indexOf(xValue) !== -1) continue;
+
+		xValuesSet.add(xValue);
+		const xValueKey = String(xValue); // Use string key for the object
+		if (!groupedData[xValueKey]) {
+			groupedData[xValueKey] = [];
+		}
+		groupedData[xValueKey].push(row);
+	}
+
+	// Sort X values (numerically if possible, otherwise string locale compare)
+	const sortedXValues = Array.from(xValuesSet).sort((a, b) => {
+		if (allXAreNumeric) {
+			return (a as number) - (b as number);
+		}
+		return String(a).localeCompare(String(b));
+	});
+
+	return { groupedData, sortedXValues, allXAreNumeric };
+};
+
+/**
  * Process file data from a CSV or Excel file and store raw data
  * @param file File to process
  * @param onSuccess Callback with raw headers and rows
@@ -177,32 +297,22 @@ export const processBarChartData = (
 	const { headers, rows } = rawData;
 	const { xAxisColumn, yAxisColumn } = config;
 
-	if (!xAxisColumn || !yAxisColumn) {
+	const axisInfo = validateAndExtractAxisInfo(
+		headers,
+		rows,
+		xAxisColumn,
+		yAxisColumn,
+		"bar charts",
+	);
+
+	if (!axisInfo.success) {
 		return {
-			error: "X and Y axes must be selected for bar charts.",
+			error: axisInfo.error,
 			isTruncated: false,
 		};
 	}
 
-	const xAxisIndex = headers.indexOf(xAxisColumn);
-	const yAxisIndex = headers.indexOf(yAxisColumn);
-
-	if (xAxisIndex === -1 || yAxisIndex === -1) {
-		return {
-			error: "Selected axis column(s) not found in data.",
-			isTruncated: false,
-		};
-	}
-
-	const yColumnData = rows.map((row) => row[yAxisIndex]);
-	const yAxisAnalysis = analyzeColumnData(yColumnData, yAxisColumn);
-
-	if (yAxisAnalysis.isEmpty) {
-		return {
-			error: `Y-axis column '${yAxisColumn}' contains no valid data.`,
-			isTruncated: false,
-		};
-	}
+	const { xAxisIndex, yAxisIndex, yAxisAnalysis } = axisInfo;
 
 	if (yAxisAnalysis.uniqueValues > MAX_Y_CATEGORIES_FOR_BAR_CHART) {
 		return {
@@ -213,24 +323,17 @@ export const processBarChartData = (
 		};
 	}
 
-	const groupedData: { [xValue: string]: FileData } = {};
-
-	for (const row of rows) {
-		const xValue = String(row[xAxisIndex] ?? "").trim();
-		if (xValue === "") continue;
-		if (headers.indexOf(xValue) !== -1) continue;
-		if (!groupedData[xValue]) {
-			groupedData[xValue] = [];
-		}
-		groupedData[xValue].push(row);
-	}
+	// Use the new helper for grouping and sorting
+	const { groupedData, sortedXValues } = groupDataByXAxis(
+		rows,
+		xAxisIndex,
+		headers,
+	);
 
 	let processedData: ChartDataItem[] = [];
 	let layout: "stacked" | "simple" = "simple";
 	let yCategories: string[] = [];
 	const yKey = "count";
-
-	const sortedXValues = Object.keys(groupedData).sort();
 
 	if (yAxisAnalysis.isCategorical && yAxisAnalysis.uniqueValues > 1) {
 		layout = "stacked";
@@ -297,85 +400,32 @@ export const processLineChartData = (
 	const { headers, rows } = rawData;
 	const { xAxisColumn, yAxisColumn } = config;
 
-	if (!xAxisColumn || !yAxisColumn) {
+	const axisInfo = validateAndExtractAxisInfo(
+		headers,
+		rows,
+		xAxisColumn,
+		yAxisColumn,
+		"line charts",
+	);
+
+	if (!axisInfo.success) {
 		return {
 			processedData: [],
 			yCategories: [],
 			numericYKey: undefined,
-			error: "X 轴和 Y 轴都必须为线形图选择。",
+			error: axisInfo.error,
 			isTruncated: false,
 		};
 	}
 
-	const xAxisIndex = headers.indexOf(xAxisColumn);
-	if (xAxisIndex === -1) {
-		return {
-			processedData: [],
-			yCategories: [],
-			numericYKey: undefined,
-			error: `X 轴列 '${xAxisColumn}' 未找到。`,
-			isTruncated: false,
-		};
-	}
+	const { xAxisIndex, yAxisIndex: primaryYAxisIndex, yAxisAnalysis } = axisInfo;
 
-	const primaryYAxisIndex = headers.indexOf(yAxisColumn);
-	if (primaryYAxisIndex === -1) {
-		return {
-			processedData: [],
-			yCategories: [],
-			numericYKey: undefined,
-			error: `Y 轴列 '${yAxisColumn}' 未找到。`,
-			isTruncated: false,
-		};
-	}
-
-	const primaryYColumnData = rows.map((row) => row[primaryYAxisIndex]);
-	const yAxisAnalysis = analyzeColumnData(primaryYColumnData, yAxisColumn);
-
-	if (yAxisAnalysis.isEmpty) {
-		return {
-			processedData: [],
-			yCategories: [],
-			numericYKey: undefined,
-			error: `Y 轴列 '${yAxisColumn}' 不包含有效数据。`,
-			isTruncated: false,
-		};
-	}
-
-	const groupedData: { [xValueKey: string]: FileData } = {};
-	let allXAreNumeric = true;
-	const xValuesSet = new Set<string | number>();
-
-	for (const row of rows) {
-		let xValue: string | number | null | undefined = row[xAxisIndex];
-		const numXValue = Number(xValue);
-		if (
-			xValue !== null &&
-			xValue !== undefined &&
-			String(xValue).trim() !== "" &&
-			!isNaN(numXValue)
-		) {
-			xValue = numXValue;
-		} else {
-			allXAreNumeric = false;
-			xValue = String(xValue ?? "").trim();
-		}
-		if (xValue === "" || xValue === null || xValue === undefined) continue;
-		if (typeof xValue === "string" && headers.indexOf(xValue) !== -1) continue;
-		xValuesSet.add(xValue);
-		const xValueKey = String(xValue);
-		if (!groupedData[xValueKey]) {
-			groupedData[xValueKey] = [];
-		}
-		groupedData[xValueKey].push(row);
-	}
-
-	const sortedXValues = Array.from(xValuesSet).sort((a, b) => {
-		if (allXAreNumeric) {
-			return (a as number) - (b as number);
-		}
-		return String(a).localeCompare(String(b));
-	});
+	// Use the new helper for grouping and sorting
+	const { groupedData, sortedXValues, allXAreNumeric } = groupDataByXAxis(
+		rows,
+		xAxisIndex,
+		headers,
+	);
 
 	let processedData: ChartDataItem[] = [];
 	let yCategoriesResult: string[] = [];
@@ -406,7 +456,7 @@ export const processLineChartData = (
 					counts[yValue]++;
 				}
 			}
-			processedData.push({ [xAxisColumn]: xValue, ...counts });
+			processedData.push({ [String(xAxisColumn)]: xValue, ...counts });
 		}
 	} else if (yAxisAnalysis.isNumeric) {
 		numericYKey = yAxisColumn;
@@ -427,8 +477,8 @@ export const processLineChartData = (
 			const averageY = count > 0 ? sum / count : 0;
 			if (numericYKey) {
 				processedData.push({
-					[xAxisColumn]: xValue,
-					[numericYKey]: averageY,
+					[String(xAxisColumn)]: xValue,
+					[String(numericYKey)]: averageY,
 				});
 			} else {
 				console.error("Numeric Y key is undefined despite numeric analysis");
@@ -480,85 +530,32 @@ export const processAreaChartData = (
 	const { headers, rows } = rawData;
 	const { xAxisColumn, yAxisColumn } = config;
 
-	if (!xAxisColumn || !yAxisColumn) {
+	const axisInfo = validateAndExtractAxisInfo(
+		headers,
+		rows,
+		xAxisColumn,
+		yAxisColumn,
+		"area charts",
+	);
+
+	if (!axisInfo.success) {
 		return {
 			processedData: [],
 			yCategories: [],
 			numericYKey: undefined,
-			error: "X 轴和 Y 轴都必须为面积图选择。",
+			error: axisInfo.error,
 			isTruncated: false,
 		};
 	}
 
-	const xAxisIndex = headers.indexOf(xAxisColumn);
-	if (xAxisIndex === -1) {
-		return {
-			processedData: [],
-			yCategories: [],
-			numericYKey: undefined,
-			error: `X 轴列 '${xAxisColumn}' 未找到。`,
-			isTruncated: false,
-		};
-	}
+	const { xAxisIndex, yAxisIndex, yAxisAnalysis } = axisInfo;
 
-	const primaryYAxisIndex = headers.indexOf(yAxisColumn);
-	if (primaryYAxisIndex === -1) {
-		return {
-			processedData: [],
-			yCategories: [],
-			numericYKey: undefined,
-			error: `Y 轴列 '${yAxisColumn}' 未找到。`,
-			isTruncated: false,
-		};
-	}
-
-	const primaryYColumnData = rows.map((row) => row[primaryYAxisIndex]);
-	const yAxisAnalysis = analyzeColumnData(primaryYColumnData, yAxisColumn);
-
-	if (yAxisAnalysis.isEmpty) {
-		return {
-			processedData: [],
-			yCategories: [],
-			numericYKey: undefined,
-			error: `Y 轴列 '${yAxisColumn}' 不包含有效数据。`,
-			isTruncated: false,
-		};
-	}
-
-	const groupedData: { [xValueKey: string]: FileData } = {};
-	let allXAreNumeric = true;
-	const xValuesSet = new Set<string | number>();
-
-	for (const row of rows) {
-		let xValue: string | number | null | undefined = row[xAxisIndex];
-		const numXValue = Number(xValue);
-		if (
-			xValue !== null &&
-			xValue !== undefined &&
-			String(xValue).trim() !== "" &&
-			!isNaN(numXValue)
-		) {
-			xValue = numXValue;
-		} else {
-			allXAreNumeric = false;
-			xValue = String(xValue ?? "").trim();
-		}
-		if (xValue === "" || xValue === null || xValue === undefined) continue;
-		if (typeof xValue === "string" && headers.indexOf(xValue) !== -1) continue;
-		xValuesSet.add(xValue);
-		const xValueKey = String(xValue);
-		if (!groupedData[xValueKey]) {
-			groupedData[xValueKey] = [];
-		}
-		groupedData[xValueKey].push(row);
-	}
-
-	const sortedXValues = Array.from(xValuesSet).sort((a, b) => {
-		if (allXAreNumeric) {
-			return (a as number) - (b as number);
-		}
-		return String(a).localeCompare(String(b));
-	});
+	// Use the new helper for grouping and sorting
+	const { groupedData, sortedXValues, allXAreNumeric } = groupDataByXAxis(
+		rows,
+		xAxisIndex,
+		headers,
+	);
 
 	let processedData: ChartDataItem[] = [];
 	let yCategoriesResult: string[] = [];
@@ -584,12 +581,12 @@ export const processAreaChartData = (
 			const counts: { [yCategory: string]: number } = {};
 			yCategoriesResult.forEach((cat) => (counts[cat] = 0));
 			for (const row of groupRows) {
-				const yValue = String(row[primaryYAxisIndex] ?? "").trim();
+				const yValue = String(row[yAxisIndex] ?? "").trim();
 				if (yValue !== "" && counts.hasOwnProperty(yValue)) {
 					counts[yValue]++;
 				}
 			}
-			processedData.push({ [xAxisColumn]: xValue, ...counts });
+			processedData.push({ [String(xAxisColumn)]: xValue, ...counts });
 		}
 	} else if (yAxisAnalysis.isNumeric) {
 		numericYKey = yAxisColumn;
@@ -599,7 +596,7 @@ export const processAreaChartData = (
 			const groupRows = groupedData[xValueKey] || [];
 			let sum = 0;
 			for (const row of groupRows) {
-				const yValue = row[primaryYAxisIndex];
+				const yValue = row[yAxisIndex];
 				const numYValue = Number(yValue);
 				if (yValue !== null && yValue !== undefined && !isNaN(numYValue)) {
 					sum += numYValue;
@@ -607,8 +604,8 @@ export const processAreaChartData = (
 			}
 			if (numericYKey) {
 				processedData.push({
-					[xAxisColumn]: xValue,
-					[numericYKey]: sum,
+					[String(xAxisColumn)]: xValue,
+					[String(numericYKey)]: sum,
 				});
 			} else {
 				console.error("Numeric Y key is undefined despite numeric analysis");
@@ -851,8 +848,8 @@ export const processScatterChartData = (
 			isFinite(numY)
 		) {
 			processedData.push({
-				[xAxisColumn]: numX,
-				[yAxisColumn]: numY,
+				[String(xAxisColumn)]: numX,
+				[String(yAxisColumn)]: numY,
 			});
 		}
 	}
