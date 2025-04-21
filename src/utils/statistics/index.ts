@@ -15,6 +15,13 @@ import { getDistributionShapeStatistics } from "./distribution-shape";
 import { getBasicStatistics } from "./basic";
 import { CellValue, StatisticResult } from "./types";
 
+// 为简化API导出常用函数的别名
+import { fisherSkewness as skewness } from "./distribution-shape";
+import { fisherKurtosis as kurtosis } from "./distribution-shape";
+
+// 重新导出这些别名
+export { skewness, kurtosis };
+
 /**
  * 计算所有描述性统计量
  * @param data 数据集

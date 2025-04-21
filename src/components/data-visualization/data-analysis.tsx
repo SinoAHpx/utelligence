@@ -96,23 +96,6 @@ export default function DataAnalysis({
     }
   }, [selectedColumns, selectedColumn]);
 
-  // Format stat value for display
-  const formatStatValue = (value: any): string => {
-    if (value === null) return "N/A";
-    if (Array.isArray(value)) {
-      if (value.length === 0) return "N/A";
-      return value.join(", ");
-    }
-    if (typeof value === 'number') {
-      // Format number to 4 decimal places at most
-      return value.toLocaleString(undefined, {
-        maximumFractionDigits: 4,
-        minimumFractionDigits: 0
-      });
-    }
-    return String(value);
-  };
-
   if (!file) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -167,7 +150,6 @@ export default function DataAnalysis({
               <StatisticsTab
                 statsData={statsData}
                 isLoading={isLoading}
-                formatStatValue={formatStatValue}
               />
             </TabsContent>
 

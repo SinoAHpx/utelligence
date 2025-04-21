@@ -6,11 +6,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatisticsFilter } from "./statistics-filter";
 import { StatisticsTable } from "./statistics-table";
 import { StatisticResult } from "@/utils/statistics/types";
+import { formatStatValue, groupStatsByCategory } from "../utils/analysis-helpers";
 
 interface StatisticsTabProps {
     statsData: StatisticResult[];
     isLoading: boolean;
-    formatStatValue: (value: any) => string;
 }
 
 /**
@@ -19,7 +19,6 @@ interface StatisticsTabProps {
 export function StatisticsTab({
     statsData,
     isLoading,
-    formatStatValue,
 }: StatisticsTabProps) {
     const [statsCategory, setStatsCategory] = useState<string>("all");
 
@@ -29,13 +28,7 @@ export function StatisticsTab({
         : statsData.filter(stat => stat.category === statsCategory);
 
     // 按类别分组统计数据
-    const statsByCategory = filteredStats.reduce((acc: Record<string, StatisticResult[]>, stat) => {
-        if (!acc[stat.category]) {
-            acc[stat.category] = [];
-        }
-        acc[stat.category].push(stat);
-        return acc;
-    }, {});
+    const statsByCategory = groupStatsByCategory(filteredStats);
 
     if (isLoading) {
         return (
