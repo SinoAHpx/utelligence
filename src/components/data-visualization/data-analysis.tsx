@@ -24,9 +24,6 @@ import {
 import { processFileData } from "@/utils/data-processing";
 import { StatisticsTab } from "./statistical-analysis/statistics-tab";
 import { CorrelationTab } from "./statistical-analysis/correlation-tab";
-import { CentralTendencyTab } from "./statistical-analysis/central-tendency-tab";
-import { DispersionTab } from "./statistical-analysis/dispersion-tab";
-import { DistributionTab } from "./statistical-analysis/distribution-tab";
 import { calculateDescriptiveStatistics } from "@/utils/statistics";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { convertToNumericArray } from "@/utils/statistics/utils";
@@ -51,9 +48,6 @@ export default function DataAnalysis({
 
   const tabOptions = [
     { id: "statistics", name: "统计描述" },
-    { id: "centralTendency", name: "中心趋势" },
-    { id: "dispersion", name: "离散程度" },
-    { id: "distribution", name: "分布分析" },
     { id: "correlation", name: "相关性分析" },
     { id: "regression", name: "回归分析" },
   ];
@@ -173,26 +167,7 @@ export default function DataAnalysis({
               <StatisticsTab
                 statsData={statsData}
                 isLoading={isLoading}
-              />
-            </TabsContent>
-
-            <TabsContent value="centralTendency" className="mt-6">
-              <CentralTendencyTab
-                data={columnData}
-                columnName={selectedColumn}
-              />
-            </TabsContent>
-
-            <TabsContent value="dispersion" className="mt-6">
-              <DispersionTab
-                data={columnData}
-                columnName={selectedColumn}
-              />
-            </TabsContent>
-
-            <TabsContent value="distribution" className="mt-6">
-              <DistributionTab
-                data={columnData}
+                columnData={columnData}
                 columnName={selectedColumn}
               />
             </TabsContent>

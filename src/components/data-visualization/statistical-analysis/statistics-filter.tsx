@@ -22,6 +22,9 @@ export function StatisticsFilter({
         { id: CATEGORIES.DISPERSION, name: "离散程度" },
         { id: CATEGORIES.DISTRIBUTION_SHAPE, name: "分布形态" },
         { id: CATEGORIES.BASIC, name: "基本统计" },
+        { id: "centralTendencyTab", name: "中心趋势分析" },
+        { id: "dispersionTab", name: "离散程度分析" },
+        { id: "distributionTab", name: "分布分析" },
     ];
 
     return (
