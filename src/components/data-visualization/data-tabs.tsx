@@ -83,8 +83,8 @@ export default function DataTabs({ file }: DataTabsProps) {
         <TabsList className="w-full grid grid-cols-4 mb-4">
           <TabsTrigger value="preview">文件预览</TabsTrigger>
           <TabsTrigger value="display">数据展示</TabsTrigger>
-          <TabsTrigger value="cleaning">数据清洗</TabsTrigger>
           <TabsTrigger value="analysis">数据分析</TabsTrigger>
+          <TabsTrigger value="cleaning">数据清洗</TabsTrigger>
         </TabsList>
 
         <div className="flex-1 overflow-auto">
