@@ -27,6 +27,7 @@ import { CorrelationTab } from "./statistical-analysis/correlation-tab";
 import { calculateDescriptiveStatistics } from "@/utils/statistics";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { convertToNumericArray } from "@/utils/statistics/utils";
+import { InferentialStatisticsTab } from "./statistical-analysis/inferential-statistics/inferential-tab";
 
 interface DataAnalysisProps {
   file: File | null;
@@ -48,6 +49,7 @@ export default function DataAnalysis({
 
   const tabOptions = [
     { id: "statistics", name: "统计描述" },
+    { id: "inferential", name: "推断性统计" },
     { id: "correlation", name: "相关性分析" },
     { id: "regression", name: "回归分析" },
   ];
@@ -166,6 +168,14 @@ export default function DataAnalysis({
             <TabsContent value="statistics" className="mt-6">
               <StatisticsTab
                 statsData={statsData}
+                isLoading={isLoading}
+                columnData={columnData}
+                columnName={selectedColumn}
+              />
+            </TabsContent>
+
+            <TabsContent value="inferential" className="mt-6">
+              <InferentialStatisticsTab
                 isLoading={isLoading}
                 columnData={columnData}
                 columnName={selectedColumn}

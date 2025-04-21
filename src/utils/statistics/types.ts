@@ -12,4 +12,5 @@ export const CATEGORIES = {
 	DISPERSION: "离散程度测度",
 	DISTRIBUTION_SHAPE: "分布形态测度",
 	BASIC: "基本统计量",
+	INFERENTIAL: "推断性统计",
 };
