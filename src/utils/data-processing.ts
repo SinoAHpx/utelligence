@@ -873,3 +873,89 @@ export const processScatterChartData = (
 
 	return { processedData, isTruncated };
 };
+
+/**
+ * Process data for Radar Chart visualization
+ * For radar charts, we take a single column and count the frequency of each unique value
+ * @param rawData The raw file data with headers and rows
+ * @param config Configuration with the selected column
+ * @returns Processed data ready for the radar chart component
+ */
+export const processRadarChartData = (
+	rawData: { headers: string[]; rows: FileData },
+	config: { xAxisColumn: string },
+): Pick<ChartConfig, "processedData" | "isTruncated"> & { error?: string } => {
+	const { headers, rows } = rawData;
+	const { xAxisColumn } = config;
+
+	// Find the index of the selected column
+	const colIndex = headers.indexOf(xAxisColumn);
+	if (colIndex === -1) {
+		return {
+			processedData: [],
+			isTruncated: false,
+			error: `列 '${xAxisColumn}' 未找到`,
+		};
+	}
+
+	// Extract the column data
+	const columnData = rows.map((row) => row[colIndex]);
+
+	// Count the frequency of each unique value, ignoring nulls, N/A, empty strings, etc.
+	const valueFrequencies: { [key: string]: number } = {};
+	const emptyValues = ["n/a", "na", "null", "undefined", "-", ""];
+
+	for (const value of columnData) {
+		// Skip if value is null, undefined, or empty after trimming
+		if (value === null || value === undefined) {
+			continue;
+		}
+
+		const strValue = String(value).trim().toLowerCase();
+
+		// Skip common empty value representations
+		if (strValue === "" || emptyValues.includes(strValue)) {
+			continue;
+		}
+
+		// Use the original case for display
+		const displayValue = String(value).trim();
+		valueFrequencies[displayValue] = (valueFrequencies[displayValue] || 0) + 1;
+	}
+
+	// Convert to the format needed for radar charts
+	let processedData = Object.entries(valueFrequencies).map(([key, value]) => ({
+		subject: key,
+		value,
+	}));
+
+	// Sort by frequency (descending)
+	processedData.sort((a, b) => b.value - a.value);
+
+	// If no valid data found
+	if (processedData.length === 0) {
+		return {
+			processedData: [],
+			isTruncated: false,
+			error: `列 '${xAxisColumn}' 不包含有效数据或所有值都为空`,
+		};
+	}
+
+	// Truncate to avoid too many data points (if needed)
+	const isTruncated = processedData.length > MAX_DATA_POINTS;
+	if (isTruncated) {
+		processedData = processedData.slice(0, MAX_DATA_POINTS);
+	}
+
+	// If we have too many categories, limit to the top 12 (common practice for radar charts)
+	const MAX_RADAR_CATEGORIES = 12;
+	const isCategoryTruncated = processedData.length > MAX_RADAR_CATEGORIES;
+	if (isCategoryTruncated) {
+		processedData = processedData.slice(0, MAX_RADAR_CATEGORIES);
+	}
+
+	return {
+		processedData,
+		isTruncated: isTruncated || isCategoryTruncated,
+	};
+};

@@ -1,101 +1,108 @@
 import React from "react";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ChartDataItem } from "@/types/chart-types";
+import { AlertTriangle, Ban, Loader2 } from "lucide-react";
+import { ChartConfig } from "@/types/chart-types";
 import { getChartColor } from "@/constants/chart-colors";
 
-interface RadarChartProps {
-    title: string;
-    chartData: ChartDataItem[];
-    xAxisColumn: string;
-    yAxisColumn: string;
-    columns?: string[]; // 添加 columns 属性以支持多列数据
+interface RadarChartComponentProps {
+    chartConfig: ChartConfig;
 }
 
-export const RadarChartComponent: React.FC<RadarChartProps> = ({
-    title,
-    chartData,
-    xAxisColumn,
-    yAxisColumn,
-    columns = []
-}) => {
-    // 定义类型帮助处理索引访问
-    interface DataItem {
-        [key: string]: string | number | null | undefined;
+const RadarChartComponent: React.FC<RadarChartComponentProps> = ({ chartConfig }) => {
+    const {
+        title = "雷达图",
+        processedData = [],
+        xAxisColumn,
+        isTruncated = false,
+    } = chartConfig;
+
+    const description = `分类列: ${xAxisColumn || 'N/A'} (计数统计)`;
+
+    // If data is completely empty or undefined
+    if (!processedData) {
+        return (
+            <Card className="h-[400px]">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{title}</CardTitle>
+                    <CardDescription className="text-xs">
+                        {description} - 正在加载数据...
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center h-[340px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">正在处理图表数据</p>
+                </CardContent>
+            </Card>
+        );
     }
 
-    // 确定要使用的列
-    // 如果提供了columns且长度>=3，则使用columns；否则使用xAxisColumn和yAxisColumn
-    const useMultipleColumns = columns.length >= 3;
-    const categoryColumn = useMultipleColumns ? columns[0] : xAxisColumn;
-    const dataColumns = useMultipleColumns
-        ? columns.slice(1)
-        : [yAxisColumn];
+    // If data is empty array (no valid data found)
+    if (processedData.length === 0) {
+        return (
+            <Card className="h-[400px]">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{title}</CardTitle>
+                    <CardDescription className="text-xs">
+                        {description}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center h-[340px]">
+                    <Ban className="h-8 w-8 text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">此分类列没有可用于雷达图的有效数据</p>
+                    <p className="text-xs text-muted-foreground mt-2">所有值为空或N/A，请选择其他列</p>
+                </CardContent>
+            </Card>
+        );
+    }
 
-    // 提取雷达图的唯一类别
-    const categories = [...new Set(
-        chartData.slice(0, 10).map(item => String((item as DataItem)[categoryColumn] || "未知"))
-    )];
-
-    // 处理雷达图数据 - 每个类别作为一个数据点
-    const radarData = categories.map(category => {
-        // 创建基本对象，带有类别名
-        const dataPoint: Record<string, string | number> = {
-            subject: category
-        };
-
-        // 对于每个数据列，计算该类别的平均值
-        dataColumns.forEach(colName => {
-            // 找到所有匹配该类别的行
-            const matchingRows = chartData.filter(
-                item => String((item as DataItem)[categoryColumn]) === category
-            );
-
-            // 计算该列在这个类别下的平均值
-            if (matchingRows.length > 0) {
-                const sum = matchingRows.reduce(
-                    (acc, row) => acc + Number((row as DataItem)[colName] || 0),
-                    0
-                );
-                dataPoint[colName] = sum / matchingRows.length;
-            } else {
-                dataPoint[colName] = 0;
-            }
-        });
-
-        return dataPoint;
-    });
+    // If there are too few data points (fewer than 3) 
+    if (processedData.length < 3) {
+        return (
+            <Card className="h-[400px]">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{title}</CardTitle>
+                    <CardDescription className="text-xs flex items-center">
+                        {description}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center h-[340px]">
+                    <AlertTriangle className="h-8 w-8 text-amber-500 mb-4" />
+                    <p className="text-muted-foreground">雷达图需要至少 3 个不同的分类值</p>
+                    <p className="text-xs text-muted-foreground mt-2">当前只有 {processedData.length} 个不同的值</p>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card className="h-[400px]">
             <CardHeader className="pb-2">
                 <CardTitle className="text-sm">{title}</CardTitle>
-                <CardDescription className="text-xs">
-                    {useMultipleColumns
-                        ? `分类: ${categoryColumn}, 维度: ${dataColumns.join(', ')}`
-                        : `分类: ${xAxisColumn}, 值: ${yAxisColumn}`
-                    }
+                <CardDescription className="text-xs flex items-center">
+                    {description}
+                    {isTruncated && (
+                        <span className="ml-2 flex items-center text-amber-600 dark:text-amber-400" title="数据点过多，已截断显示">
+                            <AlertTriangle size={12} className="mr-1" />
+                            (已截断)
+                        </span>
+                    )}
                 </CardDescription>
             </CardHeader>
             <CardContent className="h-[340px]">
                 <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                    <RadarChart outerRadius="70%" data={processedData}>
                         <PolarGrid />
                         <PolarAngleAxis dataKey="subject" />
                         <PolarRadiusAxis />
-
-                        {dataColumns.map((column, index) => (
-                            <Radar
-                                key={column}
-                                name={column}
-                                dataKey={column}
-                                stroke={getChartColor(index)}
-                                fill={getChartColor(index)}
-                                fillOpacity={0.6}
-                            />
-                        ))}
-
-                        <Tooltip />
+                        <Radar
+                            name="计数"
+                            dataKey="value"
+                            stroke={getChartColor(0)}
+                            fill={getChartColor(0)}
+                            fillOpacity={0.6}
+                        />
+                        <Tooltip formatter={(value: number) => [`${value} 项`, '计数']} />
                         <Legend />
                     </RadarChart>
                 </ResponsiveContainer>
@@ -104,4 +111,6 @@ export const RadarChartComponent: React.FC<RadarChartProps> = ({
     );
 };
 
-export default RadarChartComponent; 
+RadarChartComponent.displayName = "RadarChartComponent";
+
+export default React.memo(RadarChartComponent); 
