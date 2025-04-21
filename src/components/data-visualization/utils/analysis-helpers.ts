@@ -16,9 +16,36 @@ import {
  * 提取数值型数据
  */
 export function extractNumericData(data: CellValue[]): number[] {
-	return data.filter(
-		(value) => typeof value === "number" && !isNaN(value),
-	) as number[];
+	// Common invalid value representations
+	const invalidValues = [
+		"n/a",
+		"na",
+		"null",
+		"undefined",
+		"-",
+		"nan",
+		"#n/a",
+		"#null",
+		"#value!",
+	];
+
+	return data
+		.filter((v) => {
+			// Skip null, undefined, or empty values
+			if (v === null || v === undefined) return false;
+
+			// Handle numeric types directly
+			if (typeof v === "number") return !isNaN(v);
+
+			const strValue = String(v).trim().toLowerCase();
+
+			// Skip empty strings and common invalid value representations
+			if (strValue === "" || invalidValues.includes(strValue)) return false;
+
+			// Check if it can be converted to a valid number
+			return !isNaN(Number(strValue));
+		})
+		.map((v) => (typeof v === "number" ? v : Number(v)));
 }
 
 /**

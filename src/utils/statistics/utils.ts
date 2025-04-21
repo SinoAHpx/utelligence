@@ -4,10 +4,34 @@ import { CellValue } from "./types";
  * 将各种类型的数据转换为数字数组，过滤掉非数值项
  */
 export function convertToNumericArray(data: CellValue[]): number[] {
+	// Common invalid value representations
+	const invalidValues = [
+		"n/a",
+		"na",
+		"null",
+		"undefined",
+		"-",
+		"nan",
+		"#n/a",
+		"#null",
+		"#value!",
+	];
+
 	return data
-		.filter((v) => v !== null && v !== undefined && String(v).trim() !== "")
-		.map((v) => (typeof v === "number" ? v : Number(v)))
-		.filter((n) => !isNaN(n));
+		.filter((v) => {
+			// Skip null, undefined, or empty values
+			if (v === null || v === undefined) return false;
+
+			const strValue = String(v).trim().toLowerCase();
+
+			// Skip empty strings and common invalid value representations
+			if (strValue === "" || invalidValues.includes(strValue)) return false;
+
+			// Only keep values that can be converted to valid numbers
+			const numValue = Number(strValue);
+			return !isNaN(numValue);
+		})
+		.map((v) => (typeof v === "number" ? v : Number(v)));
 }
 
 /**

@@ -28,6 +28,8 @@ import { CentralTendencyTab } from "./statistical-analysis/central-tendency-tab"
 import { DispersionTab } from "./statistical-analysis/dispersion-tab";
 import { DistributionTab } from "./statistical-analysis/distribution-tab";
 import { calculateDescriptiveStatistics } from "@/utils/statistics";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { convertToNumericArray } from "@/utils/statistics/utils";
 
 interface DataAnalysisProps {
   file: File | null;
@@ -45,6 +47,7 @@ export default function DataAnalysis({
   const [statsData, setStatsData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [columnData, setColumnData] = useState<any[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const tabOptions = [
     { id: "statistics", name: "统计描述" },
@@ -60,6 +63,7 @@ export default function DataAnalysis({
     if (!file || !selectedColumn) return;
 
     setIsLoading(true);
+    setErrorMessage(null);
 
     processFileData(
       file,
@@ -72,15 +76,28 @@ export default function DataAnalysis({
           const colData = rows.map(row => row[colIndex]);
           setColumnData(colData);
 
-          // Calculate statistics
-          const stats = calculateDescriptiveStatistics(colData);
-          setStatsData(stats);
+          // Check if there are enough numeric values in the column
+          const numericData = convertToNumericArray(colData);
+          if (numericData.length === 0) {
+            setErrorMessage(`列 "${selectedColumn}" 不包含有效的数值数据，请选择一个包含数值的列。`);
+            setStatsData([]);
+          } else if (numericData.length < (colData.length * 0.3)) {
+            setErrorMessage(`列 "${selectedColumn}" 中只有 ${numericData.length}/${colData.length} (${Math.round(numericData.length / colData.length * 100)}%) 是有效的数值数据，这可能会影响分析结果的准确性。`);
+            // Calculate statistics anyway
+            const stats = calculateDescriptiveStatistics(colData);
+            setStatsData(stats);
+          } else {
+            // Calculate statistics
+            const stats = calculateDescriptiveStatistics(colData);
+            setStatsData(stats);
+          }
         }
 
         setIsLoading(false);
       },
       (error) => {
         console.error("Error processing file:", error);
+        setErrorMessage(`处理文件出错: ${error}`);
         setIsLoading(false);
       }
     );
@@ -145,6 +162,12 @@ export default function DataAnalysis({
                 </SelectContent>
               </Select>
             </div>
+
+            {errorMessage && (
+              <Alert className="mb-4">
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            )}
 
             <TabsContent value="statistics" className="mt-6">
               <StatisticsTab
