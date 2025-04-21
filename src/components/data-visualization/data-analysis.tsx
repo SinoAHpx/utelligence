@@ -2,19 +2,40 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { calculateDescriptiveStatistics } from "@/utils/statistics";
+import { processFileData } from "@/utils/data-processing";
 
 interface DataAnalysisProps {
   file: File | null;
@@ -22,22 +43,14 @@ interface DataAnalysisProps {
   availableColumns: string[];
 }
 
-// 示例数据
-const sampleStats = [
-  { name: "平均值", value: 245.76 },
-  { name: "中位数", value: 237.5 },
-  { name: "标准差", value: 114.28 },
-  { name: "最小值", value: 65 },
-  { name: "最大值", value: 490 },
-  { name: "数据量", value: 50 },
-];
-
-const sampleDistribution = [
-  { bin: "0-100", count: 5 },
-  { bin: "100-200", count: 15 },
-  { bin: "200-300", count: 20 },
-  { bin: "300-400", count: 8 },
-  { bin: "400-500", count: 2 },
+// Default empty state for statistics
+const emptyStats = [
+  { name: "平均值", value: "-", category: "集中趋势测度" },
+  { name: "中位数", value: "-", category: "集中趋势测度" },
+  { name: "标准差", value: "-", category: "离散程度测度" },
+  { name: "最小值", value: "-", category: "基本统计量" },
+  { name: "最大值", value: "-", category: "基本统计量" },
+  { name: "数据量", value: "-", category: "基本统计量" },
 ];
 
 export default function DataAnalysis({
@@ -47,13 +60,109 @@ export default function DataAnalysis({
 }: DataAnalysisProps) {
   const [activeTab, setActiveTab] = useState<string>("statistics");
   const [selectedColumn, setSelectedColumn] = useState<string>("");
+  const [statsCategory, setStatsCategory] = useState<string>("all");
+  const [statsData, setStatsData] = useState<any[]>(emptyStats);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [distributionData, setDistributionData] = useState<any[]>([]);
+  const [columnData, setColumnData] = useState<any[]>([]);
 
-  const tabs = [
+  const tabOptions = [
     { id: "statistics", name: "统计描述" },
-    { id: "distribution", name: "数据分布" },
     { id: "correlation", name: "相关性分析" },
     { id: "regression", name: "回归分析" },
   ];
+
+  const statCategories = [
+    { id: "all", name: "全部指标" },
+    { id: "集中趋势测度", name: "集中趋势" },
+    { id: "离散程度测度", name: "离散程度" },
+    { id: "分布形态测度", name: "分布形态" },
+    { id: "基本统计量", name: "基本统计" },
+  ];
+
+  // Fetch column data when the selected column changes
+  useEffect(() => {
+    if (!file || !selectedColumn) return;
+
+    setIsLoading(true);
+
+    processFileData(
+      file,
+      (data) => {
+        const headers = data.headers;
+        const rows = data.rows;
+
+        const colIndex = headers.indexOf(selectedColumn);
+        if (colIndex !== -1) {
+          const colData = rows.map(row => row[colIndex]);
+          setColumnData(colData);
+
+          // Calculate statistics
+          const stats = calculateDescriptiveStatistics(colData);
+          setStatsData(stats);
+
+          // Generate distribution data
+          generateDistributionData(colData);
+        }
+
+        setIsLoading(false);
+      },
+      (error) => {
+        console.error("Error processing file:", error);
+        setIsLoading(false);
+      }
+    );
+  }, [file, selectedColumn]);
+
+  // Generate distribution data for histogram
+  const generateDistributionData = (data: any[]) => {
+    // Convert data to numbers, filtering out non-numeric values
+    const numericData = data
+      .filter(v => v !== null && v !== undefined && String(v).trim() !== "")
+      .map(v => typeof v === 'number' ? v : Number(v))
+      .filter(n => !isNaN(n));
+
+    if (numericData.length === 0) {
+      setDistributionData([]);
+      return;
+    }
+
+    // Find min and max
+    const min = Math.min(...numericData);
+    const max = Math.max(...numericData);
+
+    // Create bins
+    const binCount = Math.min(10, Math.ceil(Math.sqrt(numericData.length)));
+    const binWidth = (max - min) / binCount;
+
+    // Initialize bins
+    const bins = Array(binCount).fill(0).map((_, i) => {
+      const lowerBound = min + i * binWidth;
+      const upperBound = min + (i + 1) * binWidth;
+      return {
+        bin: `${lowerBound.toFixed(2)}-${upperBound.toFixed(2)}`,
+        lowerBound,
+        upperBound,
+        count: 0,
+      };
+    });
+
+    // Count values in each bin
+    numericData.forEach(value => {
+      // Handle edge case for the maximum value
+      if (value === max) {
+        bins[bins.length - 1].count++;
+        return;
+      }
+
+      const binIndex = Math.floor((value - min) / binWidth);
+      if (binIndex >= 0 && binIndex < binCount) {
+        bins[binIndex].count++;
+      }
+    });
+
+    setDistributionData(bins);
+  };
 
   useEffect(() => {
     // 当选定列变化时，默认选择第一列
@@ -64,6 +173,37 @@ export default function DataAnalysis({
       setSelectedColumn(selectedColumns[0]);
     }
   }, [selectedColumns, selectedColumn]);
+
+  // Filter statistics based on category
+  const filteredStats = statsCategory === 'all'
+    ? statsData
+    : statsData.filter(stat => stat.category === statsCategory);
+
+  // Group statistics by category for better organization
+  const statsByCategory = filteredStats.reduce((acc: Record<string, any[]>, stat) => {
+    if (!acc[stat.category]) {
+      acc[stat.category] = [];
+    }
+    acc[stat.category].push(stat);
+    return acc;
+  }, {});
+
+  // Format stat value for display
+  const formatStatValue = (value: any): string => {
+    if (value === null) return "N/A";
+    if (Array.isArray(value)) {
+      if (value.length === 0) return "N/A";
+      return value.join(", ");
+    }
+    if (typeof value === 'number') {
+      // Format number to 4 decimal places at most
+      return value.toLocaleString(undefined, {
+        maximumFractionDigits: 4,
+        minimumFractionDigits: 0
+      });
+    }
+    return String(value);
+  };
 
   if (!file) {
     return (
@@ -85,336 +225,189 @@ export default function DataAnalysis({
 
   return (
     <div className="w-full space-y-6">
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-        <div className="mb-4">
-          <h3 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-            数据分析
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            对数据进行统计分析和可视化
-          </p>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl font-bold">数据分析</CardTitle>
+          <CardDescription>对选定数据进行详细的统计分析</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="statistics" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="flex items-center justify-between mb-6">
+              <TabsList>
+                {tabOptions.map((tab) => (
+                  <TabsTrigger key={tab.id} value={tab.id}>
+                    {tab.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
 
-          <div className="flex overflow-x-auto space-x-2 pb-2 mb-4 border-b border-gray-200 dark:border-gray-700">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 text-sm whitespace-nowrap rounded-t-md transition-colors ${
-                  activeTab === tab.id
-                    ? "bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary border-b-2 border-primary"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                }`}
-              >
-                {tab.name}
-              </button>
-            ))}
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              选择分析列：
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {selectedColumns.map((column) => (
-                <button
-                  key={column}
-                  onClick={() => setSelectedColumn(column)}
-                  className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                    selectedColumn === column
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                  }`}
-                >
-                  {column}
-                </button>
-              ))}
+              <Select value={selectedColumn} onValueChange={setSelectedColumn}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="选择分析列" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedColumns.map((column) => (
+                    <SelectItem key={column} value={column}>
+                      {column}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-        </div>
 
-        {activeTab === "statistics" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
-              <h4 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-                {selectedColumn} - 统计指标
-              </h4>
-              <div className="overflow-hidden border rounded-md">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+            <TabsContent value="statistics" className="mt-6">
+              {isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[250px]" />
+                  <Skeleton className="h-4 w-[200px]" />
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {statCategories.map((category) => (
+                      <Badge
+                        key={category.id}
+                        variant={statsCategory === category.id ? "default" : "outline"}
+                        className="cursor-pointer hover:bg-primary/90 transition-colors"
+                        onClick={() => setStatsCategory(category.id)}
                       >
-                        指标
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                      >
-                        值
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {sampleStats.map((stat, index) => (
-                      <tr
-                        key={index}
-                        className={
-                          index % 2 === 0
-                            ? "bg-white dark:bg-gray-800"
-                            : "bg-gray-50 dark:bg-gray-700"
-                        }
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {stat.name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {stat.value}
-                        </td>
-                      </tr>
+                        {category.name}
+                      </Badge>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-                {selectedColumn} - 基本统计图
-              </h4>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={sampleStats.slice(0, 5)}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#8884d8" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "distribution" && (
-          <div>
-            <h4 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-              {selectedColumn} - 数据分布
-            </h4>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={sampleDistribution}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="bin" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="count" fill="#82ca9d" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "correlation" && selectedColumns.length >= 2 && (
-          <div>
-            <h4 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-              相关性分析
-            </h4>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <div className="overflow-hidden border rounded-md">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                        >
-                          变量
-                        </th>
-                        {selectedColumns.map((col) => (
-                          <th
-                            key={col}
-                            scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-                          >
-                            {col}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {selectedColumns.map((row, rowIndex) => (
-                        <tr
-                          key={rowIndex}
-                          className={
-                            rowIndex % 2 === 0
-                              ? "bg-white dark:bg-gray-800"
-                              : "bg-gray-50 dark:bg-gray-700"
-                          }
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
-                            {row}
-                          </td>
-                          {selectedColumns.map((col, colIndex) => (
-                            <td
-                              key={colIndex}
-                              className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
-                            >
-                              {rowIndex === colIndex
-                                ? "1.0"
-                                : (Math.random() * 2 - 1).toFixed(2)}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ScatterChart
-                      margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        type="number"
-                        dataKey="x"
-                        name={selectedColumns[0]}
-                      />
-                      <YAxis
-                        type="number"
-                        dataKey="y"
-                        name={selectedColumns[1]}
-                      />
-                      <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-                      <Legend />
-                      <Scatter
-                        name={`${selectedColumns[0]} vs ${selectedColumns[1]}`}
-                        data={Array.from({ length: 20 }, (_, i) => ({
-                          x: Math.random() * 100,
-                          y: Math.random() * 100,
-                        }))}
-                        fill="#8884d8"
-                      />
-                    </ScatterChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "regression" && selectedColumns.length >= 2 && (
-          <div>
-            <h4 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-              回归分析
-            </h4>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ScatterChart
-                      margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        type="number"
-                        dataKey="x"
-                        name={selectedColumns[0]}
-                        unit=""
-                      />
-                      <YAxis
-                        type="number"
-                        dataKey="y"
-                        name={selectedColumns[1]}
-                        unit=""
-                      />
-                      <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-                      <Legend />
-                      <Scatter
-                        name="数据点"
-                        data={Array.from({ length: 20 }, (_, i) => ({
-                          x: i * 5,
-                          y: 30 + i * 4 + Math.random() * 20 - 10,
-                        }))}
-                        fill="#8884d8"
-                      />
-                      <Line
-                        name="回归线"
-                        data={[
-                          { x: 0, y: 30 },
-                          { x: 100, y: 230 },
-                        ]}
-                        type="linear"
-                        dataKey="y"
-                        stroke="#ff7300"
-                        dot={false}
-                      />
-                    </ScatterChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              <div>
-                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md h-full">
-                  <h5 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-                    回归模型统计
-                  </h5>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        R²值:
-                      </span>
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                        0.923
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        调整后的R²:
-                      </span>
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                        0.919
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        回归方程:
-                      </span>
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                        y = 2.0x + 30.0
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        标准误差:
-                      </span>
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                        5.87
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        观测值:
-                      </span>
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                        20
-                      </span>
-                    </div>
                   </div>
+
+                  <ScrollArea className="h-[60vh]">
+                    {Object.entries(statsByCategory).map(([category, stats]) => (
+                      <div key={category} className="mb-8">
+                        <h3 className="text-lg font-semibold mb-3 text-primary/80">{category}</h3>
+                        <Card>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-[60%]">指标</TableHead>
+                                <TableHead>值</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {stats.map((stat, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell className="font-medium">{stat.name}</TableCell>
+                                  <TableCell>{formatStatValue(stat.value)}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </Card>
+                      </div>
+                    ))}
+                  </ScrollArea>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="correlation">
+              {selectedColumns.length >= 2 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>相关性分析</CardTitle>
+                    <CardDescription>
+                      查看变量之间的相关关系
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>变量</TableHead>
+                          {selectedColumns.map((col) => (
+                            <TableHead key={col}>{col}</TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedColumns.map((row, rowIndex) => (
+                          <TableRow key={rowIndex}>
+                            <TableCell className="font-medium">{row}</TableCell>
+                            {selectedColumns.map((col, colIndex) => (
+                              <TableCell key={colIndex}>
+                                {rowIndex === colIndex ? (
+                                  <Badge variant="default">1.0</Badge>
+                                ) : (
+                                  (Math.random() * 2 - 1).toFixed(2)
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="flex items-center justify-center h-40">
+                  <p className="text-gray-500">请选择至少两列数据进行相关性分析</p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="regression">
+              {selectedColumns.length >= 2 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>回归分析</CardTitle>
+                      <CardDescription>
+                        基于{selectedColumns[0]}和{selectedColumns[1]}的回归分析
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[300px] flex items-center justify-center">
+                      <p className="text-gray-500">回归模型可视化</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>回归模型统计</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell className="font-medium">R²值</TableCell>
+                            <TableCell>0.923</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="font-medium">调整后的R²</TableCell>
+                            <TableCell>0.919</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="font-medium">回归方程</TableCell>
+                            <TableCell>y = 2.0x + 30.0</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="font-medium">标准误差</TableCell>
+                            <TableCell>5.87</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="font-medium">观测值</TableCell>
+                            <TableCell>20</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-40">
+                  <p className="text-gray-500">请选择至少两列数据进行回归分析</p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }

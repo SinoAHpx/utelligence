@@ -66,6 +66,7 @@
     "react-textarea-autosize": "^8.5.3",
     "recharts": "^2.15.2",
     "remark-gfm": "^4.0.0",
+    "simple-statistics": "^7.8.8",
     "sonner": "^2.0.2",
     "tailwind-merge": "^2.2.2",
     "tw-animate-css": "^1.2.5",
