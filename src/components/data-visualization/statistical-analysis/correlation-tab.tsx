@@ -153,8 +153,16 @@ export function CorrelationTab({ selectedColumns, file }: CorrelationTabProps) {
     }
 
     // 根据相关系数值选择不同的样式和颜色
-    const getCorrelationStyle = (value: number | null) => {
+    const getCorrelationStyle = (value: number | null, isSelfCorrelation: boolean) => {
         if (value === null) return { variant: "outline", className: "" };
+
+        // 自身相关性（对角线）使用灰色背景
+        if (isSelfCorrelation) {
+            return {
+                variant: "default",
+                className: "bg-gray-400 dark:bg-gray-800"
+            };
+        }
 
         const absValue = Math.abs(value);
 
@@ -200,7 +208,8 @@ export function CorrelationTab({ selectedColumns, file }: CorrelationTabProps) {
                                 <TableCell className="font-medium">{row}</TableCell>
                                 {correlationData.columns.map((col, colIndex) => {
                                     const correlationValue = correlationData.correlationMatrix[rowIndex][colIndex];
-                                    const style = getCorrelationStyle(correlationValue);
+                                    const isSelfCorrelation = rowIndex === colIndex;
+                                    const style = getCorrelationStyle(correlationValue, isSelfCorrelation);
 
                                     return (
                                         <TableCell key={colIndex}>
