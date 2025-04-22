@@ -1,21 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-} from "@/components/ui/card";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { processFileData } from "@/utils/data-processing";
@@ -28,8 +13,9 @@ import {
     RegressionResult
 } from "@/utils/statistics/regression";
 import { convertToNumericArray } from "@/utils/statistics/utils";
-import { CellValue } from "@/utils/statistics/types";
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line } from "recharts";
+import { RegressionControls } from "./regression/regression-controls";
+import { RegressionResults } from "./regression/regression-results";
+import { RegressionTypeInformation } from "./regression/regression-type-information";
 
 interface RegressionTabProps {
     file: File;
@@ -47,321 +33,190 @@ export function RegressionTab({ file, selectedColumns }: RegressionTabProps) {
     const [regressionData, setRegressionData] = useState<{ x: number; y: number; predicted?: number }[]>([]);
     const [numericColumns, setNumericColumns] = useState<string[]>([]);
     const [hasFile, setHasFile] = useState<boolean>(false);
-    const [dataPointLimit, setDataPointLimit] = useState<number>(400);
+    const [dataPointLimit] = useState<number>(400); // Keep limit logic here or move to Results
 
-    // Initialize state when file or columns change
+    // Identify which columns contain numeric data
+    const identifyNumericColumns = async () => {
+        if (!file) return;
+
+        setIsLoading(true);
+        setErrorMessage(null);
+        setNumericColumns([]); // Reset numeric columns
+
+        try {
+            const data = await new Promise<{ headers: string[]; rows: any[][] }>((resolve, reject) => {
+                processFileData(file, resolve, reject);
+            });
+
+            const headers = data.headers;
+            const rows = data.rows;
+            const numericCols: string[] = [];
+
+            for (const col of selectedColumns) {
+                const colIndex = headers.indexOf(col);
+                if (colIndex !== -1) {
+                    const colData = rows.map(row => row[colIndex]);
+                    const numericData = convertToNumericArray(colData);
+                    // Consider numeric if at least 30% are valid numbers
+                    if (numericData.length >= (colData.length * 0.3)) {
+                        numericCols.push(col);
+                    }
+                }
+            }
+            setNumericColumns(numericCols);
+
+        } catch (error: any) {
+            console.error("Error identifying numeric columns:", error);
+            setErrorMessage(`处理文件以识别数值列时出错: ${typeof error === 'string' ? error : error?.message || '未知错误'}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Perform the regression analysis
+    const performRegression = async () => {
+        if (!file || !dependentVar || !independentVar) return;
+
+        setIsLoading(true);
+        setErrorMessage(null);
+        setRegressionResult(null);
+        setRegressionData([]);
+
+        try {
+            const data = await new Promise<{ headers: string[]; rows: any[][] }>((resolve, reject) => {
+                processFileData(file, resolve, reject);
+            });
+
+            const headers = data.headers;
+            const rows = data.rows;
+            const dependentIndex = headers.indexOf(dependentVar);
+            const independentIndex = headers.indexOf(independentVar);
+
+            if (dependentIndex === -1 || independentIndex === -1) {
+                throw new Error("无法找到选定的因变量或自变量列");
+            }
+
+            const yData = rows.map(row => row[dependentIndex]);
+            const xData = rows.map(row => row[independentIndex]);
+
+            let result: RegressionResult | null = null;
+            switch (regressionType) {
+                case "simple":
+                    result = simpleLinearRegression(xData, yData);
+                    break;
+                case "multiple":
+                    const additionalData = additionalVars.map(col => {
+                        const colIndex = headers.indexOf(col);
+                        return colIndex !== -1 ? rows.map(row => row[colIndex]) : [];
+                    }).filter(arr => arr.length > 0);
+
+                    if (additionalData.length > 0) {
+                        result = multipleLinearRegression(yData, [xData, ...additionalData]);
+                    } else {
+                        result = simpleLinearRegression(xData, yData); // Fallback to simple if no valid additional vars
+                    }
+                    break;
+                case "logistic":
+                    result = logisticRegression(xData, yData);
+                    break;
+                case "exponential":
+                    result = exponentialRegression(xData, yData);
+                    break;
+                case "power":
+                    result = powerRegression(xData, yData);
+                    break;
+            }
+
+            if (result) {
+                setRegressionResult(result);
+
+                // Prepare data for visualization (using valid pairs)
+                const visualData: { x: number; y: number; predicted?: number }[] = [];
+                const [validX, validY] = prepareRegressionData(xData, yData); // Reuse data prep logic
+
+                for (let i = 0; i < validX.length; i++) {
+                    const dataPoint: { x: number; y: number; predicted?: number } = {
+                        x: validX[i],
+                        y: validY[i]
+                    };
+
+                    // Match predictions - need to ensure this aligns correctly with valid pairs
+                    // Simple approach: Use the index assuming result.predictedValues corresponds to valid pairs
+                    if (result.predictedValues && i < result.predictedValues.length) {
+                        dataPoint.predicted = result.predictedValues[i];
+                    }
+                    visualData.push(dataPoint);
+                }
+
+                visualData.sort((a, b) => a.x - b.x);
+                setRegressionData(visualData);
+            } else {
+                throw new Error("无法执行回归分析。请确保数据适合所选的回归类型（例如，逻辑回归需要二元 Y 值）。");
+            }
+
+        } catch (error: any) {
+            console.error("Error performing regression:", error);
+            setErrorMessage(`执行回归分析时出错: ${typeof error === 'string' ? error : error?.message || '未知错误'}`);
+            setRegressionResult(null);
+            setRegressionData([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Initialize state when file or selected columns change
     useEffect(() => {
         if (file) {
             setHasFile(true);
             identifyNumericColumns();
         } else {
             setHasFile(false);
+            setNumericColumns([]);
+            setDependentVar("");
+            setIndependentVar("");
+            setAdditionalVars([]);
+            setRegressionResult(null);
+            setRegressionData([]);
+            setErrorMessage(null);
         }
-    }, [file, selectedColumns]);
+    }, [file, selectedColumns]); // Rerun when file or selected columns change
 
     // Reset dependent/independent variables when numeric columns change
     useEffect(() => {
         if (numericColumns.length > 0) {
-            if (numericColumns.length > 1) {
-                setDependentVar(numericColumns[0]);
-                setIndependentVar(numericColumns[1]);
-            } else if (numericColumns.length === 1) {
-                setDependentVar(numericColumns[0]);
-                setIndependentVar("");
-            } else {
-                setDependentVar("");
-                setIndependentVar("");
+            // Set defaults only if current selections are invalid or not present
+            const firstCol = numericColumns[0];
+            const secondCol = numericColumns.length > 1 ? numericColumns[1] : "";
+
+            if (!numericColumns.includes(dependentVar)) {
+                setDependentVar(firstCol);
             }
+            if (!numericColumns.includes(independentVar) || independentVar === dependentVar) {
+                setIndependentVar(secondCol);
+            }
+            // Remove any additional vars that are no longer numeric or are the main vars
+            setAdditionalVars(prev => prev.filter(v =>
+                numericColumns.includes(v) && v !== dependentVar && v !== independentVar
+            ));
+        } else {
+            // Clear selections if no numeric columns available
+            setDependentVar("");
+            setIndependentVar("");
             setAdditionalVars([]);
         }
-    }, [numericColumns]);
+    }, [numericColumns]); // Rerun only when numeric columns list changes
 
     // Perform regression when variables or regression type changes
     useEffect(() => {
-        if (dependentVar && independentVar && hasFile) {
+        // Only run if we have valid selections and file
+        if (dependentVar && independentVar && hasFile && numericColumns.includes(dependentVar) && numericColumns.includes(independentVar)) {
             performRegression();
+        } else {
+            // Clear results if selections become invalid
+            setRegressionResult(null);
+            setRegressionData([]);
         }
-    }, [dependentVar, independentVar, additionalVars, regressionType]);
-
-    // Identify which columns contain numeric data
-    const identifyNumericColumns = () => {
-        if (!file) return;
-
-        setIsLoading(true);
-        setErrorMessage(null);
-
-        processFileData(
-            file,
-            (data) => {
-                const headers = data.headers;
-                const rows = data.rows;
-                const numericCols: string[] = [];
-
-                // Check each column for numeric values
-                for (const col of selectedColumns) {
-                    const colIndex = headers.indexOf(col);
-                    if (colIndex !== -1) {
-                        const colData = rows.map(row => row[colIndex]);
-                        const numericData = convertToNumericArray(colData);
-
-                        // Consider a column numeric if it has at least 30% numeric values
-                        if (numericData.length >= (colData.length * 0.3)) {
-                            numericCols.push(col);
-                        }
-                    }
-                }
-
-                setNumericColumns(numericCols);
-                setIsLoading(false);
-            },
-            (error) => {
-                console.error("Error processing file:", error);
-                setErrorMessage(`处理文件出错: ${error}`);
-                setIsLoading(false);
-            }
-        );
-    };
-
-    // Perform the regression analysis
-    const performRegression = () => {
-        if (!file || !dependentVar || !independentVar) return;
-
-        setIsLoading(true);
-        setErrorMessage(null);
-
-        processFileData(
-            file,
-            (data) => {
-                const headers = data.headers;
-                const rows = data.rows;
-
-                const dependentIndex = headers.indexOf(dependentVar);
-                const independentIndex = headers.indexOf(independentVar);
-
-                if (dependentIndex === -1 || independentIndex === -1) {
-                    setErrorMessage("无法找到选定的列");
-                    setIsLoading(false);
-                    return;
-                }
-
-                const yData = rows.map(row => row[dependentIndex]);
-                const xData = rows.map(row => row[independentIndex]);
-
-                let result: RegressionResult | null = null;
-
-                // Perform different regression types
-                switch (regressionType) {
-                    case "simple":
-                        result = simpleLinearRegression(xData, yData);
-                        break;
-                    case "multiple":
-                        if (additionalVars.length > 0) {
-                            const additionalData = additionalVars.map(col => {
-                                const colIndex = headers.indexOf(col);
-                                return colIndex !== -1 ? rows.map(row => row[colIndex]) : [];
-                            }).filter(arr => arr.length > 0);
-
-                            if (additionalData.length > 0) {
-                                result = multipleLinearRegression(yData, [xData, ...additionalData]);
-                            } else {
-                                result = simpleLinearRegression(xData, yData);
-                            }
-                        } else {
-                            result = simpleLinearRegression(xData, yData);
-                        }
-                        break;
-                    case "logistic":
-                        result = logisticRegression(xData, yData);
-                        break;
-                    case "exponential":
-                        result = exponentialRegression(xData, yData);
-                        break;
-                    case "power":
-                        result = powerRegression(xData, yData);
-                        break;
-                }
-
-                if (result) {
-                    setRegressionResult(result);
-
-                    // Prepare data for visualization
-                    const visualData: { x: number; y: number; predicted?: number }[] = [];
-                    const numericX = convertToNumericArray(xData);
-                    const numericY = convertToNumericArray(yData);
-
-                    // Match up valid X and Y values and include predictions if available
-                    for (let i = 0; i < Math.min(numericX.length, numericY.length); i++) {
-                        const dataPoint: { x: number; y: number; predicted?: number } = {
-                            x: numericX[i],
-                            y: numericY[i]
-                        };
-
-                        if (result.predictedValues && i < result.predictedValues.length) {
-                            dataPoint.predicted = result.predictedValues[i];
-                        }
-
-                        visualData.push(dataPoint);
-                    }
-
-                    // Sort data by X value for better line visualization
-                    visualData.sort((a, b) => a.x - b.x);
-                    setRegressionData(visualData);
-                } else {
-                    setErrorMessage("无法执行回归分析。请确保数据适合所选的回归类型。");
-                    setRegressionResult(null);
-                    setRegressionData([]);
-                }
-
-                setIsLoading(false);
-            },
-            (error) => {
-                console.error("Error processing file:", error);
-                setErrorMessage(`处理文件出错: ${error}`);
-                setIsLoading(false);
-            }
-        );
-    };
-
-    // Truncate data points for chart rendering to improve performance
-    const truncatedData = useMemo(() => {
-        if (regressionData.length <= dataPointLimit) {
-            return regressionData;
-        }
-
-        // If we need to truncate, use reservoir sampling to maintain distribution
-        const sampledData: typeof regressionData = [];
-
-        // Always include min and max X values to ensure we see the full range
-        const sortedByX = [...regressionData].sort((a, b) => a.x - b.x);
-        if (sortedByX.length > 0) {
-            sampledData.push(sortedByX[0]);
-            sampledData.push(sortedByX[sortedByX.length - 1]);
-        }
-
-        // Reservoir sampling for scatter points
-        const remainingPoints = regressionData.filter((_, i) => i !== 0 && i !== regressionData.length - 1);
-        const sampleSize = Math.min(dataPointLimit - 2, remainingPoints.length);
-
-        for (let i = 0; i < sampleSize; i++) {
-            sampledData.push(remainingPoints[i]);
-        }
-
-        for (let i = sampleSize; i < remainingPoints.length; i++) {
-            const j = Math.floor(Math.random() * (i + 1));
-            if (j < sampleSize) {
-                sampledData[j + 2] = remainingPoints[i];
-            }
-        }
-
-        return sampledData;
-    }, [regressionData, dataPointLimit]);
-
-    // Get regression line points - for visualization only
-    const linePoints = useMemo(() => {
-        if (!regressionResult || regressionData.length === 0) {
-            return [];
-        }
-
-        // Sort data by X value
-        const sortedData = [...regressionData].sort((a, b) => a.x - b.x);
-
-        // For simple linear regression or when we have predictedValues, plot the actual line
-        if (regressionResult.predictedValues && regressionResult.predictedValues.length > 0) {
-            // Sample points evenly to draw the line (max 100 points)
-            const step = Math.max(1, Math.floor(sortedData.length / 100));
-            const lineData: Array<{ x: number, y: number }> = [];
-
-            for (let i = 0; i < sortedData.length; i += step) {
-                if (sortedData[i].predicted !== undefined) {
-                    lineData.push({
-                        x: sortedData[i].x,
-                        y: sortedData[i].predicted as number
-                    });
-                }
-            }
-
-            // Always include the last point
-            if (lineData.length > 0 &&
-                sortedData.length > 0 &&
-                lineData[lineData.length - 1].x !== sortedData[sortedData.length - 1].x &&
-                sortedData[sortedData.length - 1].predicted !== undefined) {
-                lineData.push({
-                    x: sortedData[sortedData.length - 1].x,
-                    y: sortedData[sortedData.length - 1].predicted as number
-                });
-            }
-
-            return lineData;
-        }
-
-        // For other regression types, generate points for the equation
-        // This is needed especially for logistic, exponential and power regressions
-        const xMin = sortedData[0].x;
-        const xMax = sortedData[sortedData.length - 1].x;
-        const step = (xMax - xMin) / 100;
-
-        const lineData: Array<{ x: number, y: number }> = [];
-
-        switch (regressionType) {
-            case "simple":
-                // y = mx + b
-                if (regressionResult.slope !== undefined && regressionResult.intercept !== undefined) {
-                    for (let x = xMin; x <= xMax; x += step) {
-                        lineData.push({
-                            x,
-                            y: regressionResult.slope * x + regressionResult.intercept
-                        });
-                    }
-                }
-                break;
-
-            case "exponential":
-                // y = a * e^(bx)
-                if (regressionResult.coefficients.length >= 2) {
-                    const a = regressionResult.coefficients[0];
-                    const b = regressionResult.coefficients[1];
-                    for (let x = xMin; x <= xMax; x += step) {
-                        lineData.push({
-                            x,
-                            y: a * Math.exp(b * x)
-                        });
-                    }
-                }
-                break;
-
-            case "power":
-                // y = a * x^b
-                if (regressionResult.coefficients.length >= 2) {
-                    const a = regressionResult.coefficients[0];
-                    const b = regressionResult.coefficients[1];
-                    for (let x = xMin; x <= xMax; x += step) {
-                        // Make sure x is positive for power function
-                        if (x > 0) {
-                            lineData.push({
-                                x,
-                                y: a * Math.pow(x, b)
-                            });
-                        }
-                    }
-                }
-                break;
-
-            case "logistic":
-                // y = 1 / (1 + e^(-b-mx))
-                if (regressionResult.slope !== undefined && regressionResult.intercept !== undefined) {
-                    const sigmoid = (z: number) => 1 / (1 + Math.exp(-z));
-                    for (let x = xMin; x <= xMax; x += step) {
-                        lineData.push({
-                            x,
-                            y: sigmoid(regressionResult.intercept + regressionResult.slope * x)
-                        });
-                    }
-                }
-                break;
-        }
-
-        return lineData;
-    }, [regressionResult, regressionData, regressionType]);
+    }, [dependentVar, independentVar, additionalVars, regressionType, hasFile]); // Dependencies
 
     // Add a variable to the multiple regression
     const handleAddVariable = (variable: string) => {
@@ -375,6 +230,111 @@ export function RegressionTab({ file, selectedColumns }: RegressionTabProps) {
         setAdditionalVars(additionalVars.filter(v => v !== variable));
     };
 
+    // Truncate data points for chart rendering
+    const truncatedData = useMemo(() => {
+        if (regressionData.length <= dataPointLimit) {
+            return regressionData;
+        }
+        const sampledData: typeof regressionData = [];
+        const sortedByX = [...regressionData].sort((a, b) => a.x - b.x);
+        if (sortedByX.length > 0) {
+            sampledData.push(sortedByX[0]);
+            sampledData.push(sortedByX[sortedByX.length - 1]);
+        }
+        const remainingPoints = regressionData.filter((_, i) => i !== 0 && i !== regressionData.length - 1);
+        const sampleSize = Math.min(dataPointLimit - 2, remainingPoints.length);
+        for (let i = 0; i < sampleSize; i++) {
+            sampledData.push(remainingPoints[i]);
+        }
+        for (let i = sampleSize; i < remainingPoints.length; i++) {
+            const j = Math.floor(Math.random() * (i + 1));
+            if (j < sampleSize) {
+                sampledData[j + 2] = remainingPoints[i];
+            }
+        }
+        return sampledData;
+    }, [regressionData, dataPointLimit]);
+
+    // Generate points for the regression line visualization
+    const linePoints = useMemo(() => {
+        if (!regressionResult || regressionData.length === 0) return [];
+
+        const sortedData = [...regressionData].sort((a, b) => a.x - b.x);
+        const lineData: Array<{ x: number, y: number }> = [];
+        const xMin = sortedData[0].x;
+        const xMax = sortedData[sortedData.length - 1].x;
+        const range = xMax - xMin;
+
+        // Avoid division by zero or infinite loops if range is zero
+        if (range <= 0) {
+            // Handle single point case or very small range
+            if (regressionResult.predictedValues && regressionResult.predictedValues.length > 0) {
+                return sortedData.filter(d => d.predicted !== undefined).map(d => ({ x: d.x, y: d.predicted as number }));
+            } else {
+                // Cannot generate line for non-predicted cases with zero range
+                return [];
+            }
+        }
+
+        const step = range / 100; // Generate 101 points for the line
+
+        // Function to calculate y based on regression type and coefficients
+        const calculateY = (x: number): number | null => {
+            switch (regressionType) {
+                case "simple":
+                case "multiple": // Use predicted values if available, otherwise estimate if simple
+                    if (regressionResult.predictedValues) {
+                        // Find the closest original data point to get prediction (less accurate)
+                        // A better approach might involve interpolation if needed
+                        const closestPoint = sortedData.reduce((prev, curr) =>
+                            Math.abs(curr.x - x) < Math.abs(prev.x - x) ? curr : prev
+                        );
+                        return closestPoint.predicted ?? null;
+                    } else if (regressionType === "simple" && regressionResult.slope !== undefined && regressionResult.intercept !== undefined) {
+                        return regressionResult.slope * x + regressionResult.intercept;
+                    }
+                    return null;
+                case "exponential":
+                    if (regressionResult.coefficients.length >= 2) {
+                        return regressionResult.coefficients[0] * Math.exp(regressionResult.coefficients[1] * x);
+                    }
+                    return null;
+                case "power":
+                    if (x > 0 && regressionResult.coefficients.length >= 2) {
+                        return regressionResult.coefficients[0] * Math.pow(x, regressionResult.coefficients[1]);
+                    }
+                    return null;
+                case "logistic":
+                    if (regressionResult.slope !== undefined && regressionResult.intercept !== undefined) {
+                        const z = regressionResult.intercept + regressionResult.slope * x;
+                        return 1 / (1 + Math.exp(-z));
+                    }
+                    return null;
+                default: return null;
+            }
+        };
+
+        for (let i = 0; i <= 100; i++) {
+            const x = xMin + i * step;
+            const y = calculateY(x);
+            if (y !== null && isFinite(y)) { // Ensure y is a valid number
+                lineData.push({ x, y });
+            }
+        }
+
+        // Ensure the last point is included exactly if missed by step
+        if (lineData.length === 0 || lineData[lineData.length - 1].x < xMax) {
+            const lastY = calculateY(xMax);
+            if (lastY !== null && isFinite(lastY)) {
+                lineData.push({ x: xMax, y: lastY });
+            }
+        }
+
+        return lineData;
+    }, [regressionResult, regressionData, regressionType]);
+
+    // ---- Render Logic ----
+
     if (!hasFile) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -383,334 +343,104 @@ export function RegressionTab({ file, selectedColumns }: RegressionTabProps) {
         );
     }
 
-    if (numericColumns.length < 2) {
+    if (isLoading && numericColumns.length === 0) {
+        // Show skeleton when initially identifying numeric columns
         return (
-            <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500">需要至少两列数值数据进行回归分析</p>
+            <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-8 w-1/3" />
+                <Skeleton className="h-60 w-full" />
             </div>
         );
     }
 
-    if (isLoading && !regressionResult) {
+    if (numericColumns.length < 1) {
         return (
-            <div className="space-y-4">
-                <Skeleton className="h-8 w-[300px]" />
-                <Skeleton className="h-[300px] w-full" />
-                <Skeleton className="h-[200px] w-full" />
+            <div className="flex items-center justify-center h-full">
+                <p className="text-gray-500">选定列中未找到足够的数值数据进行分析</p>
+            </div>
+        );
+    }
+
+    if (numericColumns.length < 2 && regressionType !== "logistic") {
+        // Most regressions need at least 2 numeric columns (X and Y)
+        // Logistic might work with 1 X if Y is binary (handled in function)
+        return (
+            <div className="flex items-center justify-center h-full">
+                <p className="text-gray-500">需要至少两列数值数据进行此回归分析</p>
             </div>
         );
     }
 
     return (
         <div className="space-y-6">
-            {/* Regression controls */}
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="space-y-2 flex-1">
-                    <label className="text-sm font-medium">回归类型</label>
-                    <Select value={regressionType} onValueChange={setRegressionType}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="选择回归类型" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="simple">简单线性回归</SelectItem>
-                            <SelectItem value="multiple">多元线性回归</SelectItem>
-                            <SelectItem value="logistic">逻辑回归</SelectItem>
-                            <SelectItem value="exponential">指数回归</SelectItem>
-                            <SelectItem value="power">幂函数回归</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
+            {/* Controls Section */}
+            <RegressionControls
+                regressionType={regressionType}
+                setRegressionType={setRegressionType}
+                numericColumns={numericColumns}
+                dependentVar={dependentVar}
+                setDependentVar={setDependentVar}
+                independentVar={independentVar}
+                setIndependentVar={setIndependentVar}
+                additionalVars={additionalVars}
+                handleAddVariable={handleAddVariable}
+                handleRemoveVariable={handleRemoveVariable}
+            />
 
-                <div className="space-y-2 flex-1">
-                    <label className="text-sm font-medium">因变量 (Y)</label>
-                    <Select value={dependentVar} onValueChange={setDependentVar}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="选择因变量" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {numericColumns.map(col => (
-                                <SelectItem key={col} value={col}>{col}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <div className="space-y-2 flex-1">
-                    <label className="text-sm font-medium">自变量 (X)</label>
-                    <Select value={independentVar} onValueChange={setIndependentVar}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="选择自变量" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {numericColumns
-                                .filter(col => col !== dependentVar)
-                                .map(col => (
-                                    <SelectItem key={col} value={col}>{col}</SelectItem>
-                                ))
-                            }
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-
-            {/* Additional variables for multiple regression */}
-            {regressionType === "multiple" && (
-                <div className="space-y-4">
-                    <div className="flex flex-wrap gap-2">
-                        <label className="text-sm font-medium w-full">额外自变量</label>
-                        {additionalVars.map(variable => (
-                            <div
-                                key={variable}
-                                className="px-3 py-1 bg-primary/10 rounded-full flex items-center gap-2"
-                            >
-                                <span>{variable}</span>
-                                <button
-                                    onClick={() => handleRemoveVariable(variable)}
-                                    className="text-xs text-red-500 hover:text-red-700"
-                                >
-                                    ✕
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-
-                    <Select onValueChange={handleAddVariable}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="添加额外自变量" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {numericColumns
-                                .filter(col => col !== dependentVar && col !== independentVar && !additionalVars.includes(col))
-                                .map(col => (
-                                    <SelectItem key={col} value={col}>{col}</SelectItem>
-                                ))
-                            }
-                        </SelectContent>
-                    </Select>
-                </div>
-            )}
-
+            {/* Error Message */}
             {errorMessage && (
-                <Alert>
+                <Alert variant="destructive">
                     <AlertDescription>{errorMessage}</AlertDescription>
                 </Alert>
             )}
 
-            {/* Results */}
-            {regressionResult && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Visualization */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>回归分析可视化</CardTitle>
-                            <CardDescription>
-                                {dependentVar} vs {independentVar}
-                                {regressionType === "multiple" && additionalVars.length > 0 && " + 其他变量"}
-                                {regressionData.length > dataPointLimit && (
-                                    <span className="block text-xs text-muted-foreground mt-1">
-                                        (显示 {truncatedData.length} 个数据点，总共 {regressionData.length} 个)
-                                    </span>
-                                )}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="h-[350px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis
-                                        type="number"
-                                        dataKey="x"
-                                        name={independentVar}
-                                        label={{ value: independentVar, position: 'bottom' }}
-                                    />
-                                    <YAxis
-                                        type="number"
-                                        dataKey="y"
-                                        name={dependentVar}
-                                        label={{ value: dependentVar, angle: -90, position: 'left' }}
-                                    />
-                                    <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                    <Scatter name="观测值" data={truncatedData} fill="#8884d8" />
-                                    {linePoints.length > 0 && (
-                                        <Line
-                                            type="monotone"
-                                            data={linePoints}
-                                            dataKey="y"
-                                            stroke="#ff7300"
-                                            name="预测值"
-                                            dot={false}
-                                            isAnimationActive={false}
-                                        />
-                                    )}
-                                </ScatterChart>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
-
-                    {/* Statistics */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>回归模型统计</CardTitle>
-                            <CardDescription>
-                                {(() => {
-                                    switch (regressionType) {
-                                        case "simple": return "简单线性回归";
-                                        case "multiple": return "多元线性回归";
-                                        case "logistic": return "逻辑回归";
-                                        case "exponential": return "指数回归";
-                                        case "power": return "幂函数回归";
-                                        default: return "回归分析";
-                                    }
-                                })()}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <table className="w-full">
-                                <tbody>
-                                    <tr>
-                                        <td className="py-2 font-medium">回归方程</td>
-                                        <td>{regressionResult.equation}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-2 font-medium">
-                                            {regressionType === "logistic" ? "伪R²值" : "R²值"}
-                                        </td>
-                                        <td>{regressionResult.r2.toFixed(4)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-2 font-medium">调整后的R²</td>
-                                        <td>{regressionResult.adjustedR2.toFixed(4)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-2 font-medium">标准误差</td>
-                                        <td>{regressionResult.standardError.toFixed(4)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-2 font-medium">观测值</td>
-                                        <td>{regressionResult.observations}</td>
-                                    </tr>
-                                    {regressionType === "simple" && (
-                                        <>
-                                            <tr>
-                                                <td className="py-2 font-medium">斜率</td>
-                                                <td>{regressionResult.slope?.toFixed(4)}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="py-2 font-medium">截距</td>
-                                                <td>{regressionResult.intercept?.toFixed(4)}</td>
-                                            </tr>
-                                        </>
-                                    )}
-                                </tbody>
-                            </table>
-                        </CardContent>
-                    </Card>
+            {/* Loading Indicator for Regression Calculation */}
+            {isLoading && regressionResult === null && (
+                <div className="space-y-4 mt-6">
+                    <Skeleton className="h-[350px] w-full" />
+                    <Skeleton className="h-[200px] w-full" />
                 </div>
             )}
 
-            {/* Regression Types Information */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>回归分析类型说明</CardTitle>
-                    <CardDescription>
-                        {(() => {
-                            switch (regressionType) {
-                                case "simple": return "了解简单线性回归的适用场景和基本原理";
-                                case "multiple": return "了解多元线性回归的适用场景和基本原理";
-                                case "logistic": return "了解逻辑回归的适用场景和基本原理";
-                                case "exponential": return "了解指数回归的适用场景和基本原理";
-                                case "power": return "了解幂函数回归的适用场景和基本原理";
-                                default: return "选择不同的回归类型查看相关说明";
-                            }
-                        })()}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {regressionType === "simple" && (
-                        <div>
-                            <h3 className="text-lg font-medium mb-2">简单线性回归</h3>
-                            <p>简单线性回归分析两个变量之间的线性关系，形式为 y = a + bx。它假设因变量与自变量之间存在线性关系。</p>
-                            <p className="mt-2">适用场景：当您认为一个变量可以线性预测另一个变量时。</p>
-                            <div className="mt-4 p-3 bg-primary/5 rounded-md">
-                                <h4 className="text-sm font-semibold mb-1">数学模型</h4>
-                                <p className="text-sm">y = β₀ + β₁x + ε</p>
-                                <p className="text-sm mt-1">其中 β₀ 是截距，β₁ 是斜率，ε 是误差项</p>
-                            </div>
-                        </div>
-                    )}
+            {/* Results Section */}
+            {!isLoading && regressionResult && (
+                <RegressionResults
+                    regressionResult={regressionResult}
+                    regressionData={regressionData}
+                    truncatedData={truncatedData}
+                    linePoints={linePoints}
+                    dependentVar={dependentVar}
+                    independentVar={independentVar}
+                    regressionType={regressionType}
+                    additionalVars={additionalVars}
+                    dataPointLimit={dataPointLimit}
+                />
+            )}
 
-                    {regressionType === "multiple" && (
-                        <div>
-                            <h3 className="text-lg font-medium mb-2">多元线性回归</h3>
-                            <p>多元线性回归考虑多个自变量对因变量的影响，形式为 y = b₀ + b₁x₁ + b₂x₂ + ... + bₙxₙ。</p>
-                            <p className="mt-2">适用场景：当多个变量可能共同影响一个结果变量时。例如，预测房价时可能同时考虑面积、位置、年龄等多个因素。</p>
-                            <div className="mt-4 p-3 bg-primary/5 rounded-md">
-                                <h4 className="text-sm font-semibold mb-1">数学模型</h4>
-                                <p className="text-sm">y = β₀ + β₁x₁ + β₂x₂ + ... + βₙxₙ + ε</p>
-                                <p className="text-sm mt-1">其中 β₀ 是截距，β₁...βₙ 是各个自变量的系数，ε 是误差项</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {regressionType === "logistic" && (
-                        <div>
-                            <h3 className="text-lg font-medium mb-2">逻辑回归</h3>
-                            <p>逻辑回归用于预测二分类结果的概率，适用于因变量为二元（如是/否，0/1）的情况。</p>
-                            <p className="mt-2">适用场景：预测事件发生的概率，如客户是否会购买产品、患者是否患有某种疾病等。</p>
-                            <div className="mt-4 p-3 bg-primary/5 rounded-md">
-                                <h4 className="text-sm font-semibold mb-1">数学模型</h4>
-                                <p className="text-sm">logit(p) = ln(p/(1-p)) = β₀ + β₁x₁ + ... + βₙxₙ</p>
-                                <p className="text-sm mt-1">p = 1/(1+e^-(β₀ + β₁x₁ + ... + βₙxₙ))</p>
-                                <p className="text-sm mt-1">其中 p 是事件发生的概率，β₀ 是截距，β₁...βₙ 是各个自变量的系数</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {regressionType === "exponential" && (
-                        <div>
-                            <h3 className="text-lg font-medium mb-2">指数回归</h3>
-                            <p>指数回归用于建模指数增长或衰减的关系，形式为 y = ae^(bx)。</p>
-                            <p className="mt-2">适用场景：适用于呈指数增长的数据，如人口增长、复利增长、细菌繁殖等。</p>
-                            <div className="mt-4 p-3 bg-primary/5 rounded-md">
-                                <h4 className="text-sm font-semibold mb-1">数学模型</h4>
-                                <p className="text-sm">y = ae^(bx) + ε</p>
-                                <p className="text-sm mt-1">对数变换: ln(y) = ln(a) + bx</p>
-                                <p className="text-sm mt-1">其中 a 和 b 是待估计的参数，ε 是误差项</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {regressionType === "power" && (
-                        <div>
-                            <h3 className="text-lg font-medium mb-2">幂函数回归</h3>
-                            <p>幂函数回归用于建模符合幂函数关系的数据，形式为 y = ax^b。</p>
-                            <p className="mt-2">适用场景：适用于随自变量增加呈幂次关系的数据，如物理学中的某些关系、规模效应等。</p>
-                            <div className="mt-4 p-3 bg-primary/5 rounded-md">
-                                <h4 className="text-sm font-semibold mb-1">数学模型</h4>
-                                <p className="text-sm">y = ax^b + ε</p>
-                                <p className="text-sm mt-1">对数变换: ln(y) = ln(a) + b×ln(x)</p>
-                                <p className="text-sm mt-1">其中 a 和 b 是待估计的参数，ε 是误差项</p>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="mt-6">
-                        <h3 className="text-lg font-medium mb-2">其他常见非线性回归类型</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="p-3 rounded-md border">
-                                <h4 className="text-sm font-semibold">对数模型</h4>
-                                <p className="text-sm mt-1">y = a + b·ln(x)</p>
-                                <p className="text-sm text-muted-foreground mt-1">适用于增长率随时间递减的情况</p>
-                            </div>
-                            <div className="p-3 rounded-md border">
-                                <h4 className="text-sm font-semibold">Gompertz模型</h4>
-                                <p className="text-sm mt-1">y = a·e^(-b·e^(-cx))</p>
-                                <p className="text-sm text-muted-foreground mt-1">适用于S形增长曲线，如市场渗透率</p>
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+            {/* Information Section */}
+            <RegressionTypeInformation regressionType={regressionType} />
         </div>
     );
+}
+
+// Helper function (already exists in regression.ts, but needed here for type check)
+function prepareRegressionData(xData: any[], yData: any[]): [number[], number[]] {
+    const pairs: [number, number][] = [];
+
+    for (let i = 0; i < Math.min(xData.length, yData.length); i++) {
+        const xValue = xData[i];
+        const yValue = yData[i];
+        const xNum = typeof xValue === "number" ? xValue : Number(String(xValue).trim());
+        const yNum = typeof yValue === "number" ? yValue : Number(String(yValue).trim());
+
+        if (
+            !isNaN(xNum) && !isNaN(yNum) &&
+            xValue !== null && xValue !== undefined && String(xValue).trim() !== "" &&
+            yValue !== null && yValue !== undefined && String(yValue).trim() !== ""
+        ) {
+            pairs.push([xNum, yNum]);
+        }
+    }
+    return [pairs.map((p) => p[0]), pairs.map((p) => p[1])];
 } 
