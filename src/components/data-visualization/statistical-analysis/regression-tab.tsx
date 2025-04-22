@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
     Card,
     CardContent,
@@ -47,6 +47,7 @@ export function RegressionTab({ file, selectedColumns }: RegressionTabProps) {
     const [regressionData, setRegressionData] = useState<{ x: number; y: number; predicted?: number }[]>([]);
     const [numericColumns, setNumericColumns] = useState<string[]>([]);
     const [hasFile, setHasFile] = useState<boolean>(false);
+    const [dataPointLimit, setDataPointLimit] = useState<number>(400);
 
     // Initialize state when file or columns change
     useEffect(() => {
@@ -221,6 +222,147 @@ export function RegressionTab({ file, selectedColumns }: RegressionTabProps) {
         );
     };
 
+    // Truncate data points for chart rendering to improve performance
+    const truncatedData = useMemo(() => {
+        if (regressionData.length <= dataPointLimit) {
+            return regressionData;
+        }
+
+        // If we need to truncate, use reservoir sampling to maintain distribution
+        const sampledData: typeof regressionData = [];
+
+        // Always include min and max X values to ensure we see the full range
+        const sortedByX = [...regressionData].sort((a, b) => a.x - b.x);
+        if (sortedByX.length > 0) {
+            sampledData.push(sortedByX[0]);
+            sampledData.push(sortedByX[sortedByX.length - 1]);
+        }
+
+        // Reservoir sampling for scatter points
+        const remainingPoints = regressionData.filter((_, i) => i !== 0 && i !== regressionData.length - 1);
+        const sampleSize = Math.min(dataPointLimit - 2, remainingPoints.length);
+
+        for (let i = 0; i < sampleSize; i++) {
+            sampledData.push(remainingPoints[i]);
+        }
+
+        for (let i = sampleSize; i < remainingPoints.length; i++) {
+            const j = Math.floor(Math.random() * (i + 1));
+            if (j < sampleSize) {
+                sampledData[j + 2] = remainingPoints[i];
+            }
+        }
+
+        return sampledData;
+    }, [regressionData, dataPointLimit]);
+
+    // Get regression line points - for visualization only
+    const linePoints = useMemo(() => {
+        if (!regressionResult || regressionData.length === 0) {
+            return [];
+        }
+
+        // Sort data by X value
+        const sortedData = [...regressionData].sort((a, b) => a.x - b.x);
+
+        // For simple linear regression or when we have predictedValues, plot the actual line
+        if (regressionResult.predictedValues && regressionResult.predictedValues.length > 0) {
+            // Sample points evenly to draw the line (max 100 points)
+            const step = Math.max(1, Math.floor(sortedData.length / 100));
+            const lineData: Array<{ x: number, y: number }> = [];
+
+            for (let i = 0; i < sortedData.length; i += step) {
+                if (sortedData[i].predicted !== undefined) {
+                    lineData.push({
+                        x: sortedData[i].x,
+                        y: sortedData[i].predicted as number
+                    });
+                }
+            }
+
+            // Always include the last point
+            if (lineData.length > 0 &&
+                sortedData.length > 0 &&
+                lineData[lineData.length - 1].x !== sortedData[sortedData.length - 1].x &&
+                sortedData[sortedData.length - 1].predicted !== undefined) {
+                lineData.push({
+                    x: sortedData[sortedData.length - 1].x,
+                    y: sortedData[sortedData.length - 1].predicted as number
+                });
+            }
+
+            return lineData;
+        }
+
+        // For other regression types, generate points for the equation
+        // This is needed especially for logistic, exponential and power regressions
+        const xMin = sortedData[0].x;
+        const xMax = sortedData[sortedData.length - 1].x;
+        const step = (xMax - xMin) / 100;
+
+        const lineData: Array<{ x: number, y: number }> = [];
+
+        switch (regressionType) {
+            case "simple":
+                // y = mx + b
+                if (regressionResult.slope !== undefined && regressionResult.intercept !== undefined) {
+                    for (let x = xMin; x <= xMax; x += step) {
+                        lineData.push({
+                            x,
+                            y: regressionResult.slope * x + regressionResult.intercept
+                        });
+                    }
+                }
+                break;
+
+            case "exponential":
+                // y = a * e^(bx)
+                if (regressionResult.coefficients.length >= 2) {
+                    const a = regressionResult.coefficients[0];
+                    const b = regressionResult.coefficients[1];
+                    for (let x = xMin; x <= xMax; x += step) {
+                        lineData.push({
+                            x,
+                            y: a * Math.exp(b * x)
+                        });
+                    }
+                }
+                break;
+
+            case "power":
+                // y = a * x^b
+                if (regressionResult.coefficients.length >= 2) {
+                    const a = regressionResult.coefficients[0];
+                    const b = regressionResult.coefficients[1];
+                    for (let x = xMin; x <= xMax; x += step) {
+                        // Make sure x is positive for power function
+                        if (x > 0) {
+                            lineData.push({
+                                x,
+                                y: a * Math.pow(x, b)
+                            });
+                        }
+                    }
+                }
+                break;
+
+            case "logistic":
+                // y = 1 / (1 + e^(-b-mx))
+                if (regressionResult.slope !== undefined && regressionResult.intercept !== undefined) {
+                    const sigmoid = (z: number) => 1 / (1 + Math.exp(-z));
+                    for (let x = xMin; x <= xMax; x += step) {
+                        lineData.push({
+                            x,
+                            y: sigmoid(regressionResult.intercept + regressionResult.slope * x)
+                        });
+                    }
+                }
+                break;
+        }
+
+        return lineData;
+    }, [regressionResult, regressionData, regressionType]);
+
     // Add a variable to the multiple regression
     const handleAddVariable = (variable: string) => {
         if (!additionalVars.includes(variable) && variable !== dependentVar && variable !== independentVar) {
@@ -364,6 +506,11 @@ export function RegressionTab({ file, selectedColumns }: RegressionTabProps) {
                             <CardDescription>
                                 {dependentVar} vs {independentVar}
                                 {regressionType === "multiple" && additionalVars.length > 0 && " + 其他变量"}
+                                {regressionData.length > dataPointLimit && (
+                                    <span className="block text-xs text-muted-foreground mt-1">
+                                        (显示 {truncatedData.length} 个数据点，总共 {regressionData.length} 个)
+                                    </span>
+                                )}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="h-[350px]">
@@ -383,14 +530,16 @@ export function RegressionTab({ file, selectedColumns }: RegressionTabProps) {
                                         label={{ value: dependentVar, angle: -90, position: 'left' }}
                                     />
                                     <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                                    <Scatter name="观测值" data={regressionData} fill="#8884d8" />
-                                    {regressionData.length > 0 && regressionData[0].predicted !== undefined && (
+                                    <Scatter name="观测值" data={truncatedData} fill="#8884d8" />
+                                    {linePoints.length > 0 && (
                                         <Line
                                             type="monotone"
-                                            dataKey="predicted"
+                                            data={linePoints}
+                                            dataKey="y"
                                             stroke="#ff7300"
                                             name="预测值"
                                             dot={false}
+                                            isAnimationActive={false}
                                         />
                                     )}
                                 </ScatterChart>
@@ -459,7 +608,47 @@ export function RegressionTab({ file, selectedColumns }: RegressionTabProps) {
                 </div>
             )}
 
-            
+            {/* Regression Types Information */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>回归分析类型说明</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Tabs defaultValue="simple">
+                        <TabsList className="mb-4">
+                            <TabsTrigger value="simple">简单线性回归</TabsTrigger>
+                            <TabsTrigger value="multiple">多元线性回归</TabsTrigger>
+                            <TabsTrigger value="logistic">逻辑回归</TabsTrigger>
+                            <TabsTrigger value="nonlinear">非线性回归</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="simple">
+                            <p>简单线性回归分析两个变量之间的线性关系，形式为 y = a + bx。它假设因变量与自变量之间存在线性关系。</p>
+                            <p className="mt-2">适用场景：当您认为一个变量可以线性预测另一个变量时。</p>
+                        </TabsContent>
+
+                        <TabsContent value="multiple">
+                            <p>多元线性回归考虑多个自变量对因变量的影响，形式为 y = b₀ + b₁x₁ + b₂x₂ + ... + bₙxₙ。</p>
+                            <p className="mt-2">适用场景：当多个变量可能共同影响一个结果变量时。</p>
+                        </TabsContent>
+
+                        <TabsContent value="logistic">
+                            <p>逻辑回归用于预测二分类结果的概率，适用于因变量为二元（如是/否，0/1）的情况。</p>
+                            <p className="mt-2">适用场景：预测事件发生的概率，如客户是否会购买产品、患者是否患有某种疾病等。</p>
+                        </TabsContent>
+
+                        <TabsContent value="nonlinear">
+                            <p>非线性回归适用于变量之间的关系不是线性的情况。常见的非线性模型包括：</p>
+                            <ul className="list-disc pl-6 mt-2 space-y-1">
+                                <li><b>指数模型</b>：y = ae^(bx)，适用于呈指数增长的数据，如人口增长。</li>
+                                <li><b>幂函数模型</b>：y = ax^b，适用于随自变量增加呈幂次关系的数据，如物理学中的某些关系。</li>
+                                <li><b>对数模型</b>：y = a + b·ln(x)，适用于增长率随时间递减的情况。</li>
+                                <li><b>Gompertz模型</b>：y = a·e^(-b·e^(-cx))，适用于S形增长曲线，如市场渗透率。</li>
+                            </ul>
+                        </TabsContent>
+                    </Tabs>
+                </CardContent>
+            </Card>
         </div>
     );
 } 
