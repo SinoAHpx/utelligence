@@ -183,7 +183,7 @@ export default function DataAnalysis({
             </TabsContent>
 
             <TabsContent value="correlation" className="mt-6">
-              <CorrelationTab selectedColumns={selectedColumns} />
+              <CorrelationTab selectedColumns={selectedColumns} file={file} />
             </TabsContent>
 
             <TabsContent value="regression" className="mt-6">

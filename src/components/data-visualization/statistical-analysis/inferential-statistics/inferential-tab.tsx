@@ -9,7 +9,6 @@ import { CellValue } from "@/utils/statistics/types";
 import { NormalityTests } from "./normality-tests";
 import { TTests } from "./t-tests";
 import { ParameterEstimation } from "./parameter-estimation";
-import { ChiSquareTests } from "./chi-square-tests";
 
 interface InferentialStatisticsTabProps {
     isLoading: boolean;
