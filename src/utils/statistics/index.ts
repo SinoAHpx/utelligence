@@ -7,6 +7,7 @@ export * from "./dispersion";
 export * from "./distribution-shape";
 export * from "./basic";
 export * from "./utils";
+export * from "./regression";
 
 // 导入各个模块的统计函数集合
 import { getCentralTendencyStatistics } from "./central-tendency";

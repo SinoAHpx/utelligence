@@ -28,6 +28,7 @@ import { calculateDescriptiveStatistics } from "@/utils/statistics";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { convertToNumericArray } from "@/utils/statistics/utils";
 import { InferentialStatisticsTab } from "./statistical-analysis/inferential-statistics/inferential-tab";
+import { RegressionTab } from "./statistical-analysis/regression-tab";
 
 interface DataAnalysisProps {
   file: File | null;
@@ -145,21 +146,23 @@ export default function DataAnalysis({
                 ))}
               </TabsList>
 
-              <Select value={selectedColumn} onValueChange={setSelectedColumn}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="选择分析列" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedColumns.map((column) => (
-                    <SelectItem key={column} value={column}>
-                      {column}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {activeTab !== "regression" && (
+                <Select value={selectedColumn} onValueChange={setSelectedColumn}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="选择分析列" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {selectedColumns.map((column) => (
+                      <SelectItem key={column} value={column}>
+                        {column}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
-            {errorMessage && (
+            {errorMessage && activeTab !== "regression" && (
               <Alert className="mb-4">
                 <AlertDescription>{errorMessage}</AlertDescription>
               </Alert>
@@ -187,57 +190,10 @@ export default function DataAnalysis({
             </TabsContent>
 
             <TabsContent value="regression" className="mt-6">
-              {selectedColumns.length >= 2 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>回归分析</CardTitle>
-                      <CardDescription>
-                        基于{selectedColumns[0]}和{selectedColumns[1]}的回归分析
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px] flex items-center justify-center">
-                      <p className="text-gray-500">回归模型可视化</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>回归模型统计</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <table className="w-full">
-                        <tbody>
-                          <tr>
-                            <td className="py-2 font-medium">R²值</td>
-                            <td>0.923</td>
-                          </tr>
-                          <tr>
-                            <td className="py-2 font-medium">调整后的R²</td>
-                            <td>0.919</td>
-                          </tr>
-                          <tr>
-                            <td className="py-2 font-medium">回归方程</td>
-                            <td>y = 2.0x + 30.0</td>
-                          </tr>
-                          <tr>
-                            <td className="py-2 font-medium">标准误差</td>
-                            <td>5.87</td>
-                          </tr>
-                          <tr>
-                            <td className="py-2 font-medium">观测值</td>
-                            <td>20</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </CardContent>
-                  </Card>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-40">
-                  <p className="text-gray-500">请选择至少两列数据进行回归分析</p>
-                </div>
-              )}
+              <RegressionTab
+                file={file}
+                selectedColumns={selectedColumns}
+              />
             </TabsContent>
           </Tabs>
         </CardContent>
