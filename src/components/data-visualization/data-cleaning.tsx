@@ -1,6 +1,25 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { useToast } from "@/components/ui/use-toast";
+import { Loader2, Download, ArrowRight } from "lucide-react";
+import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  RadioGroup,
+  RadioGroupItem
+} from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface DataCleaningProps {
   file: File | null;
@@ -15,26 +34,112 @@ export default function DataCleaning({
 }: DataCleaningProps) {
   const [activeTab, setActiveTab] = useState<string>("missing");
   const [isCleaning, setIsCleaning] = useState<boolean>(false);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [selectedColumn, setSelectedColumn] = useState<string>("");
+  const [missingOption, setMissingOption] = useState<string>("remove-rows");
+  const [customValue, setCustomValue] = useState<string>("");
+  const [outlierOption, setOutlierOption] = useState<string>("remove-outliers");
+  const [detectionMethod, setDetectionMethod] = useState<string>("zscore");
+  const [threshold, setThreshold] = useState<number>(3);
   const [cleaned, setCleaned] = useState<boolean>(false);
   const [message, setMessage] = useState<string>("");
+  const [processedFileUrl, setProcessedFileUrl] = useState<string | null>(null);
+  const { toast } = useToast();
+  const downloadLinkRef = useRef<HTMLAnchorElement>(null);
 
-  const tabs = [
+  const tabItems = [
     { id: "missing", name: "缺失值处理" },
     { id: "outliers", name: "异常值处理" },
     { id: "duplicates", name: "重复数据" },
     { id: "transform", name: "数据转换" },
   ];
 
-  const handleClean = () => {
+  // When column selection changes, update the selected column
+  React.useEffect(() => {
+    if (selectedColumns.length > 0 && !selectedColumn) {
+      setSelectedColumn(selectedColumns[0]);
+    }
+  }, [selectedColumns, selectedColumn]);
+
+  const handleClean = async () => {
+    if (!file || !selectedColumn) {
+      toast({
+        title: "错误",
+        description: "请选择要处理的列",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsCleaning(true);
     setMessage("");
+    setCleaned(false);
+    setProcessedFileUrl(null);
 
-    // Simulate cleaning process
-    setTimeout(() => {
-      setIsCleaning(false);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("columnName", selectedColumn);
+
+      let endpoint = "";
+
+      if (activeTab === "missing") {
+        endpoint = "/api/data/missing";
+        formData.append("operation", missingOption);
+        if (missingOption === "fill-custom") {
+          formData.append("customValue", customValue);
+        }
+      } else if (activeTab === "outliers") {
+        endpoint = "/api/data/outliers";
+        formData.append("operation", outlierOption);
+        formData.append("method", detectionMethod);
+        formData.append("threshold", threshold.toString());
+      } else {
+        throw new Error("未实现的数据清洗选项");
+      }
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "数据处理失败");
+      }
+
+      // Create a blob URL for downloading
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setProcessedFileUrl(url);
       setCleaned(true);
-      setMessage("数据清洗完成");
-    }, 1500);
+      setMessage("数据清洗完成，可以下载处理后的文件");
+
+    } catch (error) {
+      console.error("数据清洗错误:", error);
+      setMessage(error instanceof Error ? error.message : "处理数据时出错");
+      toast({
+        title: "错误",
+        description: error instanceof Error ? error.message : "处理数据时出错",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
+  const handleExport = () => {
+    if (processedFileUrl && downloadLinkRef.current) {
+      setIsExporting(true);
+
+      // Use a timeout to show the exporting state
+      setTimeout(() => {
+        if (downloadLinkRef.current) {
+          downloadLinkRef.current.click();
+          setIsExporting(false);
+        }
+      }, 500);
+    }
   };
 
   if (!file) {
@@ -62,17 +167,72 @@ export default function DataCleaning({
           <h3 className="font-medium text-gray-700 dark:text-gray-300">
             文件: <span className="font-bold">{file.name}</span>
           </h3>
-          <button
-            onClick={handleClean}
-            disabled={isCleaning}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              isCleaning
-                ? "bg-gray-300 dark:bg-gray-700 cursor-not-allowed"
-                : "bg-primary text-primary-foreground hover:bg-primary/90"
-            }`}
+          <div className="flex space-x-2">
+            <Button
+              onClick={handleClean}
+              disabled={isCleaning || !selectedColumn}
+              variant="default"
+            >
+              {isCleaning ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  处理中...
+                </>
+              ) : (
+                <>执行清洗</>
+              )}
+            </Button>
+
+            {processedFileUrl && (
+              <Button
+                onClick={handleExport}
+                disabled={isExporting}
+                variant="outline"
+                className="border-primary text-primary hover:bg-primary/10"
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    导出中...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    导出文件
+                  </>
+                )}
+              </Button>
+            )}
+            <a
+              ref={downloadLinkRef}
+              href={processedFileUrl || "#"}
+              download={`cleaned_${file.name}`}
+              className="hidden"
+            >
+              下载
+            </a>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <Label htmlFor="column-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            选择要处理的列:
+          </Label>
+          <Select
+            value={selectedColumn}
+            onValueChange={setSelectedColumn}
           >
-            {isCleaning ? "处理中..." : "执行清洗"}
-          </button>
+            <SelectTrigger id="column-select" className="w-full">
+              <SelectValue placeholder="请选择列" />
+            </SelectTrigger>
+            <SelectContent>
+              {selectedColumns.map((col) => (
+                <SelectItem key={col} value={col}>
+                  {col}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {message && (
@@ -81,317 +241,151 @@ export default function DataCleaning({
           </div>
         )}
 
-        <div className="flex overflow-x-auto space-x-2 pb-2 mb-4 border-b border-gray-200 dark:border-gray-700">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-sm whitespace-nowrap rounded-t-md transition-colors ${
-                activeTab === tab.id
-                  ? "bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary border-b-2 border-primary"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-              }`}
-            >
-              {tab.name}
-            </button>
-          ))}
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full grid grid-cols-4 mb-4">
+            {tabItems.map((tab) => (
+              <TabsTrigger key={tab.id} value={tab.id}>
+                {tab.name}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        <div className="mt-4">
-          {activeTab === "missing" && (
+          <TabsContent value="missing" className="mt-4">
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 缺失值处理选项
               </h4>
 
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="remove-rows"
-                    name="missing-option"
-                    className="mr-2"
-                    defaultChecked
-                  />
-                  <label
-                    htmlFor="remove-rows"
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    删除包含缺失值的行
-                  </label>
+              <RadioGroup
+                value={missingOption}
+                onValueChange={setMissingOption}
+                className="space-y-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="remove-rows" id="remove-rows" />
+                  <Label htmlFor="remove-rows">删除包含缺失值的行</Label>
                 </div>
 
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="fill-mean"
-                    name="missing-option"
-                    className="mr-2"
-                  />
-                  <label
-                    htmlFor="fill-mean"
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    使用均值填充缺失值
-                  </label>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="fill-mean" id="fill-mean" />
+                  <Label htmlFor="fill-mean">使用均值填充缺失值</Label>
                 </div>
 
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="fill-median"
-                    name="missing-option"
-                    className="mr-2"
-                  />
-                  <label
-                    htmlFor="fill-median"
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    使用中位数填充缺失值
-                  </label>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="fill-median" id="fill-median" />
+                  <Label htmlFor="fill-median">使用中位数填充缺失值</Label>
                 </div>
 
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="fill-mode"
-                    name="missing-option"
-                    className="mr-2"
-                  />
-                  <label
-                    htmlFor="fill-mode"
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    使用众数填充缺失值
-                  </label>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="fill-mode" id="fill-mode" />
+                  <Label htmlFor="fill-mode">使用众数填充缺失值</Label>
                 </div>
 
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="fill-custom"
-                    name="missing-option"
-                    className="mr-2"
-                  />
-                  <label
-                    htmlFor="fill-custom"
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    使用自定义值填充
-                  </label>
-                  <input
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="fill-custom" id="fill-custom" />
+                  <Label htmlFor="fill-custom">使用自定义值填充</Label>
+                  <Input
                     type="text"
-                    className="ml-2 px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700"
+                    value={customValue}
+                    onChange={(e) => setCustomValue(e.target.value)}
+                    className="ml-2 w-40"
                     placeholder="自定义值"
+                    disabled={missingOption !== "fill-custom"}
                   />
                 </div>
-              </div>
+              </RadioGroup>
             </div>
-          )}
+          </TabsContent>
 
-          {activeTab === "outliers" && (
+          <TabsContent value="outliers" className="mt-4">
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 异常值处理选项
               </h4>
 
-              <div className="space-y-2">
+              <RadioGroup
+                value={outlierOption}
+                onValueChange={setOutlierOption}
+                className="space-y-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="remove-outliers" id="remove-outliers" />
+                  <Label htmlFor="remove-outliers">移除异常值</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="cap-outliers" id="cap-outliers" />
+                  <Label htmlFor="cap-outliers">截断异常值（使用分位数）</Label>
+                </div>
+              </RadioGroup>
+
+              <div className="pt-4 space-y-4">
                 <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="remove-outliers"
-                    name="outlier-option"
-                    className="mr-2"
-                    defaultChecked
-                  />
-                  <label
-                    htmlFor="remove-outliers"
-                    className="text-sm text-gray-600 dark:text-gray-400"
+                  <Label className="mr-3 w-20">检测方法:</Label>
+                  <Select
+                    value={detectionMethod}
+                    onValueChange={setDetectionMethod}
                   >
-                    移除异常值
-                  </label>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="zscore">Z-Score</SelectItem>
+                      <SelectItem value="iqr">IQR（四分位数）</SelectItem>
+                      <SelectItem value="percentile">百分位数</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="cap-outliers"
-                    name="outlier-option"
-                    className="mr-2"
+                  <Label className="mr-3 w-20">阈值:</Label>
+                  <Input
+                    type="number"
+                    value={threshold}
+                    onChange={(e) => setThreshold(Number(e.target.value))}
+                    min={0}
+                    step={detectionMethod === "percentile" ? 1 : 0.1}
+                    max={detectionMethod === "percentile" ? 50 : 10}
+                    className="w-20"
                   />
-                  <label
-                    htmlFor="cap-outliers"
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    截断异常值（使用分位数）
-                  </label>
-                </div>
-
-                <div>
-                  <div className="flex items-center mt-3">
-                    <span className="text-sm text-gray-600 dark:text-gray-400 mr-3">
-                      检测方法:
-                    </span>
-                    <select className="px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700">
-                      <option value="zscore">Z-Score</option>
-                      <option value="iqr">IQR（四分位数）</option>
-                      <option value="percentile">百分位数</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-center mt-3">
-                    <span className="text-sm text-gray-600 dark:text-gray-400 mr-3">
-                      阈值:
-                    </span>
-                    <input
-                      type="number"
-                      className="px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 w-20"
-                      defaultValue="3"
-                    />
-                  </div>
+                  <span className="ml-2 text-xs text-gray-500">
+                    {detectionMethod === "zscore" && "标准差倍数"}
+                    {detectionMethod === "iqr" && "IQR倍数"}
+                    {detectionMethod === "percentile" && "百分位（1-50）"}
+                  </span>
                 </div>
               </div>
             </div>
-          )}
+          </TabsContent>
 
-          {activeTab === "duplicates" && (
+          <TabsContent value="duplicates" className="mt-4">
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 重复数据处理选项
               </h4>
 
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="remove-all"
-                    name="duplicate-option"
-                    className="mr-2"
-                    defaultChecked
-                  />
-                  <label
-                    htmlFor="remove-all"
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    删除所有重复行，只保留第一条
-                  </label>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="remove-by-cols"
-                    name="duplicate-option"
-                    className="mr-2"
-                  />
-                  <label
-                    htmlFor="remove-by-cols"
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    基于特定列删除重复项
-                  </label>
-                </div>
-
-                <div className="mt-3">
-                  <div className="flex items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400 mr-3">
-                      选择列:
-                    </span>
-                    <select className="px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700">
-                      <option value="id">ID</option>
-                      <option value="name">名称</option>
-                      <option value="date">日期</option>
-                    </select>
-                    <button className="ml-2 px-2 py-1 text-xs bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary rounded border border-primary/20 dark:border-primary/30 hover:bg-primary/20 dark:hover:bg-primary/30">
-                      添加
-                    </button>
-                  </div>
-
-                  <div className="mt-3 flex items-center flex-wrap gap-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-400 mr-3">
-                      已选列:
-                    </span>
-                    {selectedColumns.map((col) => (
-                      <span
-                        key={col}
-                        className="px-2 py-1 text-xs bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary rounded flex items-center"
-                      >
-                        {col}
-                        <button className="ml-1 text-primary/80 dark:text-primary/70 hover:text-primary">
-                          &times;
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
+              <div className="flex items-center justify-center h-40">
+                <p className="text-gray-500 dark:text-gray-400">
+                  功能开发中，敬请期待...
+                </p>
               </div>
             </div>
-          )}
+          </TabsContent>
 
-          {activeTab === "transform" && (
+          <TabsContent value="transform" className="mt-4">
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 数据转换选项
               </h4>
 
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <input type="checkbox" id="normalize" className="mr-2" />
-                  <label
-                    htmlFor="normalize"
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    数据标准化（均值为0，标准差为1）
-                  </label>
-                </div>
-
-                <div className="flex items-center">
-                  <input type="checkbox" id="minmax" className="mr-2" />
-                  <label
-                    htmlFor="minmax"
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    最小-最大缩放（0-1范围）
-                  </label>
-                </div>
-
-                <div className="flex items-center">
-                  <input type="checkbox" id="log" className="mr-2" />
-                  <label
-                    htmlFor="log"
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    对数转换
-                  </label>
-                </div>
-
-                <div className="flex items-center">
-                  <input type="checkbox" id="onehot" className="mr-2" />
-                  <label
-                    htmlFor="onehot"
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    独热编码（分类变量）
-                  </label>
-                </div>
-
-                <div className="mt-3">
-                  <div className="flex items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400 mr-3">
-                      应用到列:
-                    </span>
-                    <select className="px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700">
-                      <option value="all">所有数值列</option>
-                      <option value="col1">列 1</option>
-                      <option value="col2">列 2</option>
-                      <option value="col3">列 3</option>
-                    </select>
-                  </div>
-                </div>
+              <div className="flex items-center justify-center h-40">
+                <p className="text-gray-500 dark:text-gray-400">
+                  功能开发中，敬请期待...
+                </p>
               </div>
             </div>
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

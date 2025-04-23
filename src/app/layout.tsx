@@ -1,7 +1,7 @@
 import { ThemeProvider } from "@/providers/theme-provider";
 import type { Metadata } from "next";
 
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 
 export const runtime = "edge"; // 'nodejs' (default) | 'edge'
