@@ -35,12 +35,12 @@ export default function DataDisplay({
     setChartTitle,
     setXAxisColumn,
     setYAxisColumn,
-    processedFile,
+    currentFileIdentifier,
     isFileLoading,
     fileError,
     processAndAnalyzeFile,
     setRawFileData,
-    setProcessedFile,
+    setCurrentFileIdentifier,
     setColumnsVisualizableStatus,
   } = useDataVisualizationStore();
 
@@ -50,13 +50,10 @@ export default function DataDisplay({
   // Simplified useEffect to trigger file processing via store action
   useEffect(() => {
     if (file) {
-      // Check if the file needs processing (based on processedFile state)
+      // Check if the file needs processing (based on currentFileIdentifier state)
       const fileSignature = `${file.name}-${file.size}`;
-      const processedSignature = processedFile
-        ? `${processedFile.name}-${processedFile.size}`
-        : "";
 
-      if (fileSignature !== processedSignature) {
+      if (fileSignature !== currentFileIdentifier) {
         // Call the store action to handle processing and analysis
         // We pass `selectedColumns` here to tell the action *which* columns to analyze
         processAndAnalyzeFile(file, selectedColumns);
@@ -64,12 +61,12 @@ export default function DataDisplay({
     } else {
       // Clear relevant state if file is removed
       setRawFileData(null);
-      setProcessedFile(null);
+      setCurrentFileIdentifier(null);
       setColumnsVisualizableStatus([]);
       // Optionally reset chart creation state too?
     }
     // Dependency array: re-run if the file object changes or the list of selected columns changes
-  }, [file, selectedColumns, processedFile, processAndAnalyzeFile, setRawFileData, setProcessedFile, setColumnsVisualizableStatus]);
+  }, [file, selectedColumns, currentFileIdentifier, processAndAnalyzeFile, setRawFileData, setCurrentFileIdentifier, setColumnsVisualizableStatus]);
 
   // 打开添加图表对话框
   const openAddChartModal = () => {
