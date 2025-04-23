@@ -31,12 +31,6 @@ export function DuplicatesTab({
     const { toast } = useToast();
     const [isAnalyzing, setIsAnalyzing] = React.useState<boolean>(false);
 
-    // Initialize with selected columns if empty
-    React.useEffect(() => {
-        if (selectedColumns.length > 0 && (!duplicateColumnsSelection || duplicateColumnsSelection.length === 0)) {
-            setDuplicateColumnsSelection([...selectedColumns]);
-        }
-    }, [selectedColumns, duplicateColumnsSelection, setDuplicateColumnsSelection]);
 
     const analyzeDuplicates = async () => {
 
