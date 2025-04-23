@@ -19,9 +19,11 @@ import { CellValue, StatisticResult } from "./types";
 // 为简化API导出常用函数的别名
 import { fisherSkewness as skewness } from "./distribution-shape";
 import { fisherKurtosis as kurtosis } from "./distribution-shape";
+import { mean } from "./central-tendency";
+import { standardDeviation as stdev } from "./dispersion";
 
 // 重新导出这些别名
-export { skewness, kurtosis };
+export { skewness, kurtosis, mean, stdev };
 
 /**
  * 计算所有描述性统计量

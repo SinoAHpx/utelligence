@@ -188,6 +188,16 @@ export default function DataCleaning({
                 formData.append("columns", JSON.stringify(duplicateColumnsSelection));
                 formData.append("operation", duplicateOption);
                 formData.append("keepStrategy", keepStrategy);
+            } else if (activeTab === "transform") {
+                // Let the TransformTab handle its own submission
+                // This option is managed separately in the TransformTab component
+                toast({
+                    title: "提示",
+                    description: "请在转换选项卡中使用'应用转换'按钮",
+                    variant: "default",
+                });
+                setIsCleaning(false);
+                return;
             } else {
                 throw new Error("未实现的数据清洗选项");
             }

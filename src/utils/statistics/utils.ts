@@ -50,9 +50,8 @@ export function formatJarqueBera(result: {
 		return "样本量不足";
 	}
 
-	return `统计量: ${result.statistic.toFixed(4)}, p值: ${result.pValue.toFixed(4)}, ${
-		result.isNormal ? "符合正态分布" : "不符合正态分布"
-	}`;
+	return `统计量: ${result.statistic.toFixed(4)}, p值: ${result.pValue.toFixed(4)}, ${result.isNormal ? "符合正态分布" : "不符合正态分布"
+		}`;
 }
 
 /**
@@ -69,4 +68,29 @@ export function chiSquareCDF(x: number, df: number): number {
 	// For other df values, a more complex calculation would be needed
 	// This is a simplified approximation
 	return 1 - Math.exp(-x / 2) * Math.pow(x / 2, df / 2 - 1);
+}
+
+/**
+ * Calculate the standard deviation of an array of numbers
+ * @param data The input array of numbers
+ * @returns The standard deviation of the array
+ */
+export function stdev(data: number[]): number {
+	if (data.length <= 1) return 0;
+
+	// Calculate mean
+	const sum = data.reduce((a, b) => a + b, 0);
+	const avg = sum / data.length;
+
+	// Calculate sum of squared differences
+	const squareDiffs = data.map(value => {
+		const diff = value - avg;
+		return diff * diff;
+	});
+
+	// Calculate mean of squared differences
+	const sumSquareDiffs = squareDiffs.reduce((a, b) => a + b, 0);
+	const avgSquareDiff = sumSquareDiffs / squareDiffs.length;
+
+	return Math.sqrt(avgSquareDiff);
 }

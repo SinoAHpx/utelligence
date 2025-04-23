@@ -71,5 +71,5 @@ export interface DuplicatesTabProps extends TabComponentProps {
 }
 
 export interface TransformTabProps extends TabComponentProps {
-    // Placeholder for future implementation
+    // Add transformation specific properties
 } 
