@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Download } from "lucide-react";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
@@ -60,9 +60,32 @@ export default function DataCleaning({
 
     const { toast } = useToast();
     const downloadLinkRef = useRef<HTMLAnchorElement>(null);
-    const { rawFileData } = useDataVisualizationStore();
+    const { rawFileData, processAndAnalyzeFile } = useDataVisualizationStore();
     const [outlierData, setOutlierData] = useState<any[]>([]);
     const [showVisualization, setShowVisualization] = useState<boolean>(false);
+
+    // 调试: 记录rawFileData的状态
+    useEffect(() => {
+        console.log("DataCleaning: rawFileData changed:", rawFileData);
+    }, [rawFileData]);
+
+    // 确保文件数据已加载
+    useEffect(() => {
+        if (file && (!rawFileData || rawFileData.headers.length === 0)) {
+            console.log("DataCleaning: 需要加载文件数据，正在处理...");
+            // 确保文件数据已加载
+            processAndAnalyzeFile(file, availableColumns).then(() => {
+                console.log("DataCleaning: 文件数据处理完成");
+            }).catch((error) => {
+                console.error("DataCleaning: 处理文件数据时出错:", error);
+                toast({
+                    title: "文件处理错误",
+                    description: "无法处理文件数据，请尝试重新上传文件",
+                    variant: "destructive",
+                });
+            });
+        }
+    }, [file, rawFileData, availableColumns, processAndAnalyzeFile, toast]);
 
     const tabItems = [
         { id: "missing", name: "缺失值处理" },
@@ -229,6 +252,20 @@ export default function DataCleaning({
         );
     }
 
+    // 如果文件数据还未加载完成，显示加载中提示
+    if (!rawFileData) {
+        return (
+            <div className="w-full space-y-6">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm flex items-center justify-center">
+                    <div className="text-center">
+                        <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-primary" />
+                        <p className="text-gray-500 dark:text-gray-400">正在加载文件数据，请稍候...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full space-y-6">
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
@@ -239,7 +276,7 @@ export default function DataCleaning({
                     <div className="flex space-x-2">
                         <Button
                             onClick={handleClean}
-                            disabled={isCleaning || !selectedColumn}
+                            disabled={isCleaning || !selectedColumn || !rawFileData}
                             variant="default"
                         >
                             {isCleaning ? (

@@ -31,15 +31,29 @@ export function DuplicatesTab({
     const { toast } = useToast();
     const [isAnalyzing, setIsAnalyzing] = React.useState<boolean>(false);
 
-    // Initialize duplicate columns selection with all selected columns
+    // Initialize with selected columns if empty
     React.useEffect(() => {
-        if (selectedColumns.length > 0 && duplicateColumnsSelection.length === 0) {
+        if (selectedColumns.length > 0 && (!duplicateColumnsSelection || duplicateColumnsSelection.length === 0)) {
             setDuplicateColumnsSelection([...selectedColumns]);
         }
-    }, [selectedColumns, duplicateColumnsSelection.length, setDuplicateColumnsSelection]);
+    }, [selectedColumns, duplicateColumnsSelection, setDuplicateColumnsSelection]);
 
     const analyzeDuplicates = async () => {
-        if (!rawFileData || duplicateColumnsSelection.length === 0) {
+
+        // 确保rawFileData存在并有效
+        if (!rawFileData || !rawFileData.rows || !rawFileData.headers) {
+            toast({
+                title: "错误",
+                description: "无法分析数据，原始文件数据不存在或无效",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // Make sure duplicateColumnsSelection is an array and not undefined or null
+        const columnsToAnalyze = Array.isArray(duplicateColumnsSelection) ? duplicateColumnsSelection : [];
+
+        if (columnsToAnalyze.length === 0) {
             toast({
                 title: "错误",
                 description: "无法分析数据，请确保至少选择了一列",
@@ -68,7 +82,7 @@ export function DuplicatesTab({
                 },
                 body: JSON.stringify({
                     data: dataForAnalysis,
-                    columns: duplicateColumnsSelection,
+                    columns: columnsToAnalyze, // Use the validated columns array
                     analyzeOnly: true
                 }),
             });
@@ -97,6 +111,22 @@ export function DuplicatesTab({
             setIsAnalyzing(false);
         }
     };
+
+    // 如果存在用户界面但没有rawFileData，显示提示信息
+    if (!rawFileData) {
+        return (
+            <div className="space-y-4">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    重复数据处理选项
+                </h4>
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-4">
+                    <p className="text-amber-700 dark:text-amber-300">
+                        请先预览文件数据，确保原始数据已加载。可能需要切换到文件预览选项卡，然后再回到此页面。
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-4">
@@ -127,7 +157,7 @@ export function DuplicatesTab({
                             清空
                         </Button>
 
-                        {duplicateColumnsSelection.length > 0 && (
+                        {duplicateColumnsSelection && duplicateColumnsSelection.length > 0 && (
                             <Badge variant="secondary" className="h-6 px-2 ml-2">
                                 {duplicateColumnsSelection.length}/{availableColumns.length}
                             </Badge>
@@ -137,7 +167,7 @@ export function DuplicatesTab({
 
                 <div className="flex flex-wrap gap-2 mb-3 max-h-[200px] overflow-y-auto p-3 border rounded-md">
                     {availableColumns.map((column) => {
-                        const isSelected = duplicateColumnsSelection.includes(column);
+                        const isSelected = duplicateColumnsSelection && duplicateColumnsSelection.includes(column);
                         return (
                             <Badge
                                 key={column}
@@ -154,7 +184,7 @@ export function DuplicatesTab({
                                             duplicateColumnsSelection.filter((c) => c !== column)
                                         );
                                     } else {
-                                        setDuplicateColumnsSelection([...duplicateColumnsSelection, column]);
+                                        setDuplicateColumnsSelection([...duplicateColumnsSelection || [], column]);
                                     }
                                 }}
                             >
@@ -231,7 +261,7 @@ export function DuplicatesTab({
                     variant="outline"
                     size="sm"
                     onClick={analyzeDuplicates}
-                    disabled={isAnalyzing || duplicateColumnsSelection.length === 0}
+                    disabled={isAnalyzing || !duplicateColumnsSelection || duplicateColumnsSelection.length === 0}
                 >
                     {isAnalyzing ? (
                         <>
@@ -255,7 +285,7 @@ export function DuplicatesTab({
                             <div>
                                 <p className="text-gray-500 dark:text-gray-400">检测依据:</p>
                                 <p className="font-medium">
-                                    {duplicateColumnsSelection.join(", ")}
+                                    {duplicateColumnsSelection && duplicateColumnsSelection.join(", ")}
                                 </p>
                             </div>
                             <div>
@@ -300,7 +330,7 @@ export function DuplicatesTab({
             {showDuplicatesVisualization && duplicateStats.hasRun && duplicateGroups.length > 0 && (
                 <DuplicatesVisualization
                     duplicateGroups={duplicateGroups}
-                    selectedColumns={duplicateColumnsSelection}
+                    selectedColumns={duplicateColumnsSelection || []}
                     statistics={duplicateStats}
                     data={[]}
                 />
