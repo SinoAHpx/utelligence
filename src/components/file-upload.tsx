@@ -79,10 +79,9 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
     <div className="w-full max-w-md p-8 flex flex-col items-center">
       <div
         className={`w-full h-64 border-2 border-dashed rounded-lg flex flex-col items-center justify-center p-6 transition-colors
-          ${
-            isDragging
-              ? "border-primary bg-primary/10 dark:bg-primary/20"
-              : error
+          ${isDragging
+            ? "border-primary bg-primary/10 dark:bg-primary/20"
+            : error
               ? "border-red-400 bg-red-50 dark:bg-red-900/10"
               : "border-gray-300 dark:border-gray-700"
           }
@@ -92,9 +91,8 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
         onDrop={handleDrop}
       >
         <UploadIcon
-          className={`w-10 h-10 mb-4 ${
-            error ? "text-red-400" : "text-gray-400"
-          }`}
+          className={`w-10 h-10 mb-4 ${error ? "text-red-400" : "text-gray-400"
+            }`}
         />
         <p className="mb-2 text-sm text-center text-gray-500 dark:text-gray-400">
           <span className="font-semibold">点击上传</span> 或拖拽文件
@@ -119,11 +117,10 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
 
         <label
           htmlFor="file-upload"
-          className={`mt-4 px-4 py-2 text-white text-sm font-medium rounded-md cursor-pointer ${
-            error
+          className={`mt-4 px-4 py-2 text-white text-sm font-medium rounded-md cursor-pointer ${error
               ? "bg-red-500 hover:bg-red-600 focus:ring-red-500"
               : "bg-primary hover:bg-primary/90 focus:ring-primary"
-          } focus:outline-hidden focus:ring-2 focus:ring-offset-2`}
+            } focus:outline-hidden focus:ring-2 focus:ring-offset-2`}
         >
           选择文件
         </label>
@@ -146,8 +143,8 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
             {file.size < 1024
               ? `${file.size} B`
               : file.size < 1024 * 1024
-              ? `${(file.size / 1024).toFixed(2)} KB`
-              : `${(file.size / (1024 * 1024)).toFixed(2)} MB`}
+                ? `${(file.size / 1024).toFixed(2)} KB`
+                : `${(file.size / (1024 * 1024)).toFixed(2)} MB`}
           </p>
         </div>
       )}

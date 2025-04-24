@@ -1,12 +1,47 @@
 "use client";
 
 import ClearChatsButton from "./settings-clear-chats";
-import SettingsThemeToggle from "./settings-theme-toggle";
 import SystemPrompt, { SystemPromptProps } from "./system-prompt";
 import { Input } from "./ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { ChatOptions } from "./chat/chat-options";
+import { useHasMounted } from "@/lib/utils";
+import { MoonIcon, SunIcon } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Button } from "./ui/button";
+
+const SettingsThemeToggle = () => {
+  const hasMounted = useHasMounted();
+  const { setTheme, theme } = useTheme();
+
+  if (!hasMounted) {
+    return null;
+  }
+
+  const nextTheme = theme === "light" ? "dark" : "light";
+
+  return (
+    <div className="flex items-center justify-between px-2">
+      <Label htmlFor="theme-toggle">外观</Label>
+      <Button
+        id="theme-toggle"
+        className="gap-2"
+        size="icon"
+        variant="ghost"
+        onClick={() => setTheme(nextTheme)}
+      >
+        {theme === "light" ? (
+          <MoonIcon className="w-4 h-4" />
+        ) : (
+          <SunIcon className="w-4 h-4" />
+        )}
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+    </div>
+  );
+};
+
 
 const TemperatureSlider = ({
   chatOptions,
