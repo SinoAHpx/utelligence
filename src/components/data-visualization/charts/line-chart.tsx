@@ -15,15 +15,13 @@ export const LineChartComponent: React.FC<LineChartComponentProps> = React.memo(
         title = "Line Chart",
         processedData = [],
         xAxisColumn,
-        yAxisColumns = [],
-        categories = []
+        yAxisColumn,
+        yCategories = []
     } = chartConfig;
 
-    const primaryYAxisColumn = yAxisColumns.length > 0 ? yAxisColumns[0] : "value";
+    const isMultiLineTrend = yCategories && yCategories.length > 0 && processedData && processedData.length > 0;
 
-    const isMultiLineTrend = categories && categories.length > 0 && processedData && processedData.length > 0;
-
-    const description = `X: ${xAxisColumn || 'N/A'}${isMultiLineTrend ? `, Y: Count of ${primaryYAxisColumn} Categories` : yAxisColumns.length > 0 ? `, Y: ${yAxisColumns.join(', ')}` : ''}`;
+    const description = `X: ${xAxisColumn || 'N/A'}${isMultiLineTrend ? `, Y: Count of ${yAxisColumn || 'N/A'} Categories` : yAxisColumn ? `, Y: ${yAxisColumn}` : ''}`;
 
     return (
         <Card className="h-[400px]">
@@ -51,7 +49,7 @@ export const LineChartComponent: React.FC<LineChartComponentProps> = React.memo(
                         <Tooltip />
                         <Legend />
                         {isMultiLineTrend ? (
-                            categories.map((category, index) => (
+                            yCategories.map((category, index) => (
                                 <Line
                                     key={category}
                                     type="monotone"
@@ -61,16 +59,14 @@ export const LineChartComponent: React.FC<LineChartComponentProps> = React.memo(
                                     name={String(category)}
                                 />
                             ))
-                        ) : yAxisColumns.length > 0 ? (
+                        ) : (
                             <Line
                                 type="monotone"
-                                dataKey={yAxisColumns[0]}
+                                dataKey={yAxisColumn}
                                 stroke={getChartColor(0)}
                                 activeDot={{ r: 8 }}
-                                name={yAxisColumns[0]}
+                                name={yAxisColumn}
                             />
-                        ) : (
-                            null
                         )}
                     </LineChart>
                 </ResponsiveContainer>
