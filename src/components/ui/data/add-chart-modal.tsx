@@ -11,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/shadcn/select";
-import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
+import { visualizationChartStore, fileDataStore } from "@/store/index";
 import { CHART_TYPES, ChartType, ChartConfig } from "@/types/chart-types";
 import { processBarChartData, processLineChartData, processAreaChartData, processPieChartData, processScatterChartData, processRadarChartData } from "@/utils/data/data-processing";
 import ChartTypeSelector from "./chart-type-selector";
@@ -38,8 +38,11 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
         yAxisColumn, setYAxisColumn,
         columnsVisualizableStatus,
         addChart,
+    } = visualizationChartStore();
+
+    const {
         rawFileData,
-    } = useDataVisualizationStore();
+    } = fileDataStore();
 
     const [validationError, setValidationError] = useState<string>("");
     const [isProcessing, setIsProcessing] = useState<boolean>(false);

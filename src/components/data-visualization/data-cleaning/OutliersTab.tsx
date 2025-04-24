@@ -18,7 +18,7 @@ import { InfoIcon, BarChart3Icon, CheckIcon } from "lucide-react";
 import { Slider } from "@/components/ui/shadcn/slider";
 import { Button } from "@/components/ui/shadcn/button";
 import { Checkbox } from "@/components/ui/shadcn/checkbox";
-import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
+import { fileDataStore, dataCleaningStore } from "@/store/index";
 import { useToast } from "@/utils/hooks/use-toast";
 
 export default function OutliersTab({
@@ -59,10 +59,13 @@ export default function OutliersTab({
     // Get the store data and functions
     const {
         rawFileData: storeRawFileData,
+    } = fileDataStore();
+
+    const {
         cleanedData,
         updateCleanedData,
         handleOperation
-    } = useDataVisualizationStore();
+    } = dataCleaningStore();
 
     // Get the raw file data from the store if not provided via props
     const effectiveRawData = rawData || storeRawFileData;

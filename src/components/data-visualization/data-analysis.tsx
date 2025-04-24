@@ -29,7 +29,7 @@ import { Alert, AlertDescription } from "@/components/ui/shadcn/alert";
 import { convertToNumericArray } from "@/utils/data/statistics/utils";
 import { InferentialStatisticsTab } from "./statistical-analysis/inferential-statistics/inferential-tab";
 import { RegressionTab } from "./statistical-analysis/regression-tab";
-import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
+import { fileDataStore } from "@/store/index";
 import { useFileUploadStore } from "@/store/fileUploadStore";
 
 interface DataAnalysisProps {
@@ -50,7 +50,7 @@ export default function DataAnalysis({
   const { parsedData } = useFileUploadStore();
 
   // Use the Zustand store for accessing rawFileData
-  const { rawFileData, processAndAnalyzeFile } = useDataVisualizationStore();
+  const { rawFileData, processAndAnalyzeFile } = fileDataStore();
 
   // Get all available columns
   const availableColumns = rawFileData?.headers || parsedData?.headers || [];

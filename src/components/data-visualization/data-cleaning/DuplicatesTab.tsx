@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/shadcn/button";
 import { useToast } from "@/utils/hooks/use-toast";
 import { Badge } from "@/components/ui/shadcn/badge";
 import { cn } from "@/utils/utils";
-import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
+import { fileDataStore, dataCleaningStore } from "@/store/index";
 
 export default function DuplicatesTab({
     file,
@@ -30,10 +30,13 @@ export default function DuplicatesTab({
     // 获取store数据和函数
     const {
         rawFileData: storeRawFileData,
+    } = fileDataStore();
+
+    const {
         cleanedData,
         updateCleanedData,
         handleOperation
-    } = useDataVisualizationStore();
+    } = dataCleaningStore();
 
     // 使用props提供的rawData，如果没有则使用store中的
     const effectiveRawData = rawData || storeRawFileData;

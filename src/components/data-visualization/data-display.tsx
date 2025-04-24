@@ -4,11 +4,12 @@ import React, { useState, useEffect } from "react";
 import { PlusCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/shadcn/button";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
-import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
+import { fileDataStore, visualizationChartStore } from "@/store/index";
 import { useFileUploadStore } from "@/store/fileUploadStore";
 import ChartRenderer from "./charts/chart-renderer";
 import AddChartModal from "../ui/data/add-chart-modal";
 import { Badge } from "../ui/shadcn/badge";
+import { ChartConfig } from "@/types/chart-types";
 
 /**
  * 数据可视化显示组件
@@ -18,7 +19,7 @@ export default function DataDisplay() {
   // Get file and parsed data from FilePreviewStore
   const { file, parsedData } = useFileUploadStore();
 
-  // Get state from Zustand store
+  // Get state from Zustand stores
   const {
     userCharts,
     removeChart,
@@ -27,14 +28,18 @@ export default function DataDisplay() {
     setChartTitle,
     setXAxisColumn,
     setYAxisColumn,
+    columnsVisualizableStatus,
+    setColumnsVisualizableStatus
+  } = visualizationChartStore();
+
+  const {
     currentFileIdentifier,
     isFileLoading,
     fileError,
     processAndAnalyzeFile,
     setRawFileData,
-    setCurrentFileIdentifier,
-    setColumnsVisualizableStatus
-  } = useDataVisualizationStore();
+    setCurrentFileIdentifier
+  } = fileDataStore();
 
   // Local state only for modal open/close
   const [addChartModalOpen, setAddChartModalOpen] = useState<boolean>(false);
@@ -165,7 +170,7 @@ export default function DataDisplay() {
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {userCharts.map((chart) => (
+            {userCharts.map((chart: ChartConfig) => (
               <div key={chart.id} className="relative">
                 <ChartRenderer
                   chartConfig={chart}

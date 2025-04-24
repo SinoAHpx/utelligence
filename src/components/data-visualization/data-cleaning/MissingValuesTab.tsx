@@ -16,7 +16,7 @@ import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { Input } from "@/components/ui/shadcn/input";
 import { Switch } from "@/components/ui/shadcn/switch";
 import { InfoIcon, CheckIcon } from "lucide-react";
-import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
+import { fileDataStore, dataCleaningStore } from "@/store/index";
 import { MissingValuesTabProps } from "./types";
 import { useToast } from "@/utils/hooks/use-toast";
 
@@ -49,9 +49,12 @@ export default function MissingValuesTab({
     // Get store data and functions 
     const {
         rawFileData: storeRawFileData,
+    } = fileDataStore();
+
+    const {
         cleanedData,
         updateCleanedData
-    } = useDataVisualizationStore();
+    } = dataCleaningStore();
 
     // Get the raw file data from the store if not provided via props
     const effectiveRawData = rawData || storeRawFileData;

@@ -24,7 +24,8 @@ import { exportCleanedData } from "@/utils/data/data-processing";
 import { CheckIcon, FileDown, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/shadcn/progress";
 import { useToast } from "@/utils/hooks/use-toast";
-import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
+import { fileDataStore } from "@/store/index";
+import { dataCleaningStore } from "@/store/index";
 import { useFileUploadStore } from "@/store/fileUploadStore";
 
 interface DataCleaningProps {
@@ -46,12 +47,15 @@ export default function DataCleaning({
     // Get parsed data from FilePreviewStore
     const { parsedData } = useFileUploadStore();
 
-    // Zustand store
+    // Zustand stores
     const {
         rawFileData,
-        cleanedData,
         processAndAnalyzeFile,
-    } = useDataVisualizationStore();
+    } = fileDataStore();
+
+    const {
+        cleanedData
+    } = dataCleaningStore();
 
     // Get all available columns
     const availableColumns = rawFileData?.headers || parsedData?.headers || [];
