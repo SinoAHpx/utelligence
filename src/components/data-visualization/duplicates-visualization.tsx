@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import {
     Card,
     CardContent,
@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useDuplicatesStore } from "@/store/duplicatesStore";
 
 interface DuplicatesVisualizationProps {
     data: any[];
@@ -49,8 +50,23 @@ export default function DuplicatesVisualization({
     duplicateGroups,
     statistics,
 }: DuplicatesVisualizationProps) {
-    const [activeTab, setActiveTab] = useState<string>("summary");
-    const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+    // Use Zustand store instead of local state
+    const {
+        activeTab,
+        setActiveTab,
+        setData,
+        setSelectedColumns,
+        setDuplicateGroups,
+        setStatistics
+    } = useDuplicatesStore();
+
+    // Initialize store with props data
+    useEffect(() => {
+        setData(data);
+        setSelectedColumns(selectedColumns);
+        setDuplicateGroups(duplicateGroups);
+        setStatistics(statistics);
+    }, [data, selectedColumns, duplicateGroups, statistics, setData, setSelectedColumns, setDuplicateGroups, setStatistics]);
 
     // 计算百分比
     const duplicatePercentage = ((statistics.duplicateCount / statistics.totalRows) * 100).toFixed(2);

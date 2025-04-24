@@ -1,9 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Papa from "papaparse";
-import * as XLSX from "xlsx";
-import { ScrollArea } from "../ui/scroll-area";
+import React, { useEffect } from "react";
+import { useFilePreviewStore } from "@/store/filePreviewStore";
 
 interface FilePreviewProps {
   file: File | null;
@@ -11,115 +9,33 @@ interface FilePreviewProps {
   onColumnsAvailable?: (columns: string[]) => void;
 }
 
-interface ParsedData {
-  headers: string[];
-  data: string[][];
-}
-
 export default function FilePreview({
   file,
-  maxRows = 20,
+  maxRows = 30,
   onColumnsAvailable,
 }: FilePreviewProps) {
-  const [parsedData, setParsedData] = useState<ParsedData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
-  const processedFileRef = React.useRef("");
+  // Use Zustand store instead of local state
+  const {
+    parsedData,
+    isLoading,
+    error,
+    selectedColumns,
+    processFile,
+    toggleColumnSelection,
+  } = useFilePreviewStore();
 
   useEffect(() => {
     if (!file) return;
+    // Process file using the store's action
+    processFile(file, maxRows);
+  }, [file, maxRows, processFile]);
 
-    // 避免重复处理相同的文件
-    const fileKey = `${file.name}-${file.size}`;
-
-    // 检查是否已处理过该文件
-    if (fileKey === processedFileRef.current) {
-      return; // 如果是同一个文件，不重复处理
+  // Notify parent component about available columns when parsing is done
+  useEffect(() => {
+    if (parsedData && onColumnsAvailable && parsedData.headers.length > 0) {
+      onColumnsAvailable(parsedData.headers);
     }
-
-    processedFileRef.current = fileKey;
-
-    setIsLoading(true);
-    setError(null);
-    // 不要在这里重置selectedColumns，避免用户选择的列被清空
-    // setSelectedColumns([]);
-
-    const fileExtension = file.name.split(".").pop()?.toLowerCase();
-
-    const processFile = async () => {
-      try {
-        if (fileExtension === "csv") {
-          // 处理CSV文件
-          const text = await file.text();
-          Papa.parse(text, {
-            complete: (results) => {
-              const headers = results.data[0] as string[];
-              const data = results.data.slice(1, maxRows + 1) as string[][];
-              setParsedData({ headers, data });
-              setIsLoading(false);
-
-              // 通知父组件可用的列，但不自动选择
-              if (onColumnsAvailable && headers.length > 0) {
-                // 只在第一次加载时设置可用列
-                if (selectedColumns.length === 0) {
-                  onColumnsAvailable(headers);
-                }
-              }
-            },
-            error: (error: { message: any; }) => {
-              setError(`解析CSV文件失败: ${error.message}`);
-              setIsLoading(false);
-            },
-          });
-        } else if (fileExtension === "xlsx" || fileExtension === "xls") {
-          // 处理Excel文件
-          const arrayBuffer = await file.arrayBuffer();
-          const workbook = XLSX.read(arrayBuffer);
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-
-          // 转换为JSON
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-          // 提取表头和数据
-          const headers = jsonData[0] as string[];
-          const data = jsonData.slice(1, maxRows + 1) as string[][];
-
-          setParsedData({ headers, data });
-          setIsLoading(false);
-
-          // 通知父组件可用的列，但不自动选择
-          if (onColumnsAvailable && headers.length > 0) {
-            // 只在第一次加载时设置可用列
-            if (selectedColumns.length === 0) {
-              onColumnsAvailable(headers);
-            }
-          }
-        } else {
-          setError("不支持的文件类型");
-          setIsLoading(false);
-        }
-      } catch (err) {
-        setError(
-          `文件解析错误: ${err instanceof Error ? err.message : String(err)}`
-        );
-        setIsLoading(false);
-      }
-    };
-
-    processFile();
-  }, [file, maxRows]);
-
-  const toggleColumnSelection = (column: string) => {
-    setSelectedColumns((prev) => {
-      if (prev.includes(column)) {
-        return prev.filter((col) => col !== column);
-      } else {
-        return [...prev, column];
-      }
-    });
-  };
+  }, [parsedData, onColumnsAvailable]);
 
   const handleVisualize = () => {
     if (selectedColumns.length > 0 && onColumnsAvailable) {
@@ -195,8 +111,7 @@ export default function FilePreview({
             </h4>
             <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto overflow-x-auto p-2 bg-gray-50 dark:bg-gray-700 rounded-md">
               {parsedData.headers.map((header, index) => (
-                // biome-ignore lint/a11y/useButtonType: <explanation>
-<button
+                <button
                   key={index}
                   onClick={() => toggleColumnSelection(header)}
                   className={`px-2 py-1 text-xs rounded-full transition-colors ${selectedColumns.includes(header)

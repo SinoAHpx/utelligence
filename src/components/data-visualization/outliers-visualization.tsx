@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
     Card,
     CardContent,
@@ -35,6 +35,7 @@ import {
     Cell,
     ReferenceLine,
 } from "recharts";
+import { useOutliersStore } from "@/store/outliersStore";
 
 interface OutliersVisualizationProps {
     data: any[];
@@ -59,29 +60,30 @@ export default function OutliersVisualization({
     threshold,
     statistics,
 }: OutliersVisualizationProps) {
-    const [activeTab, setActiveTab] = useState<string>("chart");
-    const [isLoading, setIsLoading] = useState<boolean>(false);
+    // Use Zustand store instead of local state
+    const {
+        activeTab,
+        setActiveTab,
+        isLoading,
+        setIsLoading,
+        chartData,
+        setData,
+        setColumnName,
+        setMethod,
+        setThreshold,
+        setStatistics,
+        updateChartData
+    } = useOutliersStore();
 
-    // 提取数据值以供可视化
-    const getChartData = () => {
-        if (!data || data.length === 0) return [];
-
-        // 添加索引和标记是否为异常值
-        return data.map((item, index) => {
-            const value = Number(item[columnName]);
-            const isOutlier =
-                value < statistics.lowerBound ||
-                value > statistics.upperBound;
-
-            return {
-                index,
-                value,
-                isOutlier,
-            };
-        });
-    };
-
-    const chartData = getChartData();
+    // Initialize store with props data and update chart data
+    useEffect(() => {
+        setData(data);
+        setColumnName(columnName);
+        setMethod(method);
+        setThreshold(threshold);
+        setStatistics(statistics);
+        updateChartData();
+    }, [data, columnName, method, threshold, statistics, setData, setColumnName, setMethod, setThreshold, setStatistics, updateChartData]);
 
     // 格式化方法的详细信息
     const formatMethodDetails = () => {
@@ -250,108 +252,86 @@ export default function OutliersVisualization({
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="grid grid-cols-4 gap-4 text-sm">
-                    <div className="col-span-1 p-3 bg-slate-50 dark:bg-slate-900 rounded-md">
-                        <p className="text-gray-500 dark:text-gray-400">检测到的异常值:</p>
-                        <p className="text-2xl font-semibold">
-                            {statistics.outlierCount} <span className="text-sm text-gray-500">/ {statistics.totalCount}</span>
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                            {((statistics.outlierCount / statistics.totalCount) * 100).toFixed(2)}% 的数据为异常值
-                        </p>
-                    </div>
-
-                    <div className="col-span-1 p-3 bg-slate-50 dark:bg-slate-900 rounded-md">
-                        <p className="text-gray-500 dark:text-gray-400">下边界:</p>
-                        <p className="text-2xl font-semibold">
-                            {statistics.lowerBound.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                            小于此值的数据点被视为异常值
-                        </p>
-                    </div>
-
-                    <div className="col-span-1 p-3 bg-slate-50 dark:bg-slate-900 rounded-md">
-                        <p className="text-gray-500 dark:text-gray-400">上边界:</p>
-                        <p className="text-2xl font-semibold">
-                            {statistics.upperBound.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                            大于此值的数据点被视为异常值
-                        </p>
-                    </div>
-
-                    <div className="col-span-1 p-3 bg-slate-50 dark:bg-slate-900 rounded-md">
-                        <p className="text-gray-500 dark:text-gray-400">检测方法:</p>
-                        <p className="text-xl font-semibold">
-                            {method === "zscore" && "Z-Score"}
-                            {method === "iqr" && "IQR (四分位距)"}
-                            {method === "percentile" && "百分位数"}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                            阈值: {threshold}
-                        </p>
-                    </div>
-                </div>
-
-                <Card className="bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                    <CardContent className="pt-4">
-                        <div className="flex items-center mb-2">
-                            <InfoIcon className="w-4 h-4 mr-2 text-blue-500" />
-                            <h4 className="text-sm font-medium">方法详情</h4>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            {formatMethodDetails().map((detail, index) => (
-                                <div key={`detail-${index}`}>
-                                    <p className="text-gray-500 dark:text-gray-400">{detail.name}:</p>
-                                    <p className="font-medium">{detail.value}</p>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="mt-3 text-xs text-gray-500">
-                            {method === "zscore" && (
-                                <p>Z-Score方法基于均值和标准差检测异常值，适用于呈正态分布的数据。超出 <strong>{threshold}</strong> 个标准差的数据点被视为异常值。</p>
-                            )}
-                            {method === "iqr" && (
-                                <p>IQR方法基于四分位数范围检测异常值，不受极端值影响，适用于偏斜分布数据。小于 Q1-<strong>{threshold}×IQR</strong> 或大于 Q3+<strong>{threshold}×IQR</strong> 的数据点被视为异常值。</p>
-                            )}
-                            {method === "percentile" && (
-                                <p>百分位数方法使用百分位数确定异常值边界，适合需要去除特定比例极端值的场景。低于第 <strong>{threshold}</strong> 百分位或高于第 <strong>{100 - threshold}</strong> 百分位的数据点被视为异常值。</p>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <div className="flex justify-between items-center mb-2">
                         <TabsList>
-                            <TabsTrigger value="chart">可视化图表</TabsTrigger>
-                            <TabsTrigger value="table">异常值数据</TabsTrigger>
+                            <TabsTrigger value="chart">散点图</TabsTrigger>
+                            <TabsTrigger value="table">异常数据表</TabsTrigger>
+                            <TabsTrigger value="details">统计详情</TabsTrigger>
                         </TabsList>
                     </div>
 
                     <TabsContent value="chart">
-                        {isLoading ? (
-                            <div className="space-y-2">
-                                <Skeleton className="h-[400px] w-full" />
-                            </div>
-                        ) : (
-                            <div>
-                                {renderScatterPlot()}
-                            </div>
-                        )}
+                        {renderScatterPlot()}
                     </TabsContent>
 
                     <TabsContent value="table">
-                        {isLoading ? (
-                            <div className="space-y-2">
-                                <Skeleton className="h-[400px] w-full" />
-                            </div>
-                        ) : (
-                            renderTable()
-                        )}
+                        {renderTable()}
+                    </TabsContent>
+
+                    <TabsContent value="details">
+                        <div className="space-y-4">
+                            <Card className="bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                                <CardContent className="pt-4">
+                                    <div className="flex items-center mb-2">
+                                        <InfoIcon className="w-4 h-4 mr-2 text-blue-500" />
+                                        <h4 className="text-sm font-medium">异常值统计</h4>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">检测列</p>
+                                            <p className="text-sm">{columnName}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">检测方法</p>
+                                            <p className="text-sm">
+                                                {method === "zscore" && "Z-Score (标准分)"}
+                                                {method === "iqr" && "IQR (四分位距)"}
+                                                {method === "percentile" && "百分位数"}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">阈值</p>
+                                            <p className="text-sm">{threshold}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">分析结果</p>
+                                            <p className="text-sm">
+                                                检测到 {statistics.outlierCount} 个异常值 (占总数的{" "}
+                                                {((statistics.outlierCount / statistics.totalCount) * 100).toFixed(2)}%)
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">下边界</p>
+                                            <p className="text-sm">{statistics.lowerBound.toFixed(4)}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">上边界</p>
+                                            <p className="text-sm">{statistics.upperBound.toFixed(4)}</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                                <CardContent className="pt-4">
+                                    <div className="flex items-center mb-2">
+                                        <InfoIcon className="w-4 h-4 mr-2 text-blue-500" />
+                                        <h4 className="text-sm font-medium">方法详情</h4>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {formatMethodDetails().map((detail, index) => (
+                                            <div key={index} className="flex justify-between">
+                                                <span className="text-xs text-gray-500">{detail.name}</span>
+                                                <span className="text-xs font-mono">{detail.value}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
                     </TabsContent>
                 </Tabs>
             </CardContent>
