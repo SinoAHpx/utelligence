@@ -25,17 +25,14 @@ import { CheckIcon, FileDown, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/shadcn/progress";
 import { useToast } from "@/utils/hooks/use-toast";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
+import { useFilePreviewStore } from "@/store/filePreviewStore";
 
 interface DataCleaningProps {
     file: File | null;
-    availableColumns: string[];
-    onColumnsChange: (columns: string[]) => void;
 }
 
 export default function DataCleaning({
     file,
-    availableColumns,
-    onColumnsChange,
 }: DataCleaningProps) {
     const [activeTab, setActiveTab] = useState("missing");
     const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
@@ -46,12 +43,18 @@ export default function DataCleaning({
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const { toast } = useToast();
 
+    // Get parsed data from FilePreviewStore
+    const { parsedData } = useFilePreviewStore();
+
     // Zustand store
     const {
         rawFileData,
         cleanedData,
         processAndAnalyzeFile,
     } = useDataVisualizationStore();
+
+    // Get all available columns
+    const availableColumns = rawFileData?.headers || parsedData?.headers || [];
 
     // Missing values state
     const [missingValues, setMissingValues] = useState<{
@@ -94,7 +97,10 @@ export default function DataCleaning({
             setErrorMessage(null);
             setCleaningComplete(false);
 
-            processAndAnalyzeFile(file, availableColumns)
+            // Get all columns from parsed data or use an empty array
+            const columnsToAnalyze = parsedData?.headers || [];
+
+            processAndAnalyzeFile(file, columnsToAnalyze)
                 .then(() => {
                     setIsLoading(false);
                 })
@@ -104,16 +110,14 @@ export default function DataCleaning({
                     setIsLoading(false);
                 });
         }
-    }, [file, rawFileData, availableColumns, processAndAnalyzeFile]);
+    }, [file, rawFileData, parsedData, processAndAnalyzeFile]);
 
     // Update selected columns when available columns change
     useEffect(() => {
-        if (availableColumns.length > 0) {
-            setSelectedColumns(prevSelected =>
-                prevSelected.filter((col) => availableColumns.includes(col))
-            );
+        if (rawFileData && rawFileData.headers.length > 0) {
+            setSelectedColumns(rawFileData.headers);
         }
-    }, [availableColumns]);
+    }, [rawFileData]);
 
     // Reset cleaning status when tab changes
     useEffect(() => {
@@ -239,7 +243,7 @@ export default function DataCleaning({
                         <TabsContent value="missing" className="mt-4">
                             <MissingValuesTab
                                 {...tabProps}
-                                columns={availableColumns}
+                                columns={selectedColumns}
                                 onSettingsChange={setMissingValues}
                             />
                         </TabsContent>
@@ -247,7 +251,7 @@ export default function DataCleaning({
                         <TabsContent value="outliers" className="mt-4">
                             <OutliersTab
                                 {...tabProps}
-                                columns={availableColumns}
+                                columns={selectedColumns}
                                 onSettingsChange={setOutlierSettings}
                             />
                         </TabsContent>
@@ -255,7 +259,7 @@ export default function DataCleaning({
                         <TabsContent value="duplicates" className="mt-4">
                             <DuplicatesTab
                                 {...tabProps}
-                                columns={availableColumns}
+                                columns={selectedColumns}
                                 onSettingsChange={setDuplicateSettings}
                             />
                         </TabsContent>

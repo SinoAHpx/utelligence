@@ -30,17 +30,14 @@ import { convertToNumericArray } from "@/utils/data/statistics/utils";
 import { InferentialStatisticsTab } from "./statistical-analysis/inferential-statistics/inferential-tab";
 import { RegressionTab } from "./statistical-analysis/regression-tab";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
+import { useFilePreviewStore } from "@/store/filePreviewStore";
 
 interface DataAnalysisProps {
   file: File | null;
-  selectedColumns: string[];
-  availableColumns: string[];
 }
 
 export default function DataAnalysis({
   file,
-  selectedColumns,
-  availableColumns,
 }: DataAnalysisProps) {
   const [activeTab, setActiveTab] = useState<string>("statistics");
   const [selectedColumn, setSelectedColumn] = useState<string>("");
@@ -49,8 +46,14 @@ export default function DataAnalysis({
   const [columnData, setColumnData] = useState<any[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Get parsed data from FilePreviewStore
+  const { parsedData } = useFilePreviewStore();
+
   // Use the Zustand store for accessing rawFileData
   const { rawFileData, processAndAnalyzeFile } = useDataVisualizationStore();
+
+  // Get all available columns
+  const availableColumns = rawFileData?.headers || parsedData?.headers || [];
 
   const tabOptions = [
     { id: "statistics", name: "统计描述" },
@@ -141,29 +144,16 @@ export default function DataAnalysis({
   }, [file, selectedColumn, rawFileData]);
 
   useEffect(() => {
-    // 当选定列变化时，默认选择第一列
-    if (
-      selectedColumns.length > 0 &&
-      !selectedColumns.includes(selectedColumn)
-    ) {
-      setSelectedColumn(selectedColumns[0]);
+    // When available columns change, default to the first column
+    if (availableColumns.length > 0 && !availableColumns.includes(selectedColumn)) {
+      setSelectedColumn(availableColumns[0]);
     }
-  }, [selectedColumns, selectedColumn]);
+  }, [availableColumns, selectedColumn]);
 
   if (!file) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-gray-500 dark:text-gray-400">请先上传文件</p>
-      </div>
-    );
-  }
-
-  if (selectedColumns.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-gray-500 dark:text-gray-400">
-          请先在文件预览选项卡中选择至少一列数据
-        </p>
       </div>
     );
   }
@@ -192,7 +182,7 @@ export default function DataAnalysis({
                     <SelectValue placeholder="选择分析列" />
                   </SelectTrigger>
                   <SelectContent>
-                    {selectedColumns.map((column) => (
+                    {availableColumns.map((column) => (
                       <SelectItem key={column} value={column}>
                         {column}
                       </SelectItem>
@@ -226,13 +216,13 @@ export default function DataAnalysis({
             </TabsContent>
 
             <TabsContent value="correlation" className="mt-6">
-              <CorrelationTab selectedColumns={selectedColumns} file={file} />
+              <CorrelationTab availableColumns={availableColumns} file={file} />
             </TabsContent>
 
             <TabsContent value="regression" className="mt-6">
               <RegressionTab
                 file={file}
-                selectedColumns={selectedColumns}
+                availableColumns={availableColumns}
               />
             </TabsContent>
           </Tabs>

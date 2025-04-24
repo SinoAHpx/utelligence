@@ -14,8 +14,6 @@ interface DataTabsProps {
 
 export default function DataTabs({ file }: DataTabsProps) {
   const [activeTab, setActiveTab] = useState("preview");
-  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
-  const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const { setFile, processFile } = useFilePreviewStore();
 
   // Initialize file in the store when it changes
@@ -32,36 +30,6 @@ export default function DataTabs({ file }: DataTabsProps) {
       setActiveTab("preview");
     }
   }, [file]);
-
-  // 监听可视化事件
-  useEffect(() => {
-    const handleVisualize = (e: Event) => {
-      // 如果是自定义事件，尝试从detail中获取选择的列
-      if (e instanceof CustomEvent && e.detail && e.detail.columns) {
-        const newSelectedColumns = e.detail.columns;
-        // 只有当选择的列发生变化时才更新
-        if (
-          JSON.stringify(newSelectedColumns) !== JSON.stringify(selectedColumns)
-        ) {
-          setSelectedColumns(newSelectedColumns);
-        }
-      }
-
-      // 直接切换到数据展示标签页
-      setActiveTab("display");
-    };
-
-    window.addEventListener("visualize", handleVisualize as EventListener);
-
-    return () => {
-      window.removeEventListener("visualize", handleVisualize as EventListener);
-    };
-  }, [selectedColumns]);
-
-  // 处理列选择变化
-  const handleColumnSelectionChange = (columns: string[]) => {
-    setSelectedColumns(columns);
-  };
 
   return (
     <div className="w-full h-full">
@@ -83,27 +51,15 @@ export default function DataTabs({ file }: DataTabsProps) {
           </TabsContent>
 
           <TabsContent value="display" className="h-full">
-            <DataDisplay
-              selectedColumns={selectedColumns}
-              availableColumns={availableColumns}
-              onColumnSelectionChange={handleColumnSelectionChange}
-            />
+            <DataDisplay />
           </TabsContent>
 
           <TabsContent value="cleaning" className="h-full">
-            <DataCleaning
-              file={file}
-              availableColumns={availableColumns}
-              onColumnsChange={handleColumnSelectionChange}
-            />
+            <DataCleaning file={file} />
           </TabsContent>
 
           <TabsContent value="analysis" className="h-full">
-            <DataAnalysis
-              file={file}
-              selectedColumns={selectedColumns}
-              availableColumns={availableColumns}
-            />
+            <DataAnalysis file={file} />
           </TabsContent>
         </div>
       </Tabs>

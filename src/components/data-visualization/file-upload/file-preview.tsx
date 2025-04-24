@@ -10,7 +10,6 @@ export default function FilePreview() {
     parsedData,
     isLoading,
     error,
-    selectedColumns,
     maxRows,
   } = useFilePreviewStore();
 
@@ -62,10 +61,7 @@ export default function FilePreview() {
                     <th
                       key={index}
                       scope="col"
-                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${selectedColumns.includes(header)
-                        ? "bg-primary/10 dark:bg-primary/20"
-                        : ""
-                        }`}
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                     >
                       {header || `列 ${index + 1}`}
                     </th>
@@ -85,10 +81,7 @@ export default function FilePreview() {
                     {row.map((cell, cellIndex) => (
                       <td
                         key={cellIndex}
-                        className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 overflow-hidden text-ellipsis max-w-[200px] ${selectedColumns.includes(parsedData.headers[cellIndex])
-                          ? "bg-primary/10 dark:bg-primary/10"
-                          : ""
-                          }`}
+                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 overflow-hidden text-ellipsis max-w-[200px]"
                         title={String(cell)}
                       >
                         {String(cell) || "-"}

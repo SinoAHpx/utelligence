@@ -16,7 +16,7 @@ import { ColumnVisualizableConfig } from "@/store/dataVisualizationStore"; // Ne
  */
 export const processAndAnalyzeFileData = async (
 	file: File,
-	columnsToAnalyze: string[],
+	columnsToAnalyze: string[] = [],
 ): Promise<{
 	rawData: { headers: string[]; rows: FileData };
 	columnsVisualizableStatus: ColumnVisualizableConfig[];
@@ -31,12 +31,17 @@ export const processAndAnalyzeFileData = async (
 		},
 	);
 
+	// Use all columns if none are specified
+	const columnsToProcess = columnsToAnalyze.length > 0
+		? columnsToAnalyze
+		: rawData.headers;
+
 	// Analyze columns after successful processing
 	let columnsVisualizableStatus: ColumnVisualizableConfig[] = [];
-	if (columnsToAnalyze.length > 0 && rawData.rows.length > 0) {
+	if (columnsToProcess.length > 0 && rawData.rows.length > 0) {
 		try {
 			// Replicate logic from analyzeColumnsForVisualization
-			for (const colName of columnsToAnalyze) {
+			for (const colName of columnsToProcess) {
 				const colIndex = rawData.headers.indexOf(colName);
 				if (colIndex === -1) continue;
 				const columnData = rawData.rows.map((row) => row[colIndex]);

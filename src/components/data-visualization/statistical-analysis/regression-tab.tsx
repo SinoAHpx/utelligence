@@ -19,10 +19,10 @@ import { RegressionTypeInformation } from "./regression/regression-type-informat
 
 interface RegressionTabProps {
     file: File;
-    selectedColumns: string[];
+    availableColumns: string[];
 }
 
-export function RegressionTab({ file, selectedColumns }: RegressionTabProps) {
+export function RegressionTab({ file, availableColumns }: RegressionTabProps) {
     const [regressionType, setRegressionType] = useState<string>("simple");
     const [independentVar, setIndependentVar] = useState<string>("");
     const [dependentVar, setDependentVar] = useState<string>("");
@@ -52,7 +52,7 @@ export function RegressionTab({ file, selectedColumns }: RegressionTabProps) {
             const rows = data.rows;
             const numericCols: string[] = [];
 
-            for (const col of selectedColumns) {
+            for (const col of availableColumns) {
                 const colIndex = headers.indexOf(col);
                 if (colIndex !== -1) {
                     const colData = rows.map(row => row[colIndex]);
@@ -179,7 +179,7 @@ export function RegressionTab({ file, selectedColumns }: RegressionTabProps) {
             setRegressionData([]);
             setErrorMessage(null);
         }
-    }, [file, selectedColumns]); // Rerun when file or selected columns change
+    }, [file, availableColumns]); // Rerun when file or selected columns change
 
     // Reset dependent/independent variables when numeric columns change
     useEffect(() => {

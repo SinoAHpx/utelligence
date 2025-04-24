@@ -23,7 +23,7 @@ import { convertToNumericArray } from "@/utils/data/statistics/utils";
 import * as ss from "simple-statistics";
 
 interface CorrelationTabProps {
-    selectedColumns: string[];
+    availableColumns: string[];
     file?: File | null;
 }
 
@@ -52,7 +52,7 @@ function calculatePearsonCorrelation(x: number[], y: number[]): number | null {
 /**
  * 相关性分析标签页组件
  */
-export function CorrelationTab({ selectedColumns, file }: CorrelationTabProps) {
+export function CorrelationTab({ availableColumns, file }: CorrelationTabProps) {
     const [correlationData, setCorrelationData] = useState<CorrelationData>({
         columns: [],
         correlationMatrix: [],
@@ -60,7 +60,7 @@ export function CorrelationTab({ selectedColumns, file }: CorrelationTabProps) {
     });
 
     useEffect(() => {
-        if (!file || selectedColumns.length < 2) return;
+        if (!file || availableColumns.length < 2) return;
 
         setCorrelationData(prev => ({ ...prev, isLoading: true }));
 
@@ -73,7 +73,7 @@ export function CorrelationTab({ selectedColumns, file }: CorrelationTabProps) {
                 // 提取所选列的数据，并检查每列是否包含数值
                 const columnsData: { column: string; data: number[] }[] = [];
 
-                for (const column of selectedColumns) {
+                for (const column of availableColumns) {
                     const colIndex = headers.indexOf(column);
                     if (colIndex !== -1) {
                         const colData = rows.map(row => row[colIndex]);
@@ -122,9 +122,9 @@ export function CorrelationTab({ selectedColumns, file }: CorrelationTabProps) {
                 });
             }
         );
-    }, [file, selectedColumns]);
+    }, [file, availableColumns]);
 
-    if (selectedColumns.length < 2) {
+    if (availableColumns.length < 2) {
         return (
             <div className="flex items-center justify-center h-40">
                 <p className="text-gray-500">请选择至少两列数据进行相关性分析</p>

@@ -19,7 +19,7 @@ import ChartTypeSelector from "./chart-type-selector";
 interface AddChartModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    availableColumns: string[];
+    allColumns: string[];
 }
 
 /**
@@ -29,7 +29,7 @@ interface AddChartModalProps {
 export const AddChartModal: React.FC<AddChartModalProps> = ({
     open,
     onOpenChange,
-    availableColumns,
+    allColumns: allColumns,
 }) => {
     const {
         selectedChartType, setSelectedChartType,
@@ -49,7 +49,7 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
     const requiresAxis = currentChartType?.requiresAxis ?? false;
 
     // Filter visualizable columns
-    const visualizableColumns = useMemo(() => availableColumns.filter((col) => {
+    const visualizableColumns = useMemo(() => allColumns.filter((col) => {
         const status = columnsVisualizableStatus.find((s) => s.column === col);
         if (!status) return false;
         if (requiresAxis) {
@@ -57,7 +57,7 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({
         } else {
             return status.isVisualizable || status.uniqueValues > 0;
         }
-    }), [availableColumns, columnsVisualizableStatus, requiresAxis]);
+    }), [allColumns, columnsVisualizableStatus, requiresAxis]);
 
     // Reset form when modal opens or chart type changes
     useEffect(() => {

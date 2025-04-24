@@ -11,7 +11,6 @@ interface FilePreviewState {
     parsedData: ParsedData | null;
     isLoading: boolean;
     error: string | null;
-    selectedColumns: string[];
     processedFileRef: string;
     maxRows: number;
 
@@ -20,10 +19,7 @@ interface FilePreviewState {
     setParsedData: (data: ParsedData | null) => void;
     setIsLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
-    setSelectedColumns: (columns: string[]) => void;
-    toggleColumnSelection: (column: string) => void;
     processFile: (file: File, maxRows?: number) => Promise<void>;
-    clearSelectedColumns: () => void;
 }
 
 export const useFilePreviewStore = create<FilePreviewState>()((set, get) => ({
@@ -31,7 +27,6 @@ export const useFilePreviewStore = create<FilePreviewState>()((set, get) => ({
     parsedData: null,
     isLoading: false,
     error: null,
-    selectedColumns: [],
     processedFileRef: "",
     maxRows: 30,
 
@@ -40,22 +35,6 @@ export const useFilePreviewStore = create<FilePreviewState>()((set, get) => ({
     setParsedData: (data) => set({ parsedData: data }),
     setIsLoading: (loading) => set({ isLoading: loading }),
     setError: (error) => set({ error }),
-    setSelectedColumns: (columns) => set({ selectedColumns: columns }),
-    clearSelectedColumns: () => set({ selectedColumns: [] }),
-
-    toggleColumnSelection: (column) => {
-        set((state) => {
-            if (state.selectedColumns.includes(column)) {
-                return {
-                    selectedColumns: state.selectedColumns.filter((col) => col !== column)
-                };
-            } else {
-                return {
-                    selectedColumns: [...state.selectedColumns, column]
-                };
-            }
-        });
-    },
 
     processFile: async (file, maxRows = 30) => {
         const fileKey = `${file.name}-${file.size}`;

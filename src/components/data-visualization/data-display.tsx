@@ -8,25 +8,15 @@ import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
 import { useFilePreviewStore } from "@/store/filePreviewStore";
 import ChartRenderer from "./charts/chart-renderer";
 import AddChartModal from "../ui/data/add-chart-modal";
-
-/**
- * Props for the DataDisplay component
- */
-interface DataDisplayProps {
-  selectedColumns: string[];
-  availableColumns: string[];
-  onColumnSelectionChange?: (columns: string[]) => void;
-}
+import { Badge } from "../ui/shadcn/badge";
 
 /**
  * 数据可视化显示组件
  * 负责处理数据文件(CSV/Excel)并显示可视化图表
  */
-export default function DataDisplay({
-  selectedColumns,
-}: DataDisplayProps) {
-  // Get file from FilePreviewStore
-  const { file } = useFilePreviewStore();
+export default function DataDisplay() {
+  // Get file and parsed data from FilePreviewStore
+  const { file, parsedData } = useFilePreviewStore();
 
   // Get state from Zustand store
   const {
@@ -43,7 +33,7 @@ export default function DataDisplay({
     processAndAnalyzeFile,
     setRawFileData,
     setCurrentFileIdentifier,
-    setColumnsVisualizableStatus,
+    setColumnsVisualizableStatus
   } = useDataVisualizationStore();
 
   // Local state only for modal open/close
@@ -56,31 +46,27 @@ export default function DataDisplay({
       const fileSignature = `${file.name}-${file.size}`;
 
       if (fileSignature !== currentFileIdentifier) {
-        // Call the store action to handle processing and analysis
-        // We pass `selectedColumns` here to tell the action *which* columns to analyze
-        processAndAnalyzeFile(file, selectedColumns);
+        // Process all columns for visualization and analysis
+        const allColumns = parsedData?.headers || [];
+        processAndAnalyzeFile(file, allColumns);
       }
     } else {
       // Clear relevant state if file is removed
       setRawFileData(null);
       setCurrentFileIdentifier(null);
       setColumnsVisualizableStatus([]);
-      // Optionally reset chart creation state too?
     }
-    // Dependency array: re-run if the file object changes or the list of selected columns changes
-  }, [file, selectedColumns, currentFileIdentifier, processAndAnalyzeFile, setRawFileData, setCurrentFileIdentifier, setColumnsVisualizableStatus]);
+  }, [file, parsedData, currentFileIdentifier, processAndAnalyzeFile, setRawFileData, setCurrentFileIdentifier, setColumnsVisualizableStatus]);
 
   // 打开添加图表对话框
   const openAddChartModal = () => {
     // Check for fileError from the store instead of rawFileData presence
     if (fileError) {
-      // Maybe show a toast or keep the error message displayed?
       console.error("Cannot open add chart modal due to file error:", fileError);
       return; // Prevent opening modal if there's a file error
     }
     if (isFileLoading) {
       console.warn("Data is still loading, please wait.");
-      // Optionally disable the add button while loading
       return;
     }
 
@@ -92,8 +78,10 @@ export default function DataDisplay({
     setXAxisColumn("");
     // Reset yAxisColumn to empty string
     setYAxisColumn("");
-    // No need to call checkColumnsVisualizable here, status is updated by the store action
   };
+
+  // Get all available columns from the raw file data
+  const allColumns = parsedData?.headers || [];
 
   // Render loading and error states based on store state
   if (!file) {
@@ -117,17 +105,6 @@ export default function DataDisplay({
       <div className="flex flex-col items-center justify-center h-full p-4">
         <p className="text-red-500 dark:text-red-400 mb-4">文件处理失败:</p>
         <p className="text-red-400 dark:text-red-300 text-sm bg-red-900/20 p-2 rounded">{fileError}</p>
-        {/* Optionally add a button to clear the error or re-upload */}
-      </div>
-    );
-  }
-
-  if (selectedColumns.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-gray-500 dark:text-gray-400">
-          请在文件预览选项卡中选择至少一列数据进行可视化
-        </p>
       </div>
     );
   }
@@ -141,18 +118,17 @@ export default function DataDisplay({
               <h3 className="text-sm font-medium mb-2">
                 数据可视化总览
               </h3>
-              <p className="text-xs text-muted-foreground">
-                已选择 {selectedColumns.length} 列数据:{" "}
-                {selectedColumns.join(", ")}
+              <p className="text-xs text-muted-foreground mb-2">
+                可用列数: {allColumns.length}
               </p>
+              <div className="flex flex-wrap gap-2">
+                {allColumns.map((col) => (
+                  <Badge key={col} variant="outline" className="text-xs">
+                    {col}
+                  </Badge>
+                ))}
+              </div>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => window.dispatchEvent(new Event("visualize"))}
-            >
-              重新选择列
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -214,7 +190,7 @@ export default function DataDisplay({
       <AddChartModal
         open={addChartModalOpen}
         onOpenChange={setAddChartModalOpen}
-        availableColumns={selectedColumns}
+        allColumns={allColumns}
       />
     </div>
   );
