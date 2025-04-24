@@ -6,7 +6,7 @@ import DataDisplay from "@/components/data-visualization/data-display";
 import DataCleaning from "@/components/data-visualization/data-cleaning/DataCleaning";
 import DataAnalysis from "@/components/data-visualization/data-analysis";
 import FilePreview from "@/components/data-visualization/file-upload/file-preview";
-import { useFilePreviewStore } from "@/store/filePreviewStore";
+import { useFileUploadStore } from "@/store/fileUploadStore";
 
 interface DataTabsProps {
   file: File | null;
@@ -14,7 +14,7 @@ interface DataTabsProps {
 
 export default function DataTabs({ file }: DataTabsProps) {
   const [activeTab, setActiveTab] = useState("preview");
-  const { setFile, processFile } = useFilePreviewStore();
+  const { setFile, processFile } = useFileUploadStore();
 
   // Initialize file in the store when it changes
   useEffect(() => {

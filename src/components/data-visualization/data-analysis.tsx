@@ -30,7 +30,7 @@ import { convertToNumericArray } from "@/utils/data/statistics/utils";
 import { InferentialStatisticsTab } from "./statistical-analysis/inferential-statistics/inferential-tab";
 import { RegressionTab } from "./statistical-analysis/regression-tab";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
-import { useFilePreviewStore } from "@/store/filePreviewStore";
+import { useFileUploadStore } from "@/store/fileUploadStore";
 
 interface DataAnalysisProps {
   file: File | null;
@@ -47,7 +47,7 @@ export default function DataAnalysis({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Get parsed data from FilePreviewStore
-  const { parsedData } = useFilePreviewStore();
+  const { parsedData } = useFileUploadStore();
 
   // Use the Zustand store for accessing rawFileData
   const { rawFileData, processAndAnalyzeFile } = useDataVisualizationStore();

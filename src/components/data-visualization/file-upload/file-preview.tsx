@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { useFilePreviewStore } from "@/store/filePreviewStore";
+import { useFileUploadStore } from "@/store/fileUploadStore";
 
 export default function FilePreview() {
   // Use Zustand store directly
@@ -10,8 +9,7 @@ export default function FilePreview() {
     parsedData,
     isLoading,
     error,
-    maxRows,
-  } = useFilePreviewStore();
+  } = useFileUploadStore();
 
   if (!file) {
     return (
@@ -50,7 +48,7 @@ export default function FilePreview() {
       <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
         <div className="w-full overflow-x-auto">
           <div className="text-xs text-gray-500 mb-4">
-            显示前 {Math.min(parsedData.data.length, maxRows)} 行数据，共{" "}
+            显示前 {Math.min(parsedData.data.length, 30)} 行数据，共{" "}
             {parsedData.data.length} 行
           </div>
           <div className="border rounded-md">
@@ -69,7 +67,7 @@ export default function FilePreview() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {parsedData.data.map((row, rowIndex) => (
+                {parsedData.data.slice(0, 30).map((row, rowIndex) => (
                   <tr
                     key={rowIndex}
                     className={

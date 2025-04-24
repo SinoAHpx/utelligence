@@ -6,13 +6,18 @@ interface ParsedData {
     data: string[][];
 }
 
-interface FilePreviewState {
+interface FileUploadState {
     file: File | null;
+    /**
+     * Stores the parsed data from the uploaded file.
+     * - headers: Array of column names from the file's first row.
+     * - data: 2D array of string values representing the file's data rows.
+     * Used for previewing and referencing file content in the UI.
+     */
     parsedData: ParsedData | null;
     isLoading: boolean;
     error: string | null;
     processedFileRef: string;
-    maxRows: number;
 
     // Actions
     setFile: (file: File | null) => void;
@@ -22,13 +27,12 @@ interface FilePreviewState {
     processFile: (file: File, maxRows?: number) => Promise<void>;
 }
 
-export const useFilePreviewStore = create<FilePreviewState>()((set, get) => ({
+export const useFileUploadStore = create<FileUploadState>()((set, get) => ({
     file: null,
     parsedData: null,
     isLoading: false,
     error: null,
     processedFileRef: "",
-    maxRows: 30,
 
     // Actions
     setFile: (file) => set({ file }),
@@ -36,7 +40,7 @@ export const useFilePreviewStore = create<FilePreviewState>()((set, get) => ({
     setIsLoading: (loading) => set({ isLoading: loading }),
     setError: (error) => set({ error }),
 
-    processFile: async (file, maxRows = 30) => {
+    processFile: async (file) => {
         const fileKey = `${file.name}-${file.size}`;
         const { processedFileRef } = get();
 
@@ -53,7 +57,7 @@ export const useFilePreviewStore = create<FilePreviewState>()((set, get) => ({
         });
 
         try {
-            const result = await processFile(file, maxRows);
+            const result = await processFile(file);
             set({
                 parsedData: result,
                 isLoading: false

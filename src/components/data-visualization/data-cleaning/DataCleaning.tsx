@@ -25,7 +25,7 @@ import { CheckIcon, FileDown, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/shadcn/progress";
 import { useToast } from "@/utils/hooks/use-toast";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
-import { useFilePreviewStore } from "@/store/filePreviewStore";
+import { useFileUploadStore } from "@/store/fileUploadStore";
 
 interface DataCleaningProps {
     file: File | null;
@@ -44,7 +44,7 @@ export default function DataCleaning({
     const { toast } = useToast();
 
     // Get parsed data from FilePreviewStore
-    const { parsedData } = useFilePreviewStore();
+    const { parsedData } = useFileUploadStore();
 
     // Zustand store
     const {

@@ -5,7 +5,7 @@ import { PlusCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/shadcn/button";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
-import { useFilePreviewStore } from "@/store/filePreviewStore";
+import { useFileUploadStore } from "@/store/fileUploadStore";
 import ChartRenderer from "./charts/chart-renderer";
 import AddChartModal from "../ui/data/add-chart-modal";
 import { Badge } from "../ui/shadcn/badge";
@@ -16,7 +16,7 @@ import { Badge } from "../ui/shadcn/badge";
  */
 export default function DataDisplay() {
   // Get file and parsed data from FilePreviewStore
-  const { file, parsedData } = useFilePreviewStore();
+  const { file, parsedData } = useFileUploadStore();
 
   // Get state from Zustand store
   const {

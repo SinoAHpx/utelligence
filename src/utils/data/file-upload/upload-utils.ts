@@ -15,14 +15,14 @@ interface ParseError {
  * @param maxRows Maximum number of data rows to extract
  * @returns Processed data with headers and rows
  */
-export async function processFile(file: File, maxRows: number): Promise<ProcessedFileData> {
+export async function processFile(file: File): Promise<ProcessedFileData> {
     const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
     try {
         if (fileExtension === "csv") {
-            return await processCsvFile(file, maxRows);
+            return await processCsvFile(file);
         } else if (fileExtension === "xlsx" || fileExtension === "xls") {
-            return await processExcelFile(file, maxRows);
+            return await processExcelFile(file);
         } else {
             throw new Error("Unsupported file type");
         }
@@ -35,14 +35,14 @@ export async function processFile(file: File, maxRows: number): Promise<Processe
 /**
  * Process CSV file using PapaParse
  */
-async function processCsvFile(file: File, maxRows: number): Promise<ProcessedFileData> {
+async function processCsvFile(file: File): Promise<ProcessedFileData> {
     const text = await file.text();
 
     return new Promise<ProcessedFileData>((resolve, reject) => {
         Papa.parse(text, {
             complete: (results: { data: string[][] }) => {
                 const headers = results.data[0];
-                const data = results.data.slice(1, maxRows + 1);
+                const data = results.data.slice(1);
                 resolve({ headers, data });
             },
             error: (error: ParseError) => {
@@ -55,7 +55,7 @@ async function processCsvFile(file: File, maxRows: number): Promise<ProcessedFil
 /**
  * Process Excel file using xlsx library
  */
-async function processExcelFile(file: File, maxRows: number): Promise<ProcessedFileData> {
+async function processExcelFile(file: File): Promise<ProcessedFileData> {
     const arrayBuffer = await file.arrayBuffer();
     const XLSX = await import("xlsx");
 
@@ -66,7 +66,7 @@ async function processExcelFile(file: File, maxRows: number): Promise<ProcessedF
     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
 
     const headers = jsonData[0];
-    const data = jsonData.slice(1, maxRows + 1) || [];
+    const data = jsonData.slice(1) || [];
 
     return { headers, data };
 }
