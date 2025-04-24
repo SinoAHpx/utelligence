@@ -7,7 +7,7 @@ import {
     CardDescription,
     CardHeader,
     CardTitle,
-} from "@/components/ui/card";
+} from "@/components/ui/shadcn/card";
 import {
     Table,
     TableBody,
@@ -15,11 +15,11 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { processFileData } from "@/utils/data-processing";
-import { convertToNumericArray } from "@/utils/statistics/utils";
+} from "@/components/ui/shadcn/table";
+import { Badge } from "@/components/ui/shadcn/badge";
+import { Alert, AlertDescription } from "@/components/ui/shadcn/alert";
+import { processFileData } from "@/utils/data/data-processing";
+import { convertToNumericArray } from "@/utils/data/statistics/utils";
 import * as ss from "simple-statistics";
 
 interface CorrelationTabProps {

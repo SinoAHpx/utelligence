@@ -7,26 +7,26 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/components/ui/shadcn/card";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs";
+} from "@/components/ui/shadcn/tabs";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { processFileData } from "@/utils/data-processing";
+} from "@/components/ui/shadcn/select";
+import { processFileData } from "@/utils/data/data-processing";
 import { StatisticsTab } from "./statistical-analysis/statistics-tab";
 import { CorrelationTab } from "./statistical-analysis/correlation-tab";
-import { calculateDescriptiveStatistics } from "@/utils/statistics";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { convertToNumericArray } from "@/utils/statistics/utils";
+import { calculateDescriptiveStatistics } from "@/utils/data/statistics";
+import { Alert, AlertDescription } from "@/components/ui/shadcn/alert";
+import { convertToNumericArray } from "@/utils/data/statistics/utils";
 import { InferentialStatisticsTab } from "./statistical-analysis/inferential-statistics/inferential-tab";
 import { RegressionTab } from "./statistical-analysis/regression-tab";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";

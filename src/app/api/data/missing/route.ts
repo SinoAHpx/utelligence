@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Papa from "papaparse";
-import { mean, median, mode } from "@/utils/statistics";
+import { mean, median, mode } from "@/utils/data/statistics";
 
 export async function POST(request: Request) {
     try {

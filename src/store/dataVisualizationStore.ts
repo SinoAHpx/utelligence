@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 import { ChartConfig, ChartDataItem } from "@/types/chart-types";
-import { FileData } from "@/utils/data-processing";
-import { processAndAnalyzeFileData } from "@/utils/data-visualization-helpers";
+import { FileData } from "@/utils/data/data-processing";
+import { processAndAnalyzeFileData } from "@/utils/data/visualization/data-visualization-helpers";
 
 /**
  * Column visualizability status configuration

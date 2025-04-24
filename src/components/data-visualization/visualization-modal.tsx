@@ -8,11 +8,11 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { getChartColor } from "@/constants/chart-colors";
+} from "@/components/ui/shadcn/dialog";
+import { Button } from "@/components/ui/shadcn/button";
+import { getChartColor } from "@/components/constants/chart-colors";
 import { ChartDataItem as ChartData } from "@/types/chart-types";
-import { CellValue, analyzeColumnData } from "@/utils/data-processing";
+import { CellValue, analyzeColumnData } from "@/utils/data/data-processing";
 
 /**
  * Chart data item structure for visualization

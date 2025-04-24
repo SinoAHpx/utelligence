@@ -1,9 +1,9 @@
 import React from "react";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/shadcn/card";
 import { AlertTriangle, Ban, Loader2 } from "lucide-react";
 import { ChartConfig } from "@/types/chart-types";
-import { getChartColor } from "@/constants/chart-colors";
+import { getChartColor } from "@/components/constants/chart-colors";
 
 interface RadarChartComponentProps {
     chartConfig: ChartConfig;

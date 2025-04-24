@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import { PlusCircle } from "lucide-react";
 import { useChatStore } from "@/store/chatStore";
-import { Chats } from "@/lib/chatUtils";
+import { Chats } from "@/utils/chat/chat-utils";
 
 export default function ChatsPage() {
   const { getGroupedChats } = useChatStore();
@@ -63,7 +63,7 @@ export default function ChatsPage() {
                   );
                   const title = firstUserMessage
                     ? firstUserMessage.content.substring(0, 60) +
-                      (firstUserMessage.content.length > 60 ? "..." : "")
+                    (firstUserMessage.content.length > 60 ? "..." : "")
                     : `对话 ${chat.chatId.substring(5, 13)}`; // Use chatId substring
 
                   // Extract raw chat ID for the link

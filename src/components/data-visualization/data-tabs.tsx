@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcn/tabs";
 import DataDisplay from "@/components/data-visualization/data-display";
 import DataCleaning from "@/components/data-visualization/data-cleaning/DataCleaning";
 import DataAnalysis from "@/components/data-visualization/data-analysis";
-import FilePreview from "@/components/data-visualization/file-preview";
+import FilePreview from "@/components/data-visualization/file-upload/file-preview";
 import { useFilePreviewStore } from "@/store/filePreviewStore";
 
 interface DataTabsProps {

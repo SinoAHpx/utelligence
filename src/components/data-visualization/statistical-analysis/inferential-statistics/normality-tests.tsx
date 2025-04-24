@@ -7,8 +7,8 @@ import {
     CardDescription,
     CardHeader,
     CardTitle,
-} from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from "@/components/ui/shadcn/card";
+import { Alert, AlertDescription } from "@/components/ui/shadcn/alert";
 import {
     Table,
     TableHeader,
@@ -16,10 +16,10 @@ import {
     TableHead,
     TableBody,
     TableCell
-} from "@/components/ui/table";
-import { CellValue } from "@/utils/statistics/types";
-import { formatStatValue } from "../../utils/analysis-helpers";
-import { jarqueBera } from "@/utils/statistics/distribution-shape";
+} from "@/components/ui/shadcn/table";
+import { CellValue } from "@/utils/data/statistics/types";
+import { formatStatValue } from "../../../../utils/data/visualization/analysis-helpers";
+import { jarqueBera } from "@/utils/data/statistics/distribution-shape";
 
 interface NormalityTestsProps {
     data: CellValue[];

@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { CATEGORIES } from "@/utils/statistics/types";
+import { Badge } from "@/components/ui/shadcn/badge";
+import { CATEGORIES } from "@/utils/data/statistics/types";
 
 interface StatisticsFilterProps {
     activeCategory: string;

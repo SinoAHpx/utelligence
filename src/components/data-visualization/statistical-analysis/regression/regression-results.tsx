@@ -7,11 +7,11 @@ import {
     CardHeader,
     CardTitle,
     CardDescription,
-} from "@/components/ui/card";
+} from "@/components/ui/shadcn/card";
 import {
     ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line
 } from 'recharts';
-import { RegressionResult } from "@/utils/statistics/regression";
+import { RegressionResult } from "@/utils/data/statistics/regression";
 
 interface RegressionResultsProps {
     regressionResult: RegressionResult;

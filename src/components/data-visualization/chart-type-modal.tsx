@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/shadcn/dialog";
+import { Button } from "@/components/ui/shadcn/button";
 import { X } from "lucide-react";
 import { CHART_TYPES } from "@/types/chart-types";
 

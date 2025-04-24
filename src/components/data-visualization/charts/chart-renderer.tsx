@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/shadcn/card";
 import type { ChartConfig, ChartDataItem, ChartType } from "@/types/chart-types";
 import { Loader2 } from "lucide-react";
 import PieChartComponent from "./pie-chart";

@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/shadcn/scroll-area";
+import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import { InferentialFilter, InferentialCategory } from "./inferential-filter";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CellValue } from "@/utils/statistics/types";
+import { Alert, AlertDescription } from "@/components/ui/shadcn/alert";
+import { CellValue } from "@/utils/data/statistics/types";
 import { NormalityTests } from "./normality-tests";
 import { TTests } from "./t-tests";
 import { ParameterEstimation } from "./parameter-estimation";

@@ -1,8 +1,8 @@
 import React from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/shadcn/card";
 import { ChartConfig } from "@/types/chart-types";
-import { getChartColor } from "@/constants/chart-colors";
+import { getChartColor } from "@/components/constants/chart-colors";
 
 interface LineChartComponentProps {
     chartConfig: ChartConfig;

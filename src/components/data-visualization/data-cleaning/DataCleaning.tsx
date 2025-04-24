@@ -7,23 +7,23 @@ import {
     CardDescription,
     CardHeader,
     CardTitle,
-} from "@/components/ui/card";
+} from "@/components/ui/shadcn/card";
 import {
     Tabs,
     TabsContent,
     TabsList,
     TabsTrigger,
-} from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from "@/components/ui/shadcn/tabs";
+import { Button } from "@/components/ui/shadcn/button";
+import { Alert, AlertDescription } from "@/components/ui/shadcn/alert";
 import MissingValuesTab from "./MissingValuesTab";
 import OutliersTab from "./OutliersTab";
 import DuplicatesTab from "./DuplicatesTab";
 import { TransformTab } from "./TransformTab";
-import { exportCleanedData } from "@/utils/data-processing";
+import { exportCleanedData } from "@/utils/data/data-processing";
 import { CheckIcon, FileDown, AlertCircle } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/components/ui/use-toast";
+import { Progress } from "@/components/ui/shadcn/progress";
+import { useToast } from "@/utils/hooks/use-toast";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
 
 interface DataCleaningProps {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Papa from "papaparse";
-import { mean, stdev } from "@/utils/statistics";
+import { mean, stdev } from "@/utils/data/statistics";
 
 /**
  * Numeric data transformations

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, memo } from "react";
-import { useChatActions } from "@/hooks/useChatActions";
+import { useChatActions } from "@/utils/hooks/useChatActions";
 import { useChatStore } from "@/store/chatStore";
 import Chat from "./chat";
 

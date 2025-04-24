@@ -6,7 +6,7 @@ import {
 	fetchAvailableModels,
 	getLocalStorageChats,
 	saveChatMessages,
-} from "@/utils/chat-utils";
+} from "@/utils/chat/chat-utils";
 
 /**
  * Chat state interface

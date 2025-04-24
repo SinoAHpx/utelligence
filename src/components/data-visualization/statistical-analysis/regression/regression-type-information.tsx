@@ -7,7 +7,7 @@ import {
     CardHeader,
     CardTitle,
     CardDescription,
-} from "@/components/ui/card";
+} from "@/components/ui/shadcn/card";
 
 interface RegressionTypeInformationProps {
     regressionType: string;

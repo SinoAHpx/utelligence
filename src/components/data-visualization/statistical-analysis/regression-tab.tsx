@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import { processFileData } from "@/utils/data-processing";
+import { Alert, AlertDescription } from "@/components/ui/shadcn/alert";
+import { Skeleton } from "@/components/ui/shadcn/skeleton";
+import { processFileData } from "@/utils/data/data-processing";
 import {
     simpleLinearRegression,
     multipleLinearRegression,
@@ -11,8 +11,8 @@ import {
     exponentialRegression,
     powerRegression,
     RegressionResult
-} from "@/utils/statistics/regression";
-import { convertToNumericArray } from "@/utils/statistics/utils";
+} from "@/utils/data/statistics/regression";
+import { convertToNumericArray } from "@/utils/data/statistics/utils";
 import { RegressionControls } from "./regression/regression-controls";
 import { RegressionResults } from "./regression/regression-results";
 import { RegressionTypeInformation } from "./regression/regression-type-information";

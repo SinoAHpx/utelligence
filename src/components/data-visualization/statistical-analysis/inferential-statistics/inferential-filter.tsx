@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/shadcn/badge";
 
 export type InferentialCategory =
     | "all"

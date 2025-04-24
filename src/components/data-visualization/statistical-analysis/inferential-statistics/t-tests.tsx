@@ -7,8 +7,8 @@ import {
     CardDescription,
     CardHeader,
     CardTitle,
-} from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from "@/components/ui/shadcn/card";
+import { Alert, AlertDescription } from "@/components/ui/shadcn/alert";
 import {
     Table,
     TableHeader,
@@ -16,9 +16,9 @@ import {
     TableHead,
     TableBody,
     TableCell
-} from "@/components/ui/table";
-import { CellValue } from "@/utils/statistics/types";
-import { formatStatValue, extractNumericData } from "../../utils/analysis-helpers";
+} from "@/components/ui/shadcn/table";
+import { CellValue } from "@/utils/data/statistics/types";
+import { formatStatValue, extractNumericData } from "../../../../utils/data/visualization/analysis-helpers";
 import * as ss from "simple-statistics";
 
 interface TTestsProps {

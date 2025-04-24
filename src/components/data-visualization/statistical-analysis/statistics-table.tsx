@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/shadcn/card";
 import {
     Table,
     TableBody,
@@ -9,8 +9,8 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@/components/ui/table";
-import { StatisticResult } from "@/utils/statistics/types";
+} from "@/components/ui/shadcn/table";
+import { StatisticResult } from "@/utils/data/statistics/types";
 
 interface StatisticsTableProps {
     stats: StatisticResult[];

@@ -1,16 +1,16 @@
 "use client";
 
 import React, { useState } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/shadcn/scroll-area";
+import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import { StatisticsFilter } from "./statistics-filter";
 import { StatisticsTable } from "./statistics-table";
-import { StatisticResult } from "@/utils/statistics/types";
-import { formatStatValue, groupStatsByCategory } from "../utils/analysis-helpers";
+import { StatisticResult } from "@/utils/data/statistics/types";
+import { formatStatValue, groupStatsByCategory } from "../../../utils/data/visualization/analysis-helpers";
 import { CentralTendencyTab } from "./central-tendency-tab";
 import { DispersionTab } from "./dispersion-tab";
 import { DistributionTab } from "./distribution-tab";
-import { CellValue } from "@/utils/statistics/types";
+import { CellValue } from "@/utils/data/statistics/types";
 
 interface StatisticsTabProps {
     statsData: StatisticResult[];

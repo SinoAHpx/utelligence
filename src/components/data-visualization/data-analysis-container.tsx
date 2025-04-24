@@ -1,17 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcn/tabs";
+import { Button } from "@/components/ui/shadcn/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/shadcn/card";
 import { ChevronLeft } from "lucide-react";
-import FileUploader from "./file-uploader";
-import FilePreview from "./file-preview";
+import FileUploader from "./file-upload/file-uploader";
+import FilePreview from "./file-upload/file-preview";
 import DuplicatesVisualization from "./duplicates-visualization";
 import OutliersVisualization from "./outliers-visualization";
 import { useFilePreviewStore } from "@/store/filePreviewStore";
-import { detectDuplicatesWithStore } from "@/utils/duplicate-detection";
-import { detectOutliersWithStore } from "@/utils/outlier-detection";
+import { detectDuplicatesWithStore } from "@/utils/data/analysis/duplicate-detection";
+import { detectOutliersWithStore } from "@/utils/data/analysis/outlier-detection";
 
 export default function DataAnalysisContainer() {
     const [activeTab, setActiveTab] = useState("file-preview");

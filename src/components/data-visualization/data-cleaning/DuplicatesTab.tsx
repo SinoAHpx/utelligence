@@ -3,13 +3,13 @@
 import React, { useState, useEffect } from "react";
 import { DuplicatesTabProps } from "./types";
 import { Loader2, InfoIcon, Eye, CheckIcon, CircleIcon, X } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/shadcn/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/shadcn/radio-group";
+import { Card, CardContent } from "@/components/ui/shadcn/card";
+import { Button } from "@/components/ui/shadcn/button";
+import { useToast } from "@/utils/hooks/use-toast";
+import { Badge } from "@/components/ui/shadcn/badge";
+import { cn } from "@/utils/utils";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
 
 export default function DuplicatesTab({

@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { PlusCircle, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/shadcn/button";
+import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
 import { useFilePreviewStore } from "@/store/filePreviewStore";
 import ChartRenderer from "./charts/chart-renderer";
-import AddChartModal from "./components/add-chart-modal";
+import AddChartModal from "../ui/data/add-chart-modal";
 
 /**
  * Props for the DataDisplay component

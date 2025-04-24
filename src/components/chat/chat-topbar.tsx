@@ -17,22 +17,22 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/components/ui/shadcn/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/shadcn/dropdown-menu";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import Settings from "@/components/settings";
-import { useHasMounted } from "@/lib/utils";
+} from "@/components/ui/shadcn/dialog";
+import Settings from "@/components/settings/settings";
+import { useHasMounted } from "@/utils/utils";
 import { useChatStore } from "@/store/chatStore";
 
 /**

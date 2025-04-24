@@ -15,10 +15,10 @@ import {
     CardHeader,
     CardTitle,
     CardDescription,
-} from "@/components/ui/card";
+} from "@/components/ui/shadcn/card";
 import { AlertTriangle } from "lucide-react";
 import { ChartConfig } from "@/types/chart-types";
-import { getChartColor } from "@/constants/chart-colors";
+import { getChartColor } from "@/components/constants/chart-colors";
 
 interface BarChartComponentProps {
     chartConfig: ChartConfig;

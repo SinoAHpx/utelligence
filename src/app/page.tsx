@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import ChatPage from "@/components/chat/chat-page";
-import DataPanel from "@/components/data-panel";
+import DataPanel from "@/components/data-visualization/file-upload/data-panel";
 import { useChatStore } from "@/store/chatStore";
 
 export default function Home() {

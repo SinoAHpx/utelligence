@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, memo } from "react";
 import Chat from "./chat";
-import { useChatActions } from "@/hooks/useChatActions";
+import { useChatActions } from "@/utils/hooks/useChatActions";
 
 /**
  * Props for the ChatLayout component

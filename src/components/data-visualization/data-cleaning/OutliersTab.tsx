@@ -2,24 +2,24 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { OutliersTabProps } from "./types";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/shadcn/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/shadcn/radio-group";
+import { Input } from "@/components/ui/shadcn/input";
 import {
     Select,
     SelectTrigger,
     SelectValue,
     SelectContent,
     SelectItem
-} from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+} from "@/components/ui/shadcn/select";
+import { Card, CardContent } from "@/components/ui/shadcn/card";
+import { Badge } from "@/components/ui/shadcn/badge";
 import { InfoIcon, BarChart3Icon, CheckIcon } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/shadcn/slider";
+import { Button } from "@/components/ui/shadcn/button";
+import { Checkbox } from "@/components/ui/shadcn/checkbox";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/utils/hooks/use-toast";
 
 export default function OutliersTab({
     columns,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Papa from "papaparse";
-import { mean, standardDeviation } from "@/utils/statistics";
+import { mean, standardDeviation } from "@/utils/data/statistics";
 
 // 添加用于获取异常值数据的GET端点
 export async function GET(request: Request) {

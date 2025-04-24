@@ -7,8 +7,8 @@ import {
     CardDescription,
     CardHeader,
     CardTitle,
-} from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from "@/components/ui/shadcn/card";
+import { Alert, AlertDescription } from "@/components/ui/shadcn/alert";
 import {
     Table,
     TableHeader,
@@ -16,14 +16,14 @@ import {
     TableHead,
     TableBody,
     TableCell,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/shadcn/table";
+import { Button } from "@/components/ui/shadcn/button";
 import { InfoIcon, Download, Filter, Eye } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcn/tabs";
+import { Badge } from "@/components/ui/shadcn/badge";
+import { Skeleton } from "@/components/ui/shadcn/skeleton";
+import { ScrollArea } from "@/components/ui/shadcn/scroll-area";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/shadcn/accordion";
 import { useDuplicatesStore } from "@/store/duplicatesStore";
 
 export default function DuplicatesVisualization() {

@@ -1,24 +1,24 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/shadcn/button";
+import { Label } from "@/components/ui/shadcn/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/shadcn/radio-group";
+import { Checkbox } from "@/components/ui/shadcn/checkbox";
 import {
     Select,
     SelectTrigger,
     SelectValue,
     SelectContent,
     SelectItem
-} from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+} from "@/components/ui/shadcn/select";
+import { Card, CardContent } from "@/components/ui/shadcn/card";
+import { Input } from "@/components/ui/shadcn/input";
+import { Switch } from "@/components/ui/shadcn/switch";
 import { InfoIcon, CheckIcon } from "lucide-react";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
 import { MissingValuesTabProps } from "./types";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/utils/hooks/use-toast";
 
 export default function MissingValuesTab({
     columns,

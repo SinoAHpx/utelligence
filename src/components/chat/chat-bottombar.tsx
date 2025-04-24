@@ -5,8 +5,8 @@ import { PaperPlaneIcon, StopIcon } from "@radix-ui/react-icons";
 import { ChatRequestOptions } from "ai";
 import dynamic from "next/dynamic";
 
-import { useHasMounted } from "@/lib/utils";
-import { Button } from "../ui/button";
+import { useHasMounted } from "@/utils/utils";
+import { Button } from "../ui/shadcn/button";
 import { useChatStore } from "@/store/chatStore";
 
 // Dynamically import TextareaAutosize with SSR disabled to avoid hydration issues

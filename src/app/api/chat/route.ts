@@ -12,7 +12,7 @@ export const maxDuration = 30;
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { encodeChat } from "@/lib/token-counter";
+import { encodeChat } from "@/utils/chat/token-counter";
 
 const addSystemMessage = (messages: CoreMessage[], systemPrompt?: string) => {
   // early exit if system prompt is empty
