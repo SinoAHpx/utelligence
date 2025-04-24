@@ -1,15 +1,15 @@
 "use client";
 
-import ClearChatsButton from "./settings-clear-chats";
+import ClearChatsButton from "./settings/settings-clear-chats";
 import SystemPrompt, { SystemPromptProps } from "./system-prompt";
-import { Input } from "../ui/shadcn/input";
-import { Slider } from "@/components/ui/shadcn/slider";
-import { Label } from "@/components/ui/shadcn/label";
-import { ChatOptions } from "../chat/options";
-import { useHasMounted } from "@/utils/utils";
+import { Input } from "./ui/input";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import { ChatOptions } from "./chat/options";
+import { useHasMounted } from "@/lib/utils";
 import { MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { Button } from "../ui/shadcn/button";
+import { Button } from "./ui/button";
 
 const SettingsThemeToggle = () => {
   const hasMounted = useHasMounted();

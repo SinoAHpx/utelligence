@@ -3,14 +3,11 @@
 import React, { useMemo, memo } from "react";
 import {
   GearIcon,
-  ChevronDownIcon,
-  InfoCircledIcon,
   Pencil1Icon,
   ChatBubbleIcon,
 } from "@radix-ui/react-icons";
 import { Message } from "ai/react";
 import Link from "next/link";
-import { toast } from "sonner";
 
 import {
   Tooltip,
@@ -18,12 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/shadcn/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/shadcn/dropdown-menu";
+
 import {
   Dialog,
   DialogContent,
@@ -127,10 +119,6 @@ const ChatTopbar = memo(({
   if (!hasMounted) {
     return null;
   }
-
-  const handleModelChange = (model: string) => {
-    setChatOptions({ ...chatOptions, selectedModel: model });
-  };
 
   return (
     <div className="w-full flex px-4 py-4 items-center justify-between border-b border-gray-200 dark:border-gray-700">

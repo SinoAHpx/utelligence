@@ -1,9 +1,9 @@
 import React, { memo } from "react";
 import { Message } from "ai/react";
 
-import ChatBottombar from "./chat-bottombar";
+import ChatBottombar from "./bottom-bar";
 import ChatList from "./chat-list";
-import ChatTopbar from "./chat-topbar";
+import ChatTopbar from "./topbar";
 
 /**
  * Props for the Chat component

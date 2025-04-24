@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 
 import { useHasMounted } from "@/utils/utils";
-import { ChatOptions } from "../chat/chat-options";
+import { ChatOptions } from "../chat/options";
 import { Textarea } from "../ui/shadcn/textarea";
 import { Label } from "@/components/ui/shadcn/label";
 import { useChatStore } from "@/store/chatStore";

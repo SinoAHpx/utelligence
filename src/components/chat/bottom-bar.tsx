@@ -115,7 +115,7 @@ const ChatBottombar = memo(({
                 </div>
             </div>
             <div className="relative px-2 py-2 text-center text-xs text-slate-500 md:px-[60px]">
-                <span>按回车发送，Shift + 回车换行</span>
+                <span>按回车发送, Shift + 回车换行</span>
             </div>
         </div>
     );
