@@ -44,42 +44,7 @@ type ChatTopbarProps = {
   createNewChat: () => void;
 };
 
-/**
- * ModelSelector component for selecting language models
- */
-const ModelSelector = memo(({
-  selectedModel,
-  availableModels,
-  onModelChange
-}: {
-  selectedModel?: string;
-  availableModels: string[];
-  onModelChange: (model: string) => void;
-}) => (
-  <DropdownMenu>
-    <DropdownMenuTrigger className="flex items-center px-2 md:px-3 py-1.5 text-sm rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-      <span className="mr-2 truncate w-[120px] inline-block overflow-hidden">
-        {selectedModel || "选择模型"}
-      </span>
-      <ChevronDownIcon className="w-4 h-4 shrink-0" />
-    </DropdownMenuTrigger>
-    <DropdownMenuContent>
-      {availableModels.map((model) => (
-        <DropdownMenuItem
-          key={model}
-          onClick={() => onModelChange(model)}
-          className={
-            selectedModel === model ? "bg-gray-100 dark:bg-gray-800" : ""
-          }
-        >
-          {model}
-        </DropdownMenuItem>
-      ))}
-    </DropdownMenuContent>
-  </DropdownMenu>
-));
 
-ModelSelector.displayName = "ModelSelector";
 
 /**
  * SettingsButton component for opening settings dialog
@@ -135,7 +100,6 @@ SettingsButton.displayName = "SettingsButton";
  * - Navigation buttons for chat list and creating new chats
  */
 const ChatTopbar = memo(({
-  isLoading,
   messages,
   createNewChat,
 }: ChatTopbarProps) => {
@@ -145,8 +109,6 @@ const ChatTopbar = memo(({
     chatOptions,
     setChatOptions,
     currentChatId,
-    availableModels,
-    tokenLimit,
   } = useChatStore();
 
   // Get chat title from first user message or fallback to ID
@@ -176,12 +138,6 @@ const ChatTopbar = memo(({
         <span className="font-medium text-lg truncate max-w-[140px] md:max-w-[200px] lg:max-w-[240px]">
           {chatTitle}
         </span>
-
-        <ModelSelector
-          selectedModel={chatOptions.selectedModel}
-          availableModels={availableModels}
-          onModelChange={handleModelChange}
-        />
 
         <SettingsButton
           chatOptions={chatOptions}

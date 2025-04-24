@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { useChatStore } from "@/store/chatStore";
 import { basePath } from "@/utils/utils";
-import { fetchAvailableModels } from "@/utils/chat/chat-utils";
+
 
 /**
  * Custom hook for all chat-related actions
@@ -39,31 +39,6 @@ export const useChatActions = () => {
 			toast.error("Something went wrong: " + error);
 		},
 	});
-
-	/**
-	 * Fetch models and token limit on mount
-	 */
-	useEffect(() => {
-		const loadModelsAndLimits = async () => {
-			// Fetch models
-			const { models, error } = await fetchAvailableModels();
-			if (error) {
-				toast.error(error);
-			} else if (models.length > 0) {
-				useChatStore.getState().setAvailableModels(models);
-
-				// Set default model if none selected
-				if (!chatOptions.selectedModel) {
-					useChatStore.getState().setChatOptions({
-						...chatOptions,
-						selectedModel: models[0],
-					});
-				}
-			}
-		};
-
-		loadModelsAndLimits();
-	}, [chatOptions]);
 
 	/**
 	 * Load messages from store when chat ID changes

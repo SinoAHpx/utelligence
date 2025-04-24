@@ -3,7 +3,6 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { Message } from "ai/react";
 import {
 	ChatOptions,
-	fetchAvailableModels,
 	getLocalStorageChats,
 	saveChatMessages,
 } from "@/utils/chat/chat-utils";
@@ -26,15 +25,6 @@ interface ChatState {
 	systemPrompts: Record<string, string>;
 	setSystemPrompt: (chatId: string, systemPrompt: string) => void;
 	getSystemPrompt: (chatId: string) => string;
-
-	// Models
-	availableModels: string[];
-	setAvailableModels: (models: string[]) => void;
-	fetchModels: () => Promise<void>;
-
-	// Token limits
-	tokenLimit: number;
-	setTokenLimit: (limit: number) => void;
 
 	// Messages
 	messages: Record<string, Message[]>;
@@ -82,32 +72,6 @@ export const useChatStore = create<ChatState>()(
 				if (!chatId) return state.chatOptions.systemPrompt;
 				return state.systemPrompts[chatId] || state.chatOptions.systemPrompt;
 			},
-
-			// Models
-			availableModels: [],
-			setAvailableModels: (models) => set({ availableModels: models }),
-			fetchModels: async () => {
-				const { models, error } = await fetchAvailableModels();
-
-				if (error) {
-					set({ error });
-					return;
-				}
-
-				set({ availableModels: models });
-
-				// If no model is selected yet, set the first available model
-				const { chatOptions } = get();
-				if (!chatOptions.selectedModel && models.length > 0) {
-					set({
-						chatOptions: { ...chatOptions, selectedModel: models[0] },
-					});
-				}
-			},
-
-			// Token limits
-			tokenLimit: 4096,
-			setTokenLimit: (limit) => set({ tokenLimit: limit }),
 
 			// Messages
 			messages: {},

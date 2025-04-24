@@ -17,33 +17,6 @@ export interface ChatOptions {
 }
 
 /**
- * Fetch available models from the server
- * @returns Array of available model names
- */
-export const fetchAvailableModels = async (): Promise<{
-	models: string[];
-	error?: string;
-}> => {
-	try {
-		const res = await fetch(basePath + "/api/models");
-
-		if (!res.ok) {
-			const errorResponse = await res.json();
-			const errorMessage = `Connection to vLLM server failed: ${errorResponse.error} [${res.status} ${res.statusText}]`;
-			return { models: [], error: errorMessage };
-		}
-
-		const data = await res.json();
-		const modelNames = data.data.map((model: any) => model.id);
-		return { models: modelNames };
-	} catch (error) {
-		const errorMessage =
-			error instanceof Error ? error.message : "Failed to fetch models";
-		return { models: [], error: errorMessage };
-	}
-};
-
-/**
  * Fetch the token limit from the server
  * @returns Token limit number
  */

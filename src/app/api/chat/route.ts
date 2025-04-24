@@ -130,7 +130,7 @@ export async function POST(req: Request) {
 
     // Call the language model
     const customOpenai = createOpenAI({
-      baseUrl: baseUrl + "/v1",
+      baseURL: baseUrl + "/v1",
       apiKey: apiKey ?? "",
     });
 
