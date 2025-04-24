@@ -190,8 +190,12 @@ function findDuplicates(
     data.forEach((row, index) => {
         // Create a key from the specified columns' values
         const key = columns
-            .map(col => row[col] === undefined || row[col] === null ? '' : row[col].trim())
-            .join('|');
+            .map((col) => {
+                const value = row[col];
+                if (value === undefined || value === null) return "";
+                return String(value).trim();
+            })
+            .join("|");
 
         if (duplicateMap.has(key)) {
             duplicateMap.get(key)!.push(index);

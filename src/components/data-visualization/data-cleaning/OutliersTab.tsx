@@ -24,7 +24,7 @@ export default function OutliersTab({
     rawData
 }: OutliersTabProps) {
     // State for column selection and outlier detection settings
-    const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+    const [selectedColumn, setSelectedColumn] = useState<string>("");
     const [detectionMethod, setDetectionMethod] = useState<string>("zscore");
     const [replacementMethod, setReplacementMethod] = useState<string>("remove");
     const [threshold, setThreshold] = useState<number>(3);
@@ -63,16 +63,25 @@ export default function OutliersTab({
             isNumeric: boolean
         }> = {};
 
-        effectiveRawData.headers.forEach(column => {
-            // Check if column has numeric values
+        effectiveRawData.headers.forEach((column, colIdx) => {
             const numericValues: number[] = [];
             let isNumeric = true;
 
-            effectiveRawData.rows.forEach(row => {
-                const value = row[column];
-                if (value === null || value === undefined || value === "") return;
+            effectiveRawData.rows.forEach((row) => {
+                const rawValue = row[colIdx];
 
-                const numValue = Number(value);
+                // Treat empty/null/NA as missing and ignore
+                if (
+                    rawValue === null ||
+                    rawValue === undefined ||
+                    (typeof rawValue === "string" && rawValue.trim() === "") ||
+                    (typeof rawValue === "string" &&
+                        ["na", "n/a", "null"].includes(rawValue.trim().toLowerCase()))
+                ) {
+                    return; // skip missing values
+                }
+
+                const numValue = Number(rawValue);
                 if (!isNaN(numValue)) {
                     numericValues.push(numValue);
                 } else {
@@ -88,21 +97,21 @@ export default function OutliersTab({
                     max: 0,
                     mean: 0,
                     std: 0,
-                    isNumeric: false
+                    isNumeric: false,
                 };
                 return;
             }
 
-            // Calculate basic statistics
+            // Calculate statistics
             const sum = numericValues.reduce((acc, val) => acc + val, 0);
             const mean = sum / numericValues.length;
-            const squaredDiffs = numericValues.map(val => Math.pow(val - mean, 2));
+            const squaredDiffs = numericValues.map((val) => Math.pow(val - mean, 2));
             const variance = squaredDiffs.reduce((acc, val) => acc + val, 0) / numericValues.length;
             const std = Math.sqrt(variance);
 
             // Detect outliers using Z-score
             let outlierCount = 0;
-            numericValues.forEach(value => {
+            numericValues.forEach((value) => {
                 const zScore = Math.abs((value - mean) / std);
                 if (zScore > threshold) {
                     outlierCount++;
@@ -116,7 +125,7 @@ export default function OutliersTab({
                 max: Math.max(...numericValues),
                 mean,
                 std,
-                isNumeric: true
+                isNumeric: true,
             };
         });
 
@@ -125,22 +134,20 @@ export default function OutliersTab({
 
     // Notify parent component of settings changes
     useEffect(() => {
-        if (selectedColumns.length === 0) return;
+        if (!selectedColumn) return;
 
         const settings: { [key: string]: { method: string; threshold: number; replacement: string } } = {};
 
-        selectedColumns.forEach(column => {
-            if (columnOutlierStats[column]?.isNumeric) {
-                settings[column] = {
-                    method: detectionMethod,
-                    threshold: detectionMethod === "zscore" ? threshold : iqrMultiplier,
-                    replacement: replacementMethod
-                };
-            }
-        });
+        if (columnOutlierStats[selectedColumn]?.isNumeric) {
+            settings[selectedColumn] = {
+                method: detectionMethod,
+                threshold: detectionMethod === "zscore" ? threshold : iqrMultiplier,
+                replacement: replacementMethod,
+            };
+        }
 
         onSettingsChange(settings);
-    }, [selectedColumns, detectionMethod, replacementMethod, threshold, iqrMultiplier, columnOutlierStats]);
+    }, [selectedColumn, detectionMethod, replacementMethod, threshold, iqrMultiplier, columnOutlierStats]);
 
     // 如果存在用户界面但没有rawData，显示提示信息
     if (!effectiveRawData) {
@@ -158,7 +165,14 @@ export default function OutliersTab({
         );
     }
 
-    const numericColumns = columns.filter(column => columnOutlierStats[column]?.isNumeric);
+    const numericColumns = columns.filter((column) => columnOutlierStats[column]?.isNumeric);
+
+    // Set default selected column when numericColumns become available or change
+    useEffect(() => {
+        if (!selectedColumn && numericColumns.length > 0) {
+            setSelectedColumn(numericColumns[0]);
+        }
+    }, [numericColumns, selectedColumn]);
 
     return (
         <div className="space-y-6">
@@ -182,7 +196,7 @@ export default function OutliersTab({
                                 选择要分析的列:
                             </Label>
                             <div className="flex gap-2">
-                                <Select value={selectedColumns} onValueChange={setSelectedColumns}>
+                                <Select value={selectedColumn} onValueChange={setSelectedColumn}>
                                     <SelectTrigger id="column-select" className="w-full">
                                         <SelectValue placeholder="选择列" />
                                     </SelectTrigger>
@@ -211,36 +225,36 @@ export default function OutliersTab({
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                        setAnalyzingColumn(selectedColumns[0]);
+                                        setAnalyzingColumn(selectedColumn);
                                     }}
-                                    disabled={selectedColumns.length === 0 || analyzingColumn === selectedColumns[0]}
+                                    disabled={!selectedColumn || analyzingColumn === selectedColumn}
                                 >
-                                    {analyzingColumn === selectedColumns[0] ? "分析中..." : "分析"}
+                                    {analyzingColumn === selectedColumn ? "分析中..." : "分析"}
                                 </Button>
                             </div>
 
-                            {selectedColumns.length > 0 && outliersStatistics[selectedColumns[0]] && (
+                            {selectedColumn && outliersStatistics[selectedColumn] && (
                                 <div className="mt-3 text-xs bg-slate-100 dark:bg-slate-800 p-3 rounded-md">
                                     <div className="flex items-center text-blue-600 dark:text-blue-400 mb-2">
                                         <BarChart3Icon className="h-3.5 w-3.5 mr-1" />
-                                        <span className="font-medium">"{selectedColumns[0]}" 列的统计信息</span>
+                                        <span className="font-medium">"{selectedColumn}" 列的统计信息</span>
                                     </div>
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                        <div>最小值: {outliersStatistics[selectedColumns[0]]?.min.toFixed(2)}</div>
-                                        <div>最大值: {outliersStatistics[selectedColumns[0]]?.max.toFixed(2)}</div>
-                                        <div>平均值: {outliersStatistics[selectedColumns[0]]?.mean.toFixed(2)}</div>
-                                        <div>中位数: {outliersStatistics[selectedColumns[0]]?.median.toFixed(2)}</div>
-                                        <div>Q1 (25%): {outliersStatistics[selectedColumns[0]]?.q1.toFixed(2)}</div>
-                                        <div>Q3 (75%): {outliersStatistics[selectedColumns[0]]?.q3.toFixed(2)}</div>
+                                        <div>最小值: {outliersStatistics[selectedColumn]?.min.toFixed(2)}</div>
+                                        <div>最大值: {outliersStatistics[selectedColumn]?.max.toFixed(2)}</div>
+                                        <div>平均值: {outliersStatistics[selectedColumn]?.mean.toFixed(2)}</div>
+                                        <div>中位数: {outliersStatistics[selectedColumn]?.median.toFixed(2)}</div>
+                                        <div>Q1 (25%): {outliersStatistics[selectedColumn]?.q1.toFixed(2)}</div>
+                                        <div>Q3 (75%): {outliersStatistics[selectedColumn]?.q3.toFixed(2)}</div>
                                         <div className="col-span-2 mt-1 font-medium text-amber-600 dark:text-amber-400">
-                                            检测到 {outliersStatistics[selectedColumns[0]]?.outlierCount} 个异常值
-                                            ({outliersStatistics[selectedColumns[0]]?.percentage.toFixed(1)}%)
+                                            检测到 {outliersStatistics[selectedColumn]?.outlierCount} 个异常值
+                                            ({outliersStatistics[selectedColumn]?.percentage.toFixed(1)}%)
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            {selectedColumns.length > 0 && outliersStatistics[selectedColumns[0]] === null && (
+                            {selectedColumn && outliersStatistics[selectedColumn] === null && (
                                 <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
                                     <span className="flex items-center">
                                         <InfoIcon className="h-3 w-3 mr-1" />

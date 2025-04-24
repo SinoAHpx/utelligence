@@ -44,15 +44,16 @@ export default function DuplicatesTab({
         if (columns.length > 0 && columnsSelection.length === 0) {
             setColumnsSelection([...columns]);
         }
-    }, [columns, columnsSelection]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [columns]);
 
     // 当设置改变时，通知父组件
     useEffect(() => {
         onSettingsChange({
             columnsToCheck: columnsSelection,
-            strategy: keepStrategy
+            strategy: keepStrategy,
         });
-    }, [columnsSelection, keepStrategy, duplicateOption, onSettingsChange]);
+    }, [columnsSelection, keepStrategy, onSettingsChange]);
 
     const analyzeDuplicates = async () => {
         // 确保rawData存在并有效
@@ -80,7 +81,7 @@ export default function DuplicatesTab({
         try {
             // 准备要发送的数据
             const dataForAnalysis = rawData.rows.map((row, idx) => {
-                const rowData: Record<string, any> = { _index: idx };
+                const rowData: Record<string, any> = {};
                 rawData.headers.forEach((header, i) => {
                     rowData[header] = row[i];
                 });

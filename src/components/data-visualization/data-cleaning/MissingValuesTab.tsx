@@ -45,11 +45,20 @@ export default function MissingValuesTab({
 
         const stats: Record<string, { count: number; percentage: number }> = {};
 
-        effectiveRawData.headers.forEach(column => {
+        effectiveRawData.headers.forEach((column, colIdx) => {
             let missingCount = 0;
 
-            effectiveRawData.rows.forEach(row => {
-                if (row[column] === null || row[column] === undefined || row[column] === "") {
+            effectiveRawData.rows.forEach((row) => {
+                const value = row[colIdx];
+
+                const isMissing =
+                    value === null ||
+                    value === undefined ||
+                    (typeof value === "string" && value.trim() === "") ||
+                    (typeof value === "string" &&
+                        ["na", "n/a", "null"].includes(value.trim().toLowerCase()));
+
+                if (isMissing) {
                     missingCount++;
                 }
             });
@@ -57,7 +66,7 @@ export default function MissingValuesTab({
             const totalRows = effectiveRawData.rows.length;
             stats[column] = {
                 count: missingCount,
-                percentage: totalRows > 0 ? (missingCount / totalRows) * 100 : 0
+                percentage: totalRows > 0 ? (missingCount / totalRows) * 100 : 0,
             };
         });
 
@@ -76,14 +85,14 @@ export default function MissingValuesTab({
                     strategy: "drop",
                     value: selectedThresholdType === "percent" ? dropThreshold : dropThreshold
                 };
-            } else if (missingValueOption === "fill_value") {
+            } else if (missingValueOption === "fill-value") {
                 settings[column] = {
-                    strategy: "fill_value",
+                    strategy: "fill-value",
                     value: fillValue
                 };
-            } else if (missingValueOption === "fill_method") {
+            } else if (missingValueOption === "fill-method") {
                 settings[column] = {
-                    strategy: "fill_method",
+                    strategy: "fill-method",
                     value: fillMethod
                 };
             }

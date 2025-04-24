@@ -93,6 +93,7 @@ export default function DataCleaning({
         if (file && (!rawFileData || rawFileData.headers.length === 0)) {
             setIsLoading(true);
             setErrorMessage(null);
+            setCleaningComplete(false);
 
             processAndAnalyzeFile(file, availableColumns)
                 .then(() => {
@@ -109,11 +110,35 @@ export default function DataCleaning({
     // Update selected columns when available columns change
     useEffect(() => {
         if (availableColumns.length > 0) {
-            setSelectedColumns(
-                selectedColumns.filter((col) => availableColumns.includes(col))
+            setSelectedColumns(prevSelected =>
+                prevSelected.filter((col) => availableColumns.includes(col))
             );
         }
-    }, [availableColumns, selectedColumns]);
+    }, [availableColumns]);
+
+    // Reset cleaning status when tab changes
+    useEffect(() => {
+        setCleaningComplete(false);
+    }, [activeTab]);
+
+    // Reset cleaning status when settings change
+    useEffect(() => {
+        if (activeTab === "missing" && Object.keys(missingValues).length > 0) {
+            setCleaningComplete(false);
+        }
+    }, [missingValues, activeTab]);
+
+    useEffect(() => {
+        if (activeTab === "outliers" && Object.keys(outlierSettings).length > 0) {
+            setCleaningComplete(false);
+        }
+    }, [outlierSettings, activeTab]);
+
+    useEffect(() => {
+        if (activeTab === "duplicates" && duplicateSettings.columnsToCheck.length > 0) {
+            setCleaningComplete(false);
+        }
+    }, [duplicateSettings, activeTab]);
 
     // Handle missing values processing
     const handleMissingValues = async () => {
@@ -124,32 +149,116 @@ export default function DataCleaning({
         setErrorMessage(null);
 
         try {
-            let totalSteps = Object.keys(missingValues).length;
+            const totalSteps = Object.keys(missingValues).length;
             let currentStep = 0;
 
+            // Start from already-cleaned data if存在
             let currentData = cleanedData && cleanedData.headers.length > 0
-                ? { ...cleanedData }
-                : { headers: [...rawFileData.headers], rows: [...rawFileData.rows] };
+                ? { headers: [...cleanedData.headers], rows: JSON.parse(JSON.stringify(cleanedData.rows)) }
+                : { headers: [...rawFileData.headers], rows: JSON.parse(JSON.stringify(rawFileData.rows)) };
 
             for (const column of Object.keys(missingValues)) {
-                currentStep++;
+                currentStep += 1;
                 setProgress(Math.round((currentStep / totalSteps) * 100));
 
                 const columnSetting = missingValues[column];
+                const colIndex = currentData.headers.indexOf(column);
+                if (colIndex === -1) continue;
 
-                // Use the store's handleOperation
-                const result = await handleOperation("missing", {
-                    data: currentData,
-                    column,
-                    strategy: columnSetting.strategy,
-                    value: columnSetting.value
-                });
+                // Helper to decide if cell is missing
+                const isCellMissing = (cell: any): boolean => {
+                    return (
+                        cell === null ||
+                        cell === undefined ||
+                        cell === "" ||
+                        (typeof cell === "string" && cell.trim() === "") ||
+                        (typeof cell === "string" && ["na", "n/a", "null", "-"].includes(cell.trim().toLowerCase()))
+                    );
+                };
 
-                if (result) {
-                    currentData = result;
+                if (columnSetting.strategy === "drop") {
+                    // 直接删除包含缺失值的行
+                    currentData.rows = currentData.rows.filter((row: any[]) => !isCellMissing(row[colIndex]));
+                } else if (columnSetting.strategy === "fill-value") {
+                    // 用指定的值填充
+                    const rawVal = columnSetting.value ?? "";
+                    const numVal = Number(rawVal);
+                    const fillVal = isNaN(numVal) ? rawVal : numVal;
+
+                    currentData.rows = currentData.rows.map((row: any[]) => {
+                        const newRow = [...row];
+                        if (isCellMissing(row[colIndex])) {
+                            newRow[colIndex] = fillVal;
+                        }
+                        return newRow;
+                    });
+                } else if (columnSetting.strategy === "fill-method") {
+                    // 统计列值用于计算替换值
+                    const numericVals: number[] = [];
+                    const stringVals: string[] = [];
+
+                    currentData.rows.forEach((row: any[]) => {
+                        const cell = row[colIndex];
+                        if (!isCellMissing(cell)) {
+                            const num = Number(cell);
+                            if (!isNaN(num)) numericVals.push(num);
+                            else stringVals.push(String(cell));
+                        }
+                    });
+
+                    let replacement: any = null;
+                    if (numericVals.length > 0) {
+                        switch (columnSetting.value) {
+                            case "mean":
+                                replacement = numericVals.reduce((a, b) => a + b, 0) / numericVals.length;
+                                break;
+                            case "median": {
+                                const sorted = [...numericVals].sort((a, b) => a - b);
+                                const mid = Math.floor(sorted.length / 2);
+                                replacement = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+                                break;
+                            }
+                            case "min":
+                                replacement = Math.min(...numericVals);
+                                break;
+                            case "max":
+                                replacement = Math.max(...numericVals);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+
+                    if (replacement === null) {
+                        // 计算众数（mode），适用于字符串列或数值列默认
+                        const allValues = [...numericVals.map(String), ...stringVals];
+                        const freq: Record<string, number> = {};
+
+                        for (const val of allValues) {
+                            freq[val] = (freq[val] || 0) + 1;
+                        }
+
+                        const modeEntry = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
+                        replacement = modeEntry ? modeEntry[0] : "";
+
+                        // 如果众数是数字字符串，转回数字
+                        const numVal = Number(replacement);
+                        if (!isNaN(numVal)) {
+                            replacement = numVal;
+                        }
+                    }
+
+                    currentData.rows = currentData.rows.map((row: any[]) => {
+                        const newRow = [...row];
+                        if (isCellMissing(row[colIndex])) {
+                            newRow[colIndex] = replacement;
+                        }
+                        return newRow;
+                    });
                 }
             }
 
+            // 更新全局 cleanedData
             updateCleanedData(currentData);
 
             toast({
@@ -414,7 +523,7 @@ export default function DataCleaning({
                                         )}
                                     </Button>
 
-                                    {cleanedData && cleanedData.headers.length > 0 && (
+                                    {cleanedData && cleanedData.headers.length > 0 && cleaningComplete && (
                                         <Button
                                             variant="outline"
                                             onClick={handleExport}
