@@ -2,13 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/shadcn/card";
-import {
     Tabs,
     TabsContent,
     TabsList,
@@ -49,7 +42,6 @@ export default function DataCleaning({
 
     // Zustand stores
     const {
-        rawFileData,
         processAndAnalyzeFile,
     } = fileDataStore();
 
@@ -58,7 +50,7 @@ export default function DataCleaning({
     } = dataCleaningStore();
 
     // Get all available columns
-    const availableColumns = rawFileData?.headers || parsedData?.headers || [];
+    const availableColumns = parsedData?.headers || [];
 
     // Missing values state
     const [missingValues, setMissingValues] = useState<{
@@ -96,7 +88,7 @@ export default function DataCleaning({
 
     // Load data from file when it changes
     useEffect(() => {
-        if (file && (!rawFileData || rawFileData.headers.length === 0)) {
+        if (file && (!parsedData || parsedData.headers.length === 0)) {
             setIsLoading(true);
             setErrorMessage(null);
             setCleaningComplete(false);
@@ -114,14 +106,14 @@ export default function DataCleaning({
                     setIsLoading(false);
                 });
         }
-    }, [file, rawFileData, parsedData, processAndAnalyzeFile]);
+    }, [file, parsedData, parsedData, processAndAnalyzeFile]);
 
     // Update selected columns when available columns change
     useEffect(() => {
-        if (rawFileData && rawFileData.headers.length > 0) {
-            setSelectedColumns(rawFileData.headers);
+        if (parsedData && parsedData.headers.length > 0) {
+            setSelectedColumns(parsedData.headers);
         }
-    }, [rawFileData]);
+    }, [parsedData]);
 
     // Reset cleaning status when tab changes
     useEffect(() => {
@@ -183,7 +175,7 @@ export default function DataCleaning({
     const tabProps = {
         file,
         availableColumns,
-        rawData: rawFileData,
+        rawData: parsedData,
         onComplete: () => setCleaningComplete(true),
         onProgress: (value: number) => setProgress(value),
         onProcessingStart: () => {
@@ -276,7 +268,7 @@ export default function DataCleaning({
                                 setMessage={(message) => setErrorMessage(message)}
                                 setProcessedFileUrl={() => { }}
                                 setCleaned={(cleaned) => setCleaningComplete(cleaned)}
-                                rawFileData={rawFileData}
+                                rawFileData={parsedData}
                             />
                         </TabsContent>
 

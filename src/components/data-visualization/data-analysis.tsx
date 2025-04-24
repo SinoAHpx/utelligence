@@ -48,12 +48,11 @@ export default function DataAnalysis({
 
   // Get parsed data from FilePreviewStore
   const { parsedData } = useFileUploadStore();
-
-  // Use the Zustand store for accessing rawFileData
-  const { rawFileData, processAndAnalyzeFile } = fileDataStore();
+  // Use the Zustand store for accessing parsedData
+  const { processAndAnalyzeFile } = fileDataStore();
 
   // Get all available columns
-  const availableColumns = rawFileData?.headers || parsedData?.headers || [];
+  const allColumns = parsedData?.headers || [];
 
   const tabOptions = [
     { id: "statistics", name: "统计描述" },
@@ -64,14 +63,14 @@ export default function DataAnalysis({
 
   // Ensure file data is loaded in the store
   useEffect(() => {
-    if (file && (!rawFileData || rawFileData.headers.length === 0)) {
-      processAndAnalyzeFile(file, availableColumns)
+    if (file && (!parsedData || parsedData.headers.length === 0)) {
+      processAndAnalyzeFile(file, allColumns)
         .catch((error) => {
           console.error("DataAnalysis: Error processing file data:", error);
           setErrorMessage(`处理文件出错: ${error}`);
         });
     }
-  }, [file, rawFileData, availableColumns, processAndAnalyzeFile]);
+  }, [file, parsedData, allColumns, processAndAnalyzeFile]);
 
   // Fetch column data when the selected column changes
   useEffect(() => {
@@ -80,10 +79,10 @@ export default function DataAnalysis({
     setIsLoading(true);
     setErrorMessage(null);
 
-    // Use rawFileData from the store if available
-    if (rawFileData && rawFileData.headers.includes(selectedColumn)) {
-      const colIndex = rawFileData.headers.indexOf(selectedColumn);
-      const colData = rawFileData.rows.map(row => row[colIndex]);
+    // Use parsedData from the store if available
+    if (parsedData && parsedData.headers.includes(selectedColumn)) {
+      const colIndex = parsedData.headers.indexOf(selectedColumn);
+      const colData = parsedData.rows.map(row => row[colIndex]);
       setColumnData(colData);
 
       // Check if there are enough numeric values in the column
@@ -141,14 +140,14 @@ export default function DataAnalysis({
         }
       );
     }
-  }, [file, selectedColumn, rawFileData]);
+  }, [file, selectedColumn, parsedData]);
 
   useEffect(() => {
     // When available columns change, default to the first column
-    if (availableColumns.length > 0 && !availableColumns.includes(selectedColumn)) {
-      setSelectedColumn(availableColumns[0]);
+    if (allColumns.length > 0 && !allColumns.includes(selectedColumn)) {
+      setSelectedColumn(allColumns[0]);
     }
-  }, [availableColumns, selectedColumn]);
+  }, [allColumns, selectedColumn]);
 
   if (!file) {
     return (
@@ -182,7 +181,7 @@ export default function DataAnalysis({
                     <SelectValue placeholder="选择分析列" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableColumns.map((column) => (
+                    {allColumns.map((column) => (
                       <SelectItem key={column} value={column}>
                         {column}
                       </SelectItem>
@@ -216,13 +215,13 @@ export default function DataAnalysis({
             </TabsContent>
 
             <TabsContent value="correlation" className="mt-6">
-              <CorrelationTab availableColumns={availableColumns} file={file} />
+              <CorrelationTab availableColumns={allColumns} file={file} />
             </TabsContent>
 
             <TabsContent value="regression" className="mt-6">
               <RegressionTab
                 file={file}
-                availableColumns={availableColumns}
+                availableColumns={allColumns}
               />
             </TabsContent>
           </Tabs>
