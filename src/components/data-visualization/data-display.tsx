@@ -5,6 +5,7 @@ import { PlusCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
+import { useFilePreviewStore } from "@/store/filePreviewStore";
 import ChartRenderer from "./charts/chart-renderer";
 import AddChartModal from "./components/add-chart-modal";
 
@@ -12,7 +13,6 @@ import AddChartModal from "./components/add-chart-modal";
  * Props for the DataDisplay component
  */
 interface DataDisplayProps {
-  file: File | null;
   selectedColumns: string[];
   availableColumns: string[];
   onColumnSelectionChange?: (columns: string[]) => void;
@@ -23,9 +23,11 @@ interface DataDisplayProps {
  * 负责处理数据文件(CSV/Excel)并显示可视化图表
  */
 export default function DataDisplay({
-  file,
   selectedColumns,
 }: DataDisplayProps) {
+  // Get file from FilePreviewStore
+  const { file } = useFilePreviewStore();
+
   // Get state from Zustand store
   const {
     userCharts,

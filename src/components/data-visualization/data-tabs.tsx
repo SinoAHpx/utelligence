@@ -6,6 +6,7 @@ import DataDisplay from "@/components/data-visualization/data-display";
 import DataCleaning from "@/components/data-visualization/data-cleaning/DataCleaning";
 import DataAnalysis from "@/components/data-visualization/data-analysis";
 import FilePreview from "@/components/data-visualization/file-preview";
+import { useFilePreviewStore } from "@/store/filePreviewStore";
 
 interface DataTabsProps {
   file: File | null;
@@ -15,6 +16,15 @@ export default function DataTabs({ file }: DataTabsProps) {
   const [activeTab, setActiveTab] = useState("preview");
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
+  const { setFile, processFile } = useFilePreviewStore();
+
+  // Initialize file in the store when it changes
+  useEffect(() => {
+    if (file) {
+      setFile(file);
+      processFile(file, 30);
+    }
+  }, [file, setFile, processFile]);
 
   // 处理从FilePreview获取的列信息
   const handleColumnsAvailable = React.useCallback(
@@ -90,15 +100,12 @@ export default function DataTabs({ file }: DataTabsProps) {
         <div className="flex-1 overflow-auto">
           <TabsContent value="preview" className="h-full">
             <FilePreview
-              file={file}
-              maxRows={30}
               onColumnsAvailable={handleColumnsAvailable}
             />
           </TabsContent>
 
           <TabsContent value="display" className="h-full">
             <DataDisplay
-              file={file}
               selectedColumns={selectedColumns}
               availableColumns={availableColumns}
               onColumnSelectionChange={handleColumnSelectionChange}
@@ -108,8 +115,8 @@ export default function DataTabs({ file }: DataTabsProps) {
           <TabsContent value="cleaning" className="h-full">
             <DataCleaning
               file={file}
-              selectedColumns={selectedColumns}
               availableColumns={availableColumns}
+              onColumnsChange={handleColumnSelectionChange}
             />
           </TabsContent>
 

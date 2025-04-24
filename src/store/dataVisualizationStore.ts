@@ -25,6 +25,11 @@ interface DataVisualizationState {
 	rawFileData: { headers: string[]; rows: FileData } | null;
 	setRawFileData: (data: { headers: string[]; rows: FileData } | null) => void;
 
+	// Cleaned data after processing (non-persistent)
+	cleanedData: { headers: string[]; rows: any[] } | null;
+	setCleanedData: (data: { headers: string[]; rows: any[] } | null) => void;
+	updateCleanedData: (data: { headers: string[]; rows: any[] }) => void;
+
 	// Chart configurations per file identifier (persistent)
 	fileChartConfigs: Record<string, ChartConfig[]>;
 
@@ -72,6 +77,12 @@ interface DataVisualizationState {
 
 	// Helper to load charts for the current file
 	loadChartsForCurrentFile: () => void;
+
+	// Data cleaning operations handler
+	handleOperation: (
+		operationType: string,
+		params: any
+	) => Promise<{ headers: string[]; rows: any[] } | null>;
 }
 
 /**
@@ -85,6 +96,7 @@ export const useDataVisualizationStore = create<DataVisualizationState>()(
 
 			// Non-persistent state
 			rawFileData: null,
+			cleanedData: null,
 			userCharts: [],
 			columnsVisualizableStatus: [],
 			isFileLoading: false,
@@ -101,6 +113,8 @@ export const useDataVisualizationStore = create<DataVisualizationState>()(
 
 			// --- Setters for non-persistent state ---
 			setRawFileData: (data) => set({ rawFileData: data }),
+			setCleanedData: (data) => set({ cleanedData: data }),
+			updateCleanedData: (data) => set({ cleanedData: data }),
 			setColumnsVisualizableStatus: (status) =>
 				set({ columnsVisualizableStatus: status }),
 			setSelectedChartType: (type) => set({ selectedChartType: type }),
@@ -209,6 +223,42 @@ export const useDataVisualizationStore = create<DataVisualizationState>()(
 					});
 				} finally {
 					set({ isFileLoading: false });
+				}
+			},
+
+			// --- Data Cleaning Operations Handler ---
+			handleOperation: async (operationType, params) => {
+				try {
+					const { data, column, ...options } = params;
+					let result = { ...data };
+
+					// Process different operation types
+					switch (operationType) {
+						case "missing":
+							// Handle missing values processing
+							// Implementation will depend on your specific requirements
+							console.log(`Processing missing values for column ${column}`);
+							break;
+
+						case "outliers":
+							// Handle outliers processing
+							console.log(`Processing outliers for column ${column}`);
+							break;
+
+						case "duplicates":
+							// Handle duplicates processing
+							console.log(`Processing duplicates for columns ${params.columnsToCheck}`);
+							break;
+
+						default:
+							console.warn(`Unknown operation type: ${operationType}`);
+							return null;
+					}
+
+					return result;
+				} catch (error) {
+					console.error(`Error during ${operationType} operation:`, error);
+					return null;
 				}
 			},
 		}),

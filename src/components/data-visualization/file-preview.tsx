@@ -4,31 +4,21 @@ import React, { useEffect } from "react";
 import { useFilePreviewStore } from "@/store/filePreviewStore";
 
 interface FilePreviewProps {
-  file: File | null;
-  maxRows?: number;
   onColumnsAvailable?: (columns: string[]) => void;
 }
 
-export default function FilePreview({
-  file,
-  maxRows = 30,
-  onColumnsAvailable,
-}: FilePreviewProps) {
-  // Use Zustand store instead of local state
+export default function FilePreview({ onColumnsAvailable }: FilePreviewProps) {
+  // Use Zustand store directly
   const {
+    file,
     parsedData,
     isLoading,
     error,
     selectedColumns,
     processFile,
     toggleColumnSelection,
+    maxRows,
   } = useFilePreviewStore();
-
-  useEffect(() => {
-    if (!file) return;
-    // Process file using the store's action
-    processFile(file, maxRows);
-  }, [file, maxRows, processFile]);
 
   // Notify parent component about available columns when parsing is done
   useEffect(() => {

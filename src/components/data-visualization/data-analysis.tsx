@@ -29,6 +29,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { convertToNumericArray } from "@/utils/statistics/utils";
 import { InferentialStatisticsTab } from "./statistical-analysis/inferential-statistics/inferential-tab";
 import { RegressionTab } from "./statistical-analysis/regression-tab";
+import { useDataVisualizationStore } from "@/store/dataVisualizationStore";
 
 interface DataAnalysisProps {
   file: File | null;
@@ -48,12 +49,26 @@ export default function DataAnalysis({
   const [columnData, setColumnData] = useState<any[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Use the Zustand store for accessing rawFileData
+  const { rawFileData, processAndAnalyzeFile } = useDataVisualizationStore();
+
   const tabOptions = [
     { id: "statistics", name: "统计描述" },
     { id: "inferential", name: "推断性统计" },
     { id: "correlation", name: "相关性分析" },
     { id: "regression", name: "回归分析" },
   ];
+
+  // Ensure file data is loaded in the store
+  useEffect(() => {
+    if (file && (!rawFileData || rawFileData.headers.length === 0)) {
+      processAndAnalyzeFile(file, availableColumns)
+        .catch((error) => {
+          console.error("DataAnalysis: Error processing file data:", error);
+          setErrorMessage(`处理文件出错: ${error}`);
+        });
+    }
+  }, [file, rawFileData, availableColumns, processAndAnalyzeFile]);
 
   // Fetch column data when the selected column changes
   useEffect(() => {
@@ -62,43 +77,68 @@ export default function DataAnalysis({
     setIsLoading(true);
     setErrorMessage(null);
 
-    processFileData(
-      file,
-      (data) => {
-        const headers = data.headers;
-        const rows = data.rows;
+    // Use rawFileData from the store if available
+    if (rawFileData && rawFileData.headers.includes(selectedColumn)) {
+      const colIndex = rawFileData.headers.indexOf(selectedColumn);
+      const colData = rawFileData.rows.map(row => row[colIndex]);
+      setColumnData(colData);
 
-        const colIndex = headers.indexOf(selectedColumn);
-        if (colIndex !== -1) {
-          const colData = rows.map(row => row[colIndex]);
-          setColumnData(colData);
-
-          // Check if there are enough numeric values in the column
-          const numericData = convertToNumericArray(colData);
-          if (numericData.length === 0) {
-            setErrorMessage(`列 "${selectedColumn}" 不包含有效的数值数据，请选择一个包含数值的列。`);
-            setStatsData([]);
-          } else if (numericData.length < (colData.length * 0.3)) {
-            setErrorMessage(`列 "${selectedColumn}" 中只有 ${numericData.length}/${colData.length} (${Math.round(numericData.length / colData.length * 100)}%) 是有效的数值数据，这可能会影响分析结果的准确性。`);
-            // Calculate statistics anyway
-            const stats = calculateDescriptiveStatistics(colData);
-            setStatsData(stats);
-          } else {
-            // Calculate statistics
-            const stats = calculateDescriptiveStatistics(colData);
-            setStatsData(stats);
-          }
-        }
-
-        setIsLoading(false);
-      },
-      (error) => {
-        console.error("Error processing file:", error);
-        setErrorMessage(`处理文件出错: ${error}`);
-        setIsLoading(false);
+      // Check if there are enough numeric values in the column
+      const numericData = convertToNumericArray(colData);
+      if (numericData.length === 0) {
+        setErrorMessage(`列 "${selectedColumn}" 不包含有效的数值数据，请选择一个包含数值的列。`);
+        setStatsData([]);
+      } else if (numericData.length < (colData.length * 0.3)) {
+        setErrorMessage(`列 "${selectedColumn}" 中只有 ${numericData.length}/${colData.length} (${Math.round(numericData.length / colData.length * 100)}%) 是有效的数值数据，这可能会影响分析结果的准确性。`);
+        // Calculate statistics anyway
+        const stats = calculateDescriptiveStatistics(colData);
+        setStatsData(stats);
+      } else {
+        // Calculate statistics
+        const stats = calculateDescriptiveStatistics(colData);
+        setStatsData(stats);
       }
-    );
-  }, [file, selectedColumn]);
+      setIsLoading(false);
+    } else {
+      // Fallback to processing file directly if not in store
+      processFileData(
+        file,
+        (data) => {
+          const headers = data.headers;
+          const rows = data.rows;
+
+          const colIndex = headers.indexOf(selectedColumn);
+          if (colIndex !== -1) {
+            const colData = rows.map(row => row[colIndex]);
+            setColumnData(colData);
+
+            // Check if there are enough numeric values in the column
+            const numericData = convertToNumericArray(colData);
+            if (numericData.length === 0) {
+              setErrorMessage(`列 "${selectedColumn}" 不包含有效的数值数据，请选择一个包含数值的列。`);
+              setStatsData([]);
+            } else if (numericData.length < (colData.length * 0.3)) {
+              setErrorMessage(`列 "${selectedColumn}" 中只有 ${numericData.length}/${colData.length} (${Math.round(numericData.length / colData.length * 100)}%) 是有效的数值数据，这可能会影响分析结果的准确性。`);
+              // Calculate statistics anyway
+              const stats = calculateDescriptiveStatistics(colData);
+              setStatsData(stats);
+            } else {
+              // Calculate statistics
+              const stats = calculateDescriptiveStatistics(colData);
+              setStatsData(stats);
+            }
+          }
+
+          setIsLoading(false);
+        },
+        (error) => {
+          console.error("Error processing file:", error);
+          setErrorMessage(`处理文件出错: ${error}`);
+          setIsLoading(false);
+        }
+      );
+    }
+  }, [file, selectedColumn, rawFileData]);
 
   useEffect(() => {
     // 当选定列变化时，默认选择第一列

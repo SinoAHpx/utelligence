@@ -101,11 +101,11 @@ const validateAndExtractAxisInfo = (
 	chartTypeName: string,
 ):
 	| {
-			success: true;
-			xAxisIndex: number;
-			yAxisIndex: number;
-			yAxisAnalysis: ReturnType<typeof analyzeColumnData>;
-	  }
+		success: true;
+		xAxisIndex: number;
+		yAxisIndex: number;
+		yAxisAnalysis: ReturnType<typeof analyzeColumnData>;
+	}
 	| { success: false; error: string } => {
 	if (!xAxisColumn || !yAxisColumn) {
 		return {
@@ -958,4 +958,77 @@ export const processRadarChartData = (
 		processedData,
 		isTruncated: isTruncated || isCategoryTruncated,
 	};
+};
+
+/**
+ * Export cleaned data to a file (CSV or Excel) for download
+ * @param cleanedData Object containing headers and rows of cleaned data
+ * @param filename The name of the file to download
+ * @returns Promise that resolves when file is downloaded
+ */
+export const exportCleanedData = async (
+	cleanedData: { headers: string[]; rows: FileData },
+	filename: string
+): Promise<void> => {
+	if (!cleanedData || !cleanedData.headers || !cleanedData.rows) {
+		throw new Error("Invalid data provided for export");
+	}
+
+	const { headers, rows } = cleanedData;
+	const fileExtension = filename.split(".").pop()?.toLowerCase();
+
+	try {
+		if (fileExtension === "csv") {
+			// Prepare CSV data: headers row + data rows
+			const csvData = [headers, ...rows.map(row =>
+				// Replace null/undefined with empty string
+				row.map(cell => cell === null || cell === undefined ? "" : cell)
+			)];
+
+			// Convert to CSV string using PapaParse
+			const csv = Papa.unparse(csvData);
+
+			// Create blob and download
+			const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+			const url = URL.createObjectURL(blob);
+			downloadFile(url, filename);
+		} else if (fileExtension === "xlsx" || fileExtension === "xls") {
+			// Create worksheet from data
+			const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+			// Create workbook with worksheet
+			const workbook = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Cleaned Data");
+
+			// Generate and download Excel file
+			const excelBuffer = XLSX.write(workbook, { bookType: fileExtension, type: "array" });
+			const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+			const url = URL.createObjectURL(blob);
+			downloadFile(url, filename);
+		} else {
+			throw new Error("Unsupported file type. Only CSV and Excel files are supported.");
+		}
+	} catch (err: any) {
+		console.error("Error exporting data:", err);
+		throw new Error(`Error exporting data: ${err.message || err}`);
+	}
+};
+
+/**
+ * Helper function to trigger file download
+ * @param url The object URL of the file to download
+ * @param filename The name to give the downloaded file
+ */
+const downloadFile = (url: string, filename: string): void => {
+	const link = document.createElement("a");
+	link.href = url;
+	link.setAttribute("download", filename);
+	document.body.appendChild(link);
+	link.click();
+
+	// Clean up
+	setTimeout(() => {
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+	}, 100);
 };

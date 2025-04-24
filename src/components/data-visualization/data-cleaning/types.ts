@@ -18,8 +18,8 @@ export interface DuplicateStats {
 
 export interface DataCleaningProps {
     file: File | null;
-    selectedColumns: string[];
     availableColumns: string[];
+    onColumnsChange: (columns: string[]) => void;
 }
 
 export interface TabComponentProps {
@@ -33,41 +33,40 @@ export interface TabComponentProps {
     rawFileData: { headers: string[]; rows: any[] } | null;
 }
 
-export interface MissingValuesTabProps extends TabComponentProps {
-    missingOption: string;
-    setMissingOption: (option: string) => void;
-    customValue: string;
-    setCustomValue: (value: string) => void;
+export interface MissingValuesTabProps {
+    file: File | null;
+    columns: string[];
+    onSettingsChange: (settings: {
+        [key: string]: { strategy: string; value?: string | number }
+    }) => void;
+    rawData: { headers: string[]; rows: any[] } | null;
 }
 
-export interface OutliersTabProps extends TabComponentProps {
-    outlierOption: string;
-    setOutlierOption: (option: string) => void;
-    detectionMethod: string;
-    setDetectionMethod: (method: string) => void;
-    threshold: number;
-    setThreshold: (threshold: number) => void;
-    outlierStats: OutlierStats;
-    setOutlierStats: (stats: OutlierStats) => void;
-    showVisualization: boolean;
-    setShowVisualization: (show: boolean) => void;
-    outlierData: any[];
-    setOutlierData: (data: any[]) => void;
+export interface OutliersTabProps {
+    file: File | null;
+    columns: string[];
+    onSettingsChange: (settings: {
+        [key: string]: {
+            method: string;
+            action: string;
+            lowerThreshold?: number;
+            upperThreshold?: number;
+            multiplier?: number;
+            replacementMethod?: string;
+            replacementValue?: number;
+        }
+    }) => void;
+    rawData: { headers: string[]; rows: any[] } | null;
 }
 
-export interface DuplicatesTabProps extends TabComponentProps {
-    duplicateOption: string;
-    setDuplicateOption: (option: string) => void;
-    keepStrategy: string;
-    setKeepStrategy: (strategy: string) => void;
-    duplicateColumnsSelection: string[];
-    setDuplicateColumnsSelection: (columns: string[]) => void;
-    duplicateStats: DuplicateStats;
-    setDuplicateStats: (stats: DuplicateStats) => void;
-    duplicateGroups: any[];
-    setDuplicateGroups: (groups: any[]) => void;
-    showDuplicatesVisualization: boolean;
-    setShowDuplicatesVisualization: (show: boolean) => void;
+export interface DuplicatesTabProps {
+    file: File | null;
+    columns: string[];
+    onSettingsChange: (settings: {
+        columnsToCheck: string[];
+        strategy: string;
+    }) => void;
+    rawData: { headers: string[]; rows: any[] } | null;
 }
 
 export interface TransformTabProps extends TabComponentProps {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import {
     Card,
     CardContent,
@@ -37,53 +37,19 @@ import {
 } from "recharts";
 import { useOutliersStore } from "@/store/outliersStore";
 
-interface OutliersVisualizationProps {
-    data: any[];
-    columnName: string;
-    method: string;
-    threshold: number;
-    statistics: {
-        lowerBound: number;
-        upperBound: number;
-        method: string;
-        threshold: number;
-        outlierCount: number;
-        totalCount: number;
-        methodDetails: any;
-    };
-}
-
-export default function OutliersVisualization({
-    data,
-    columnName,
-    method,
-    threshold,
-    statistics,
-}: OutliersVisualizationProps) {
-    // Use Zustand store instead of local state
+export default function OutliersVisualization() {
+    // Use Zustand store directly
     const {
+        data,
+        columnName,
+        method,
+        threshold,
+        statistics,
         activeTab,
         setActiveTab,
         isLoading,
-        setIsLoading,
-        chartData,
-        setData,
-        setColumnName,
-        setMethod,
-        setThreshold,
-        setStatistics,
-        updateChartData
+        chartData
     } = useOutliersStore();
-
-    // Initialize store with props data and update chart data
-    useEffect(() => {
-        setData(data);
-        setColumnName(columnName);
-        setMethod(method);
-        setThreshold(threshold);
-        setStatistics(statistics);
-        updateChartData();
-    }, [data, columnName, method, threshold, statistics, setData, setColumnName, setMethod, setThreshold, setStatistics, updateChartData]);
 
     // 格式化方法的详细信息
     const formatMethodDetails = () => {
@@ -225,6 +191,21 @@ export default function OutliersVisualization({
             </ScrollArea>
         );
     };
+
+    if (isLoading) {
+        return (
+            <Card className="w-full">
+                <CardHeader>
+                    <CardTitle>加载异常值分析...</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-2">
+                        <Skeleton className="h-[400px] w-full" />
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card className="w-full">
