@@ -1,4 +1,6 @@
 import { Message } from "ai/react";
+import { v4 as uuidv4 } from "uuid";
+import { toast } from "sonner";
 import { basePath } from "@/utils/utils";
 
 
@@ -11,25 +13,10 @@ export type ChatRole = "user" | "assistant" | "system";
  * Chat options interface
  */
 export interface ChatOptions {
-	selectedModel: string;
-	systemPrompt: string;
-	temperature: number;
+  selectedModel: string;
+  systemPrompt: string;
+  temperature: number;
 }
-
-/**
- * Fetch the token limit from the server
- * @returns Token limit number
- */
-export const fetchTokenLimit = async (): Promise<number> => {
-	try {
-		const response = await fetch(basePath + "/api/token-limit");
-		const data = await response.json();
-		return data.limit || 4096; // Default to 4096 if not found
-	} catch (error) {
-		console.error("Error fetching token limit:", error);
-		return 4096; // Default token limit
-	}
-};
 
 /**
  * Save chat messages to localStorage
@@ -37,14 +24,14 @@ export const fetchTokenLimit = async (): Promise<number> => {
  * @param messages Messages to save
  */
 export const saveChatMessages = (chatId: string, messages: Message[]): void => {
-	if (!chatId) return;
+  if (!chatId) return;
 
-	// Save to local storage with chat_ prefix
-	const storageKey = `chat_${chatId}`;
-	localStorage.setItem(storageKey, JSON.stringify(messages));
+  // Save to local storage with chat_ prefix
+  const storageKey = `chat_${chatId}`;
+  localStorage.setItem(storageKey, JSON.stringify(messages));
 
-	// Trigger the storage event for other components to detect changes
-	window.dispatchEvent(new Event("storage"));
+  // Trigger the storage event for other components to detect changes
+  window.dispatchEvent(new Event("storage"));
 };
 
 /**
@@ -53,16 +40,16 @@ export const saveChatMessages = (chatId: string, messages: Message[]): void => {
  * @returns Messages array or empty array if not found
  */
 export const loadChatMessages = (chatId: string): Message[] => {
-	if (!chatId || typeof window === "undefined") return [];
+  if (!chatId || typeof window === "undefined") return [];
 
-	const storageKey = `chat_${chatId}`;
-	try {
-		const storedMessages = localStorage.getItem(storageKey);
-		return storedMessages ? JSON.parse(storedMessages) : [];
-	} catch (error) {
-		console.error(`Error loading chat messages for ${chatId}:`, error);
-		return [];
-	}
+  const storageKey = `chat_${chatId}`;
+  try {
+    const storedMessages = localStorage.getItem(storageKey);
+    return storedMessages ? JSON.parse(storedMessages) : [];
+  } catch (error) {
+    console.error(`Error loading chat messages for ${chatId}:`, error);
+    return [];
+  }
 };
 
 /**
@@ -70,52 +57,52 @@ export const loadChatMessages = (chatId: string): Message[] => {
  * @returns Object with chats grouped by date
  */
 export const getLocalStorageChats = (): Record<
-	string,
-	{ chatId: string; messages: Message[] }[]
+  string,
+  { chatId: string; messages: Message[] }[]
 > => {
-	if (typeof window === "undefined" || !localStorage) {
-		return {};
-	}
+  if (typeof window === "undefined" || !localStorage) {
+    return {};
+  }
 
-	// Get all keys that start with 'chat_'
-	const chatKeys = Object.keys(localStorage).filter((key) =>
-		key.startsWith("chat_"),
-	);
+  // Get all keys that start with 'chat_'
+  const chatKeys = Object.keys(localStorage).filter((key) =>
+    key.startsWith("chat_"),
+  );
 
-	if (chatKeys.length === 0) {
-		return {};
-	}
+  if (chatKeys.length === 0) {
+    return {};
+  }
 
-	// Parse all chat messages and filter out any invalid ones
-	const chatObjects = chatKeys
-		.map((chatKey) => {
-			const item = localStorage.getItem(chatKey);
-			try {
-				const messages = item ? JSON.parse(item) : [];
-				if (Array.isArray(messages) && messages.length > 0) {
-					return {
-						chatId: chatKey.replace("chat_", ""),
-						messages: messages as Message[],
-					};
-				}
-			} catch (error) {
-				console.error(`Error parsing localStorage item ${chatKey}:`, error);
-			}
-			return null;
-		})
-		.filter(
-			(chat): chat is { chatId: string; messages: Message[] } => chat !== null,
-		);
+  // Parse all chat messages and filter out any invalid ones
+  const chatObjects = chatKeys
+    .map((chatKey) => {
+      const item = localStorage.getItem(chatKey);
+      try {
+        const messages = item ? JSON.parse(item) : [];
+        if (Array.isArray(messages) && messages.length > 0) {
+          return {
+            chatId: chatKey.replace("chat_", ""),
+            messages: messages as Message[],
+          };
+        }
+      } catch (error) {
+        console.error(`Error parsing localStorage item ${chatKey}:`, error);
+      }
+      return null;
+    })
+    .filter(
+      (chat): chat is { chatId: string; messages: Message[] } => chat !== null,
+    );
 
-	// Sort chats by date (most recent first)
-	chatObjects.sort((a, b) => {
-		const aDate = new Date(a.messages[0]?.createdAt ?? 0);
-		const bDate = new Date(b.messages[0]?.createdAt ?? 0);
-		return bDate.getTime() - aDate.getTime();
-	});
+  // Sort chats by date (most recent first)
+  chatObjects.sort((a, b) => {
+    const aDate = new Date(a.messages[0]?.createdAt ?? 0);
+    const bDate = new Date(b.messages[0]?.createdAt ?? 0);
+    return bDate.getTime() - aDate.getTime();
+  });
 
-	// Group chats by date
-	return groupChatsByDate(chatObjects);
+  // Group chats by date
+  return groupChatsByDate(chatObjects);
 };
 
 
@@ -174,55 +161,234 @@ export const groupChatsByDate = (
   return groupedChats;
 };
 
-// Function to get and group chats from localStorage
-export const getLocalstorageChats = (): Chats => {
-  // Check if localStorage is available (for server-side rendering or environments where it's not)
-  if (typeof localStorage === "undefined") {
-    return {};
-  }
+/**
+ * Create a new user message
+ * @param content The message content
+ * @returns A new Message object
+ */
+export const createUserMessage = (content: string): Message => {
+  return {
+    id: uuidv4(),
+    role: 'user',
+    content: content
+  };
+};
 
-  const chatKeys = Object.keys(localStorage).filter((key) =>
-    key.startsWith("chat_")
-  );
+/**
+ * Create a new assistant message (empty, to be filled with stream)
+ * @returns A new Message object for the assistant
+ */
+export const createAssistantMessage = (): Message => {
+  return {
+    id: uuidv4(),
+    role: 'assistant',
+    content: ''
+  };
+};
 
-  if (chatKeys.length === 0) {
-    return {}; // Return empty object if no chats
-  }
+/**
+ * Send a message to the chat API and process the streaming response
+ * 
+ * @param messages Current messages to send to API
+ * @param chatOptions Chat configuration options
+ * @param systemPrompt System prompt to use
+ * @param onStreamChunk Callback for each chunk of the stream response
+ * @param onComplete Callback when streaming is complete
+ * @param onError Callback for error handling
+ */
+export const sendMessageToAPI = async (
+  messages: Message[],
+  chatOptions: ChatOptions,
+  systemPrompt: string,
+  onStreamChunk: (chunk: string) => void,
+  onComplete: () => void,
+  onError: (error: Error) => void
+): Promise<void> => {
+  try {
+    const response = await fetch(`${basePath}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages,
+        chatOptions: {
+          ...chatOptions,
+          systemPrompt,
+        },
+      }),
+    });
 
-  // Map through the chats and return an object with chatId and messages
-  const chatObjects = chatKeys
-    .map((chatKey) => {
-      const item = localStorage.getItem(chatKey);
-      try {
-        // Use chatKey directly as chatId, assuming format "chat_..."
-        const messages = item ? JSON.parse(item) : [];
-        // Basic validation for messages array and first message's createdAt
-        if (
-          Array.isArray(messages) &&
-          messages.length > 0 &&
-          messages[0]?.createdAt
-        ) {
-          return { chatId: chatKey, messages: messages as Message[] };
-        }
-      } catch (error) {
-        console.error(`Error parsing localStorage item ${chatKey}:`, error);
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    // Process the streaming response
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('Response body reader could not be obtained');
+    }
+
+    const decoder = new TextDecoder();
+    let done = false;
+
+    while (!done) {
+      const result = await reader.read();
+      done = result.done;
+
+      if (done) {
+        onComplete();
+        break;
       }
-      return null; // Return null for invalid/empty chats
-    })
-    .filter(
-      (chat): chat is { chatId: string; messages: Message[] } => chat !== null
-    ); // Filter out nulls and type guard
 
-  // Sort chats by the createdAt date of the first message of each chat
-  chatObjects.sort((a, b) => {
-    // Dates are validated in the map step, but add fallback just in case
-    const aDate = new Date(a.messages[0]?.createdAt ?? 0);
-    const bDate = new Date(b.messages[0]?.createdAt ?? 0);
-    return bDate.getTime() - aDate.getTime();
-  });
+      // Decode the chunk and append to the message
+      const chunk = decoder.decode(result.value, { stream: true });
+      onStreamChunk(chunk);
+    }
+  } catch (error) {
+    onError(error instanceof Error ? error : new Error(String(error)));
+    toast.error(`Something went wrong: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
 
-  // Group the valid, sorted chats
-  const groupedChats = groupChatsByDate(chatObjects);
+/**
+ * Clear all chat data from localStorage
+ */
+export const clearAllChatData = (): void => {
+  if (typeof window === "undefined") return;
 
-  return groupedChats;
+  // Clear all chat_ items from local storage
+  Object.keys(localStorage)
+    .filter(key => key.startsWith("chat_"))
+    .forEach(key => localStorage.removeItem(key));
+
+  // Trigger the storage event for other components to detect changes
+  window.dispatchEvent(new Event("storage"));
+};
+
+/**
+ * Generate a new chat ID
+ * @returns A new UUID for a chat
+ */
+export const generateChatId = (): string => {
+  return uuidv4();
+};
+
+/**
+ * Abort controller for canceling ongoing requests
+ */
+let abortController: AbortController | null = null;
+
+/**
+ * Send a chat message and handle the response stream
+ * @param input User input text
+ * @param currentMessages Current message history
+ * @param chatOptions Chat configuration
+ * @param chatId Current chat ID (optional, will generate one if not provided)
+ * @param systemPrompt System prompt to use
+ * @param callbacks Callbacks for state updates
+ * @returns The ID of the chat
+ */
+export const sendChatMessage = async (
+  input: string,
+  currentMessages: Message[],
+  chatOptions: ChatOptions,
+  chatId: string | null,
+  systemPrompt: string,
+  callbacks: {
+    setIsLoading: (loading: boolean) => void;
+    setCurrentMessages: (messagesOrUpdater: Message[] | ((messages: Message[]) => Message[])) => void;
+    setCurrentChatId: (id: string) => void;
+    setInput: (input: string) => void;
+    setError: (error: string | undefined) => void;
+  }
+): Promise<string> => {
+  const { setIsLoading, setCurrentMessages, setCurrentChatId, setInput, setError } = callbacks;
+
+  // Validate input
+  if (!input.trim() || !chatOptions.selectedModel) {
+    return chatId || '';
+  }
+
+  // Set loading state
+  setIsLoading(true);
+
+  // Generate a chat ID if needed
+  const effectiveChatId = chatId || generateChatId();
+  if (!chatId) {
+    setCurrentChatId(effectiveChatId);
+  }
+
+  try {
+    // Create the user message
+    const userMessage = createUserMessage(input);
+
+    // Add user message to the conversation
+    const updatedMessages = [...currentMessages, userMessage];
+    setCurrentMessages(updatedMessages);
+
+    // Clear input after sending
+    setInput('');
+
+    // Create empty assistant message
+    const assistantMessage = createAssistantMessage();
+    const messagesWithAssistant = [...updatedMessages, assistantMessage];
+    setCurrentMessages(messagesWithAssistant);
+
+    // Cancel any previous requests
+    if (abortController) {
+      abortController.abort();
+    }
+
+    // Create a new abort controller
+    abortController = new AbortController();
+
+    // Send the message to the API
+    await sendMessageToAPI(
+      updatedMessages,
+      chatOptions,
+      systemPrompt,
+      // Handle each chunk of the response
+      (chunk) => {
+        setCurrentMessages((currentMsgs) => {
+          const updatedMsgs = [...currentMsgs];
+          // Update the last message (assistant's response)
+          const lastMessage = updatedMsgs[updatedMsgs.length - 1];
+          lastMessage.content += chunk;
+          return updatedMsgs;
+        });
+      },
+      // Handle completion
+      () => {
+        setIsLoading(false);
+        abortController = null;
+      },
+      // Handle errors
+      (error) => {
+        setIsLoading(false);
+        setError(error.message);
+        abortController = null;
+      }
+    );
+
+    // Save messages to local storage (will be done by the store)
+    return effectiveChatId;
+  } catch (error) {
+    // Handle any unexpected errors
+    setIsLoading(false);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    setError(errorMessage);
+    toast.error(`Something went wrong: ${errorMessage}`);
+    return effectiveChatId;
+  }
+};
+
+/**
+ * Cancel any ongoing message streaming
+ */
+export const cancelMessageStream = (): void => {
+  if (abortController) {
+    abortController.abort();
+    abortController = null;
+  }
 };

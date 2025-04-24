@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useRef, memo } from "react";
+import React, { useRef, useEffect } from "react";
 import { PaperPlaneIcon, StopIcon } from "@radix-ui/react-icons";
-import { ChatRequestOptions } from "ai";
 import dynamic from "next/dynamic";
 
 import { useHasMounted } from "@/utils/utils";
@@ -15,37 +14,26 @@ const TextareaAutosize = dynamic(() => import("react-textarea-autosize"), {
 });
 
 /**
- * Props for the ChatBottombar component
- */
-type ChatBottombarProps = {
-    input: string;
-    handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-    handleSubmit: (
-        e: React.FormEvent<HTMLFormElement>,
-        chatRequestOptions?: ChatRequestOptions
-    ) => void;
-    isLoading: boolean;
-    stop: () => void;
-};
-
-/**
  * ChatBottombar handles user input and message submission
  * 
  * Features:
+ * - Uses Zustand store for state management
  * - Provides autogrowing textarea for user input
  * - Handles keyboard shortcuts (Enter to submit, Shift+Enter for new line)
  * - Shows send or stop button based on loading state
  * - Validates input before submission
  */
-const ChatBottombar = memo(({
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading,
-    stop,
-}: ChatBottombarProps) => {
+const ChatBottombar = () => {
     const hasMounted = useHasMounted();
-    const { chatOptions } = useChatStore();
+    const {
+        input,
+        handleInputChange,
+        sendMessage,
+        isLoading,
+        stopMessageGeneration,
+        chatOptions
+    } = useChatStore();
+
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const hasSelectedModel = chatOptions.selectedModel && chatOptions.selectedModel !== "";
 
@@ -59,12 +47,12 @@ const ChatBottombar = memo(({
             input.trim()
         ) {
             e.preventDefault();
-            handleSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
+            sendMessage(e as unknown as React.FormEvent<HTMLFormElement>);
         }
     };
 
     // Focus input when component mounts
-    React.useEffect(() => {
+    useEffect(() => {
         if (hasMounted && inputRef.current) {
             inputRef.current.focus();
         }
@@ -77,7 +65,7 @@ const ChatBottombar = memo(({
             <div className="stretch flex flex-row gap-3 last:mb-2 md:last:mb-6 md:mx-auto md:max-w-2xl xl:max-w-3xl">
                 <div className="w-full relative mb-1 items-center">
                     <form
-                        onSubmit={handleSubmit}
+                        onSubmit={sendMessage}
                         className="w-full items-center flex relative gap-2"
                     >
                         <TextareaAutosize
@@ -105,7 +93,7 @@ const ChatBottombar = memo(({
                             <Button
                                 size="icon"
                                 className="absolute bottom-1.5 md:bottom-2 md:right-2 right-2 z-100"
-                                onClick={stop}
+                                onClick={stopMessageGeneration}
                                 aria-label="停止生成"
                             >
                                 <StopIcon className="w-5 h-5 text-white dark:text-black" />
@@ -119,8 +107,6 @@ const ChatBottombar = memo(({
             </div>
         </div>
     );
-});
-
-ChatBottombar.displayName = "ChatBottombar";
+};
 
 export default ChatBottombar;

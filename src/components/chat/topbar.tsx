@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useMemo, memo } from "react";
+import React, { useMemo } from "react";
 import {
   GearIcon,
   Pencil1Icon,
   ChatBubbleIcon,
 } from "@radix-ui/react-icons";
-import { Message } from "ai/react";
 import Link from "next/link";
 
 import {
@@ -28,79 +27,59 @@ import { useHasMounted } from "@/utils/utils";
 import { useChatStore } from "@/store/chat-store";
 
 /**
- * Props for the ChatTopbar component
- */
-type ChatTopbarProps = {
-  isLoading: boolean;
-  messages: Message[];
-  createNewChat: () => void;
-};
-
-
-
-/**
  * SettingsButton component for opening settings dialog
  */
-const SettingsButton = memo(({
-  chatOptions,
-  setChatOptions,
-  currentChatId
-}: {
-  chatOptions: any;
-  setChatOptions: (options: any) => void;
-  currentChatId: string;
-}) => (
-  <Dialog>
-    <TooltipProvider>
-      <Tooltip>
-        <DialogTrigger asChild>
-          <TooltipTrigger asChild>
-            <button
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-              aria-label="设置"
-            >
-              <GearIcon className="w-5 h-5" />
-            </button>
-          </TooltipTrigger>
-        </DialogTrigger>
-        <TooltipContent>
-          <p>设置</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-    <DialogContent className="sm:max-w-[600px]">
-      <DialogHeader>
-        <DialogTitle>设置</DialogTitle>
-      </DialogHeader>
-      <Settings
-        chatOptions={chatOptions}
-        setChatOptions={setChatOptions}
-      />
-    </DialogContent>
-  </Dialog>
-));
+const SettingsButton = () => {
+  const { chatOptions, setChatOptions, currentChatId } = useChatStore();
 
-SettingsButton.displayName = "SettingsButton";
+  return (
+    <Dialog>
+      <TooltipProvider>
+        <Tooltip>
+          <DialogTrigger asChild>
+            <TooltipTrigger asChild>
+              <button
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                aria-label="设置"
+              >
+                <GearIcon className="w-5 h-5" />
+              </button>
+            </TooltipTrigger>
+          </DialogTrigger>
+          <TooltipContent>
+            <p>设置</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>设置</DialogTitle>
+        </DialogHeader>
+        <Settings
+          chatOptions={chatOptions}
+          setChatOptions={setChatOptions}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 /**
  * ChatTopbar component handles the top navigation bar of the chat interface
  * 
  * Features:
+ * - Uses Zustand store for state management
  * - Shows the current chat title
  * - Allows model selection
  * - Provides access to settings
  * - Navigation buttons for chat list and creating new chats
  */
-const ChatTopbar = memo(({
-  messages,
-  createNewChat,
-}: ChatTopbarProps) => {
+const ChatTopbar = () => {
   const hasMounted = useHasMounted();
-
   const {
-    chatOptions,
-    setChatOptions,
+    currentMessages: messages,
     currentChatId,
+    createNewChat
   } = useChatStore();
 
   // Get chat title from first user message or fallback to ID
@@ -127,11 +106,7 @@ const ChatTopbar = memo(({
           {chatTitle}
         </span>
 
-        <SettingsButton
-          chatOptions={chatOptions}
-          setChatOptions={setChatOptions}
-          currentChatId={currentChatId}
-        />
+        <SettingsButton />
       </div>
 
       <div className="flex items-center gap-4 ml-auto">
@@ -155,8 +130,6 @@ const ChatTopbar = memo(({
       </div>
     </div>
   );
-});
-
-ChatTopbar.displayName = "ChatTopbar";
+};
 
 export default ChatTopbar;

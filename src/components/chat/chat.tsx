@@ -1,63 +1,26 @@
-import React, { memo } from "react";
-import { Message } from "ai/react";
+import React from "react";
+import { useChatStore } from "@/store/chat-store";
 
 import ChatBottombar from "./bottom-bar";
 import ChatList from "./chat-list";
 import ChatTopbar from "./topbar";
 
 /**
- * Props for the Chat component
- */
-type ChatProps = {
-    messages: Message[];
-    input: string;
-    handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-    handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-    isLoading: boolean;
-    error: undefined | Error;
-    stop: () => void;
-    createNewChat: () => void;
-};
-
-/**
  * Main Chat component that composes the whole chat interface
  * 
  * Features:
+ * - Uses Zustand store for state management
  * - Integrates chat topbar, message list, and input bar
- * - Handles message display and user input
- * - Manages loading states and error handling
+ * - No prop drilling - all components access store directly
  */
-const Chat = memo(({
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading,
-    error,
-    stop,
-    createNewChat,
-}: ChatProps) => {
+const Chat = () => {
     return (
         <div className="flex flex-col justify-between w-full h-full">
-            <ChatTopbar
-                isLoading={isLoading}
-                messages={messages}
-                createNewChat={createNewChat}
-            />
-
-            <ChatList messages={messages} isLoading={isLoading} />
-
-            <ChatBottombar
-                input={input}
-                handleInputChange={handleInputChange}
-                handleSubmit={handleSubmit}
-                isLoading={isLoading}
-                stop={stop}
-            />
+            <ChatTopbar />
+            <ChatList />
+            <ChatBottombar />
         </div>
     );
-});
-
-Chat.displayName = "Chat";
+};
 
 export default Chat;

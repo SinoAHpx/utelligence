@@ -1,24 +1,21 @@
-import React, { useEffect, useRef, memo } from "react";
-import { Message } from "ai";
+import React, { useEffect, useRef } from "react";
+import { useChatStore } from "@/store/chat-store";
 
 import EmptyState from "./empty-state";
 import MessageItem from "./message-item";
-
-type ChatListProps = {
-  messages: Message[];
-  isLoading: boolean;
-};
 
 /**
  * ChatList component displays all chat messages and handles scrolling behavior
  * 
  * Features:
+ * - Uses Zustand store for state management
  * - Automatically scrolls to the bottom when new messages arrive
  * - Shows an empty state when no messages exist
  * - Filters out system messages from the display
  * - Optimized scrolling performance
  */
-const ChatList = ({ messages, isLoading }: ChatListProps) => {
+const ChatList = () => {
+  const { currentMessages: messages, isLoading } = useChatStore();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Scroll to the bottom of the message list
@@ -57,7 +54,6 @@ const ChatList = ({ messages, isLoading }: ChatListProps) => {
               key={message.id || index}
               message={message}
               isLastMessage={index === displayMessages.length - 1}
-              isLoading={isLoading}
             />
           ))}
           <div id="scroll-anchor" ref={bottomRef} className="h-4" aria-hidden="true"></div>
@@ -67,4 +63,4 @@ const ChatList = ({ messages, isLoading }: ChatListProps) => {
   );
 };
 
-export default memo(ChatList);
+export default ChatList;

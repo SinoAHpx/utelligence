@@ -1,10 +1,15 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { Message } from "ai/react";
+
 import {
 	ChatOptions,
 	getLocalStorageChats,
 	saveChatMessages,
+	sendChatMessage,
+	cancelMessageStream,
+	clearAllChatData,
+	generateChatId,
 } from "@/utils/chat/chat-utils";
 
 /**
@@ -12,6 +17,15 @@ import {
  * Manages all state related to chat features
  */
 interface ChatState {
+	// Input state
+	input: string;
+	setInput: (input: string) => void;
+	handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+
+	// UI state
+	isLoading: boolean;
+	setIsLoading: (isLoading: boolean) => void;
+
 	// Chat options
 	chatOptions: ChatOptions;
 	setChatOptions: (options: ChatOptions) => void;
@@ -28,8 +42,14 @@ interface ChatState {
 
 	// Messages
 	messages: Record<string, Message[]>;
+	currentMessages: Message[];
 	setMessages: (chatId: string, messages: Message[]) => void;
+	setCurrentMessages: (messagesOrUpdater: Message[] | ((messages: Message[]) => Message[])) => void;
 	clearAllChats: () => void;
+
+	// Chat actions
+	sendMessage: (e: React.FormEvent<HTMLFormElement>) => void;
+	stopMessageGeneration: () => void;
 
 	// Chat history
 	getGroupedChats: () => ReturnType<typeof getLocalStorageChats>;
@@ -46,18 +66,43 @@ interface ChatState {
 export const useChatStore = create<ChatState>()(
 	persist(
 		(set, get) => ({
+			// Input state
+			input: "",
+			setInput: (input) => set({ input }),
+			handleInputChange: (e) => set({ input: e.target.value }),
+
+			// UI state
+			isLoading: false,
+			setIsLoading: (isLoading) => set({ isLoading }),
+
 			// Chat options
 			chatOptions: {
 				selectedModel: "",
-				systemPrompt: "",
+				systemPrompt: "You are a helpful AI assistant.",
 				temperature: 0.9,
 			},
 			setChatOptions: (options) => set({ chatOptions: options }),
 
 			// Chat state
 			currentChatId: "",
-			setCurrentChatId: (id) => set({ currentChatId: id }),
-			createNewChat: () => set({ currentChatId: "" }),
+			setCurrentChatId: (id) => {
+				set({ currentChatId: id });
+				// Load messages for this chat ID
+				const state = get();
+				if (id && state.messages[id]) {
+					set({ currentMessages: state.messages[id] });
+				} else {
+					set({ currentMessages: [] });
+				}
+			},
+
+			createNewChat: () => {
+				set({
+					currentChatId: "",
+					currentMessages: [],
+					input: ""
+				});
+			},
 
 			// System prompts per chat
 			systemPrompts: {},
@@ -75,6 +120,7 @@ export const useChatStore = create<ChatState>()(
 
 			// Messages
 			messages: {},
+			currentMessages: [],
 			setMessages: (chatId, messages) => {
 				if (!chatId) return;
 
@@ -86,20 +132,71 @@ export const useChatStore = create<ChatState>()(
 				// Save to localStorage and trigger event
 				saveChatMessages(chatId, messages);
 			},
+			setCurrentMessages: (messagesOrUpdater) => {
+				// Handle both direct message array and updater function
+				const newMessages = typeof messagesOrUpdater === 'function'
+					? messagesOrUpdater(get().currentMessages)
+					: messagesOrUpdater;
+
+				set({ currentMessages: newMessages });
+
+				// If we have a current chat ID, also update the messages record
+				const currentChatId = get().currentChatId;
+				if (currentChatId) {
+					set((state) => ({
+						messages: { ...state.messages, [currentChatId]: newMessages },
+					}));
+					saveChatMessages(currentChatId, newMessages);
+				}
+			},
 
 			clearAllChats: () => {
-				// Clear all chat_ items from local storage
-				if (typeof window !== "undefined") {
-					Object.keys(localStorage)
-						.filter((key) => key.startsWith("chat_"))
-						.forEach((key) => localStorage.removeItem(key));
-
-					// Trigger the storage event
-					window.dispatchEvent(new Event("storage"));
-				}
+				clearAllChatData();
 
 				// Clear messages from store
-				set({ messages: {}, currentChatId: "" });
+				set({
+					messages: {},
+					currentChatId: "",
+					currentMessages: [],
+					input: ""
+				});
+			},
+
+			// Chat actions
+			sendMessage: async (e) => {
+				e.preventDefault();
+
+				const state = get();
+				const {
+					input,
+					currentMessages,
+					chatOptions,
+					currentChatId
+				} = state;
+
+				// Get the system prompt
+				const systemPrompt = state.getSystemPrompt(currentChatId);
+
+				// Call the utility function to handle sending the message
+				await sendChatMessage(
+					input,
+					currentMessages,
+					chatOptions,
+					currentChatId,
+					systemPrompt,
+					{
+						setIsLoading: state.setIsLoading,
+						setCurrentMessages: state.setCurrentMessages,
+						setCurrentChatId: state.setCurrentChatId,
+						setInput: state.setInput,
+						setError: state.setError
+					}
+				);
+			},
+
+			stopMessageGeneration: () => {
+				cancelMessageStream();
+				set({ isLoading: false });
 			},
 
 			// Chat history - uses the utility function
@@ -121,3 +218,28 @@ export const useChatStore = create<ChatState>()(
 		},
 	),
 );
+
+// Custom hook for combining Zustand state with AI SDK
+export const useChatActions = () => {
+	const {
+		input,
+		handleInputChange,
+		currentMessages,
+		isLoading,
+		error,
+		sendMessage,
+		stopMessageGeneration,
+		createNewChat
+	} = useChatStore();
+
+	return {
+		messages: currentMessages,
+		input,
+		handleInputChange,
+		handleSubmit: sendMessage,
+		isLoading,
+		error,
+		stop: stopMessageGeneration,
+		createNewChat,
+	};
+};
