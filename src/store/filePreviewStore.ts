@@ -34,7 +34,7 @@ export const useFilePreviewStore = create<FilePreviewState>()((set, get) => ({
     error: null,
     selectedColumns: [],
     processedFileRef: "",
-    maxRows: 20,
+    maxRows: 30,
 
     // Actions
     setFile: (file) => set({ file }),
@@ -58,7 +58,7 @@ export const useFilePreviewStore = create<FilePreviewState>()((set, get) => ({
         });
     },
 
-    processFile: async (file, maxRows = 20) => {
+    processFile: async (file, maxRows = 30) => {
         const fileKey = `${file.name}-${file.size}`;
         const { processedFileRef } = get();
 

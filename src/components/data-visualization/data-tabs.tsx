@@ -26,26 +26,6 @@ export default function DataTabs({ file }: DataTabsProps) {
     }
   }, [file, setFile, processFile]);
 
-  // 处理从FilePreview获取的列信息
-  const handleColumnsAvailable = React.useCallback(
-    (columns: string[]) => {
-      if (columns.length > 0) {
-        // 只在初始加载时设置可用列，避免重复更新
-        if (availableColumns.length === 0) {
-          setAvailableColumns(columns);
-        }
-
-        // 如果还没有选择列，则将传入的列设为已选择
-        if (selectedColumns.length === 0) {
-          setSelectedColumns(columns);
-          // 当首次获取列数据时，自动切换到"数据展示"选项卡
-          setActiveTab("display");
-        }
-      }
-    },
-    [availableColumns.length, selectedColumns.length]
-  );
-
   // 当文件变更时，重置到预览标签
   useEffect(() => {
     if (file) {
@@ -99,9 +79,7 @@ export default function DataTabs({ file }: DataTabsProps) {
 
         <div className="flex-1 overflow-auto">
           <TabsContent value="preview" className="h-full">
-            <FilePreview
-              onColumnsAvailable={handleColumnsAvailable}
-            />
+            <FilePreview />
           </TabsContent>
 
           <TabsContent value="display" className="h-full">

@@ -199,7 +199,7 @@ export default function DataAnalysisContainer() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <FilePreview onColumnsAvailable={(columns) => console.log("Columns available:", columns)} />
+                            <FilePreview />
                         </CardContent>
                     </Card>
                 </TabsContent>
