@@ -3,7 +3,7 @@ import { processFile } from "@/utils/data/file-upload/upload-utils";
 
 interface ParsedData {
     headers: string[];
-    data: string[][];
+    rows: string[][];
 }
 
 interface FileUploadState {
@@ -24,7 +24,14 @@ interface FileUploadState {
     setParsedData: (data: ParsedData | null) => void;
     setIsLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
-    processFile: (file: File, maxRows?: number) => Promise<void>;
+    /**
+     * 解析并处理上传的文件，提取表头和数据内容。
+     * - 避免对同一文件重复处理（通过文件名和大小唯一标识）。
+     * - 处理过程中会设置 loading 状态和错误信息。
+     * - 处理成功后，parsedData 会被更新用于预览和后续操作。
+     * @param file 要处理的文件对象
+     */
+    processFile: (file: File) => Promise<void>;
 }
 
 export const useFileUploadStore = create<FileUploadState>()((set, get) => ({
@@ -39,7 +46,6 @@ export const useFileUploadStore = create<FileUploadState>()((set, get) => ({
     setParsedData: (data) => set({ parsedData: data }),
     setIsLoading: (loading) => set({ isLoading: loading }),
     setError: (error) => set({ error }),
-
     processFile: async (file) => {
         const fileKey = `${file.name}-${file.size}`;
         const { processedFileRef } = get();

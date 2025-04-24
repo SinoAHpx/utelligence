@@ -2,7 +2,7 @@ import Papa from "papaparse";
 
 interface ProcessedFileData {
     headers: string[];
-    data: string[][];
+    rows: string[][];
 }
 
 interface ParseError {
@@ -42,8 +42,8 @@ async function processCsvFile(file: File): Promise<ProcessedFileData> {
         Papa.parse(text, {
             complete: (results: { data: string[][] }) => {
                 const headers = results.data[0];
-                const data = results.data.slice(1);
-                resolve({ headers, data });
+                const rows = results.data.slice(1);
+                resolve({ headers, rows });
             },
             error: (error: ParseError) => {
                 reject(new Error(`CSV parsing failed: ${error.message}`));
@@ -66,7 +66,7 @@ async function processExcelFile(file: File): Promise<ProcessedFileData> {
     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
 
     const headers = jsonData[0];
-    const data = jsonData.slice(1) || [];
+    const rows = jsonData.slice(1) || [];
 
-    return { headers, data };
+    return { headers, rows };
 }

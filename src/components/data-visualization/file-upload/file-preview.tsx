@@ -35,7 +35,7 @@ export default function FilePreview() {
     );
   }
 
-  if (!parsedData || parsedData.data.length === 0) {
+  if (!parsedData || parsedData.rows.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-gray-500 dark:text-gray-400">文件中没有数据</p>
@@ -48,8 +48,8 @@ export default function FilePreview() {
       <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
         <div className="w-full overflow-x-auto">
           <div className="text-xs text-gray-500 mb-4">
-            显示前 {Math.min(parsedData.data.length, 30)} 行数据，共{" "}
-            {parsedData.data.length} 行
+            显示前 {Math.min(parsedData.rows.length, 30)} 行数据，共{" "}
+            {parsedData.rows.length} 行
           </div>
           <div className="border rounded-md">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -67,7 +67,7 @@ export default function FilePreview() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {parsedData.data.slice(0, 30).map((row, rowIndex) => (
+                {parsedData.rows.slice(0, 30).map((row, rowIndex) => (
                   <tr
                     key={rowIndex}
                     className={
