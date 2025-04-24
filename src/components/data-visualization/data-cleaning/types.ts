@@ -22,28 +22,34 @@ export interface DataCleaningProps {
     onColumnsChange: (columns: string[]) => void;
 }
 
-export interface TabComponentProps {
+export interface TabBaseProps {
     file: File | null;
+    availableColumns: string[];
+    rawData: { headers: string[]; rows: any[] } | null;
+    onComplete: () => void;
+    onProgress: (value: number) => void;
+    onProcessingStart: () => void;
+    onProcessingEnd: () => void;
+    onError: (error: string) => void;
+}
+
+export interface TabComponentProps extends TabBaseProps {
     selectedColumn: string;
     selectedColumns: string[];
-    availableColumns: string[];
     setMessage: (message: string) => void;
     setProcessedFileUrl: (url: string | null) => void;
     setCleaned: (cleaned: boolean) => void;
     rawFileData: { headers: string[]; rows: any[] } | null;
 }
 
-export interface MissingValuesTabProps {
-    file: File | null;
+export interface MissingValuesTabProps extends TabBaseProps {
     columns: string[];
     onSettingsChange: (settings: {
         [key: string]: { strategy: string; value?: string | number }
     }) => void;
-    rawData: { headers: string[]; rows: any[] } | null;
 }
 
-export interface OutliersTabProps {
-    file: File | null;
+export interface OutliersTabProps extends TabBaseProps {
     columns: string[];
     onSettingsChange: (settings: {
         [key: string]: {
@@ -56,17 +62,14 @@ export interface OutliersTabProps {
             replacementValue?: number;
         }
     }) => void;
-    rawData: { headers: string[]; rows: any[] } | null;
 }
 
-export interface DuplicatesTabProps {
-    file: File | null;
+export interface DuplicatesTabProps extends TabBaseProps {
     columns: string[];
     onSettingsChange: (settings: {
         columnsToCheck: string[];
         strategy: string;
     }) => void;
-    rawData: { headers: string[]; rows: any[] } | null;
 }
 
 export interface TransformTabProps extends TabComponentProps {
