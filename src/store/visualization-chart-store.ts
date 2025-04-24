@@ -58,7 +58,7 @@ interface VisualizationChartState {
 // This breaks the circular dependency
 const getCurrentFileIdentifier = () => {
     // Dynamic import to avoid circular dependency
-    const { fileDataStore } = require('./fileDataStore');
+    const { fileDataStore } = require('./file-data-store');
     return fileDataStore.getState().currentFileIdentifier;
 };
 

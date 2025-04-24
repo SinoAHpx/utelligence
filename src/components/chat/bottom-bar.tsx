@@ -31,23 +31,20 @@ const ChatBottombar = () => {
         sendMessage,
         isLoading,
         stopMessageGeneration,
-        chatOptions
     } = useChatStore();
 
     const inputRef = useRef<HTMLTextAreaElement>(null);
-    const hasSelectedModel = chatOptions.selectedModel && chatOptions.selectedModel !== "";
 
     // Handle keyboard shortcuts
     const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (
             e.key === "Enter" &&
             !e.shiftKey &&
-            hasSelectedModel &&
             !isLoading &&
             input.trim()
         ) {
             e.preventDefault();
-            sendMessage(e as unknown as React.FormEvent<HTMLFormElement>);
+            sendMessage();
         }
     };
 
@@ -58,7 +55,7 @@ const ChatBottombar = () => {
         }
     }, [hasMounted]);
 
-    const isSubmitDisabled = isLoading || !input.trim() || !hasSelectedModel;
+    const isSubmitDisabled = isLoading || !input.trim();
 
     return (
         <div className="px-6 md:px-10">

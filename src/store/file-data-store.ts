@@ -7,7 +7,7 @@ import { ColumnVisualizableConfig } from "./visualization-chart-store";
 // Helper function to access visualization chart store to avoid circular dependencies
 const getVisualizationChartStore = () => {
     // Dynamic import to avoid circular dependency
-    const { visualizationChartStore } = require('./visualizationChartStore');
+    const { visualizationChartStore } = require('./visualization-chart-store');
     return visualizationChartStore;
 };
 

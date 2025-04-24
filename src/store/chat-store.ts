@@ -48,7 +48,7 @@ interface ChatState {
 	clearAllChats: () => void;
 
 	// Chat actions
-	sendMessage: (e: React.FormEvent<HTMLFormElement>) => void;
+	sendMessage: () => void;
 	stopMessageGeneration: () => void;
 
 	// Chat history
@@ -163,9 +163,7 @@ export const useChatStore = create<ChatState>()(
 			},
 
 			// Chat actions
-			sendMessage: async (e) => {
-				e.preventDefault();
-
+			sendMessage: async () => {
 				const state = get();
 				const {
 					input,
