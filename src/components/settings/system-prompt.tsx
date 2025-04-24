@@ -9,7 +9,7 @@ import { useHasMounted } from "@/utils/utils";
 import { ChatOptions } from "../chat/options";
 import { Textarea } from "../ui/shadcn/textarea";
 import { Label } from "@/components/ui/shadcn/label";
-import { useChatStore } from "@/store/chatStore";
+import { useChatStore } from "@/store/chat-store";
 
 export interface SystemPromptProps {
   chatOptions: ChatOptions;

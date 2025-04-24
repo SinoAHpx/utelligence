@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import ChatPage from "@/components/chat/chat-page";
 import DataPanel from "@/components/data-visualization/file-upload/data-panel";
-import { useChatStore } from "@/store/chatStore";
+import { useChatStore } from "@/store/chat-store";
 
 export default function Home() {
   const searchParams = useSearchParams();

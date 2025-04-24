@@ -9,17 +9,17 @@ import {
 } from "@/components/ui/shadcn/tabs";
 import { Button } from "@/components/ui/shadcn/button";
 import { Alert, AlertDescription } from "@/components/ui/shadcn/alert";
-import MissingValuesTab from "./MissingValuesTab";
-import OutliersTab from "./OutliersTab";
-import DuplicatesTab from "./DuplicatesTab";
-import { TransformTab } from "./TransformTab";
+import MissingValuesTab from "./missing-value-tab";
+import OutliersTab from "./outliers-tab";
+import DuplicatesTab from "./duplicates-tab";
+import { TransformTab } from "./transform-tab";
 import { exportCleanedData } from "@/utils/data/data-processing";
 import { CheckIcon, FileDown, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/shadcn/progress";
 import { useToast } from "@/utils/hooks/use-toast";
 import { fileDataStore } from "@/store/index";
 import { dataCleaningStore } from "@/store/index";
-import { useFileUploadStore } from "@/store/fileUploadStore";
+import { useFileUploadStore } from "@/store/file-upload-store";
 
 interface DataCleaningProps {
     file: File | null;

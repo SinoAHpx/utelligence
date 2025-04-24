@@ -4,7 +4,7 @@ import { ChatRequestOptions } from "ai";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
-import { useChatStore } from "@/store/chatStore";
+import { useChatStore } from "@/store/chat-store";
 import { basePath } from "@/utils/utils";
 
 

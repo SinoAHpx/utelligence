@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import { PlusCircle } from "lucide-react";
-import { useChatStore } from "@/store/chatStore";
+import { useChatStore } from "@/store/chat-store";
 import { Chats } from "@/utils/chat/chat-utils";
 
 export default function ChatsPage() {

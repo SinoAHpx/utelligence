@@ -5,7 +5,7 @@ import { PlusCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/shadcn/button";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { fileDataStore, visualizationChartStore } from "@/store/index";
-import { useFileUploadStore } from "@/store/fileUploadStore";
+import { useFileUploadStore } from "@/store/file-upload-store";
 import ChartRenderer from "./charts/chart-renderer";
 import AddChartModal from "../ui/data/add-chart-modal";
 import { Badge } from "../ui/shadcn/badge";

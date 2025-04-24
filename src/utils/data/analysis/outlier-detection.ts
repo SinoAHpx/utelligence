@@ -1,4 +1,4 @@
-import { useOutliersStore } from "@/store/outliersStore";
+import { useOutliersStore } from "@/store/outlier-store";
 
 /**
  * 使用Z-Score方法检测异常值

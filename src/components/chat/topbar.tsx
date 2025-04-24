@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/shadcn/dialog";
 import Settings from "@/components/settings/settings";
 import { useHasMounted } from "@/utils/utils";
-import { useChatStore } from "@/store/chatStore";
+import { useChatStore } from "@/store/chat-store";
 
 /**
  * Props for the ChatTopbar component

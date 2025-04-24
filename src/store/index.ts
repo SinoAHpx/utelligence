@@ -1,12 +1,12 @@
-import { visualizationChartStore } from './visualizationChartStore';
+import { visualizationChartStore } from './visualization-chart-store';
 
 // Re-export all stores for easy import in components
-export { visualizationChartStore } from './visualizationChartStore';
-export { fileDataStore } from './fileDataStore';
-export { dataCleaningStore } from './dataCleaningStore';
+export { visualizationChartStore } from './visualization-chart-store';
+export { fileDataStore } from './file-data-store';
+export { dataCleaningStore } from './data-cleaning-store';
 
 // Re-export types
-export type { ColumnVisualizableConfig } from './visualizationChartStore';
+export type { ColumnVisualizableConfig } from './visualization-chart-store';
 
 // Initialize stores
 // This ensures that all stores are correctly initialized after hydration

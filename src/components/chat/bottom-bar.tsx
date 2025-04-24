@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 
 import { useHasMounted } from "@/utils/utils";
 import { Button } from "../ui/shadcn/button";
-import { useChatStore } from "@/store/chatStore";
+import { useChatStore } from "@/store/chat-store";
 
 // Dynamically import TextareaAutosize with SSR disabled to avoid hydration issues
 const TextareaAutosize = dynamic(() => import("react-textarea-autosize"), {

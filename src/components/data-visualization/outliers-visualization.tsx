@@ -35,7 +35,7 @@ import {
     Cell,
     ReferenceLine,
 } from "recharts";
-import { useOutliersStore } from "@/store/outliersStore";
+import { useOutliersStore } from "@/store/outlier-store";
 
 export default function OutliersVisualization() {
     // Use Zustand store directly

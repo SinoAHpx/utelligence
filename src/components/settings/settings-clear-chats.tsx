@@ -17,7 +17,7 @@ import { useRouter } from "next/navigation";
 
 import { useHasMounted } from "@/utils/utils";
 import { Button } from "@/components/ui/shadcn/button";
-import { useChatStore } from "@/store/chatStore";
+import { useChatStore } from "@/store/chat-store";
 
 export default function ClearChatsButton() {
   const hasMounted = useHasMounted();

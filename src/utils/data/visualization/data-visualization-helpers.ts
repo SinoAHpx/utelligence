@@ -3,7 +3,7 @@ import {
 	analyzeColumnData,
 	FileData,
 } from "../data-processing";
-import { ColumnVisualizableConfig } from "@/store/visualizationChartStore"; // Need this type
+import { ColumnVisualizableConfig } from "@/store/visualization-chart-store"; // Need this type
 
 /**
  * Processes a file, extracts raw data, and analyzes specified columns for visualizability.

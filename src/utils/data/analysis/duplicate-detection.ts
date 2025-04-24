@@ -1,4 +1,4 @@
-import { useDuplicatesStore } from "@/store/duplicatesStore";
+import { useDuplicatesStore } from "@/store/duplicates-store";
 
 /**
  * 检测数据中的重复行

@@ -1,6 +1,6 @@
 export * from './types';
-export * from './MissingValuesTab';
-export * from './OutliersTab';
-export * from './DuplicatesTab';
-export * from './TransformTab';
-export { default as DataCleaning } from './DataCleaning'; 
+export * from './missing-value-tab';
+export * from './outliers-tab';
+export * from './duplicates-tab';
+export * from './transform-tab';
+export { default as DataCleaning } from './data-cleaning'; 

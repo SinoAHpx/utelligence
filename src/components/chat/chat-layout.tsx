@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import Chat from "./chat";
-import { useChatActions } from "@/utils/hooks/useChatActions";
+import { useChatActions } from "@/utils/hooks/use-chat-actions";
 
 /**
  * ChatLayout component manages responsive layout for the chat interface

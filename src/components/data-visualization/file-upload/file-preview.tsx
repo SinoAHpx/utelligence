@@ -1,6 +1,6 @@
 "use client";
 
-import { useFileUploadStore } from "@/store/fileUploadStore";
+import { useFileUploadStore } from "@/store/file-upload-store";
 
 export default function FilePreview() {
   // Use Zustand store directly

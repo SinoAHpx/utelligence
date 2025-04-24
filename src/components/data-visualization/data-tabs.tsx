@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcn/tabs";
 import DataDisplay from "@/components/data-visualization/data-display";
-import DataCleaning from "@/components/data-visualization/data-cleaning/DataCleaning";
+import DataCleaning from "@/components/data-visualization/data-cleaning/data-cleaning";
 import DataAnalysis from "@/components/data-visualization/data-analysis";
 import FilePreview from "@/components/data-visualization/file-upload/file-preview";
-import { useFileUploadStore } from "@/store/fileUploadStore";
+import { useFileUploadStore } from "@/store/file-upload-store";
 
 interface DataTabsProps {
   file: File | null;

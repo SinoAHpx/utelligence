@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { FileData } from "@/utils/data/data-processing";
 import { processAndAnalyzeFileData } from "@/utils/data/visualization/data-visualization-helpers";
-import { ColumnVisualizableConfig } from "./visualizationChartStore";
+import { ColumnVisualizableConfig } from "./visualization-chart-store";
 
 // Helper function to access visualization chart store to avoid circular dependencies
 const getVisualizationChartStore = () => {

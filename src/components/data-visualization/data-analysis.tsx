@@ -30,7 +30,7 @@ import { convertToNumericArray } from "@/utils/data/statistics/utils";
 import { InferentialStatisticsTab } from "./statistical-analysis/inferential-statistics/inferential-tab";
 import { RegressionTab } from "./statistical-analysis/regression-tab";
 import { fileDataStore } from "@/store/index";
-import { useFileUploadStore } from "@/store/fileUploadStore";
+import { useFileUploadStore } from "@/store/file-upload-store";
 
 interface DataAnalysisProps {
   file: File | null;

@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/shadcn/badge";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import { ScrollArea } from "@/components/ui/shadcn/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/shadcn/accordion";
-import { useDuplicatesStore } from "@/store/duplicatesStore";
+import { useDuplicatesStore } from "@/store/duplicates-store";
 
 export default function DuplicatesVisualization() {
     // Use Zustand store directly

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { fileDataStore } from "./fileDataStore";
+import { fileDataStore } from "./file-data-store";
 
 /**
  * Data cleaning state interface
