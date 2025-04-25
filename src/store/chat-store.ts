@@ -216,28 +216,3 @@ export const useChatStore = create<ChatState>()(
 		},
 	),
 );
-
-// Custom hook for combining Zustand state with AI SDK
-export const useChatActions = () => {
-	const {
-		input,
-		handleInputChange,
-		currentMessages,
-		isLoading,
-		error,
-		sendMessage,
-		stopMessageGeneration,
-		createNewChat
-	} = useChatStore();
-
-	return {
-		messages: currentMessages,
-		input,
-		handleInputChange,
-		handleSubmit: sendMessage,
-		isLoading,
-		error,
-		stop: stopMessageGeneration,
-		createNewChat,
-	};
-};
