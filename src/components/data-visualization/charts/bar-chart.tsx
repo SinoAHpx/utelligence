@@ -95,7 +95,7 @@ const BarChartComponent: React.FC<BarChartComponentProps> = ({ chartConfig }) =>
                                     dataKey={category}
                                     stackId="a"
                                     fill={getChartColor(index)}
-                                    name={String(category)}
+                                    name={category}
                                 />
                             ))
                         ) : (

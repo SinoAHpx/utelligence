@@ -9,11 +9,14 @@ export interface ChartProps {
 	chartData: ChartDataItem[];
 }
 
+// Supported chart types
+export type ChartType = "bar" | "line" | "area" | "pie" | "scatter" | "radar";
+
 // Chart configuration type definitions
 export interface ChartConfig {
 	id: string;
 	// columns: string[]; // Keep track of originally selected columns if needed elsewhere
-	chartType: string; // e.g., 'bar', 'line'
+	chartType: ChartType; // e.g., 'bar', 'line'
 	title: string;
 	xAxisColumn?: string; // Original selected X column name
 	yAxisColumn?: string; // Original selected Y column name (single)
@@ -30,17 +33,9 @@ export interface ChartConfig {
 	numericYKey?: string; // The dataKey for a single numeric Y line/area -> Use yAxisColumn directly?
 
 	// Performance flag
-	isTruncated?: boolean; // Flag indicating if data was truncated
-
-	// Line Chart specific fields
-	// categories?: string[]; // Categories for multi-line trend
-	// numericYKey?: string; // The dataKey for a single numeric Y line
-
-	// duplicateValueHandling?: "merge" | "keep"; // Keep if relevant for other chart types
+	isTruncated?: boolean;
 }
 
-// Supported chart types
-export type ChartType = "bar" | "line" | "area" | "pie" | "scatter" | "radar";
 
 // Chart type definition with metadata
 export interface ChartTypeDefinition {

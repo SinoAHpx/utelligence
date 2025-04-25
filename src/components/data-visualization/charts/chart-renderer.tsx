@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/shadcn/card";
-import type { ChartConfig, ChartDataItem, ChartType } from "@/types/chart-types";
+import type { ChartConfig, ChartType } from "@/types/chart-types";
 import { Loader2 } from "lucide-react";
 import PieChartComponent from "./pie-chart";
 import BarChartComponent from "./bar-chart";

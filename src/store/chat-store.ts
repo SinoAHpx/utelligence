@@ -158,7 +158,7 @@ export const useChatStore = create<ChatState>()(
 
 			// Chat actions
 			sendMessage: async (message: string) => {
-				createMessage(message, get())
+				createMessage(message)
 			},
 
 			stopMessageGeneration: () => {
