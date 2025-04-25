@@ -6,56 +6,62 @@ import {
 	ChatOptions,
 	getLocalStorageChats,
 	saveChatMessages,
-	sendChatMessage,
 	cancelMessageStream,
 	clearAllChatData,
-	generateChatId,
+	createMessage
 } from "@/utils/chat/chat-utils";
 
 /**
  * Chat state interface
  * Manages all state related to chat features
  */
-interface ChatState {
-	// Input state
-	input: string;
-	setInput: (input: string) => void;
-	handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-
-	// UI state
+export interface ChatState {
+	/** 是否正在加载 */
 	isLoading: boolean;
+	/** 设置加载状态 */
 	setIsLoading: (isLoading: boolean) => void;
 
-	// Chat options
+	/** 聊天选项 */
 	chatOptions: ChatOptions;
+	/** 设置聊天选项 */
 	setChatOptions: (options: ChatOptions) => void;
 
-	// Chat state
+	/** 当前聊天ID */
 	currentChatId: string;
+	/** 设置当前聊天ID */
 	setCurrentChatId: (id: string) => void;
+	/** 创建新聊天 */
 	createNewChat: () => void;
 
-	// System prompts per chat
+	/** 每个聊天的系统提示 */
 	systemPrompts: Record<string, string>;
+	/** 设置指定聊天的系统提示 */
 	setSystemPrompt: (chatId: string, systemPrompt: string) => void;
+	/** 获取指定聊天的系统提示 */
 	getSystemPrompt: (chatId: string) => string;
 
-	// Messages
+	/** 聊天消息记录，按聊天ID分组 */
 	messages: Record<string, Message[]>;
+	/** 当前聊天的消息 */
 	currentMessages: Message[];
+	/** 设置指定聊天的消息 */
 	setMessages: (chatId: string, messages: Message[]) => void;
-	setCurrentMessages: (messagesOrUpdater: Message[] | ((messages: Message[]) => Message[])) => void;
+	/** 设置当前聊天的消息 */
+	setCurrentMessages: (messagesOrUpdater: Message[]) => void;
+	/** 清除所有聊天记录 */
 	clearAllChats: () => void;
 
-	// Chat actions
-	sendMessage: () => void;
+	/** 发送消息 */
+	sendMessage: (message: string) => void;
+	/** 停止消息生成 */
 	stopMessageGeneration: () => void;
 
-	// Chat history
+	/** 获取分组后的聊天历史 */
 	getGroupedChats: () => ReturnType<typeof getLocalStorageChats>;
 
-	// Error state
+	/** 错误信息 */
 	error: string | undefined;
+	/** 设置错误信息 */
 	setError: (error: string | undefined) => void;
 }
 
@@ -66,11 +72,6 @@ interface ChatState {
 export const useChatStore = create<ChatState>()(
 	persist(
 		(set, get) => ({
-			// Input state
-			input: "",
-			setInput: (input) => set({ input }),
-			handleInputChange: (e) => set({ input: e.target.value }),
-
 			// UI state
 			isLoading: false,
 			setIsLoading: (isLoading) => set({ isLoading }),
@@ -78,7 +79,7 @@ export const useChatStore = create<ChatState>()(
 			// Chat options
 			chatOptions: {
 				selectedModel: "",
-				systemPrompt: "You are a helpful AI assistant.",
+				systemPrompt: "你是孔子，你回答任何问题都只会用文言文。",
 				temperature: 0.9,
 			},
 			setChatOptions: (options) => set({ chatOptions: options }),
@@ -100,7 +101,6 @@ export const useChatStore = create<ChatState>()(
 				set({
 					currentChatId: "",
 					currentMessages: [],
-					input: ""
 				});
 			},
 
@@ -132,21 +132,16 @@ export const useChatStore = create<ChatState>()(
 				// Save to localStorage and trigger event
 				saveChatMessages(chatId, messages);
 			},
-			setCurrentMessages: (messagesOrUpdater) => {
-				// Handle both direct message array and updater function
-				const newMessages = typeof messagesOrUpdater === 'function'
-					? messagesOrUpdater(get().currentMessages)
-					: messagesOrUpdater;
-
-				set({ currentMessages: newMessages });
+			setCurrentMessages: (messages) => {
+				set({ currentMessages: messages });
 
 				// If we have a current chat ID, also update the messages record
 				const currentChatId = get().currentChatId;
 				if (currentChatId) {
 					set((state) => ({
-						messages: { ...state.messages, [currentChatId]: newMessages },
+						messages: { ...state.messages, [currentChatId]: messages },
 					}));
-					saveChatMessages(currentChatId, newMessages);
+					saveChatMessages(currentChatId, messages);
 				}
 			},
 
@@ -158,38 +153,12 @@ export const useChatStore = create<ChatState>()(
 					messages: {},
 					currentChatId: "",
 					currentMessages: [],
-					input: ""
 				});
 			},
 
 			// Chat actions
-			sendMessage: async () => {
-				const state = get();
-				const {
-					input,
-					currentMessages,
-					chatOptions,
-					currentChatId
-				} = state;
-
-				// Get the system prompt
-				const systemPrompt = state.getSystemPrompt(currentChatId);
-
-				// Call the utility function to handle sending the message
-				await sendChatMessage(
-					input,
-					currentMessages,
-					chatOptions,
-					currentChatId,
-					systemPrompt,
-					{
-						setIsLoading: state.setIsLoading,
-						setCurrentMessages: state.setCurrentMessages,
-						setCurrentChatId: state.setCurrentChatId,
-						setInput: state.setInput,
-						setError: state.setError
-					}
-				);
+			sendMessage: async (message: string) => {
+				createMessage(message, get())
 			},
 
 			stopMessageGeneration: () => {

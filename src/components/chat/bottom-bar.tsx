@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, ChangeEvent, useState } from "react";
 import { PaperPlaneIcon, StopIcon } from "@radix-ui/react-icons";
 import dynamic from "next/dynamic";
 
@@ -26,13 +26,11 @@ const TextareaAutosize = dynamic(() => import("react-textarea-autosize"), {
 const ChatBottombar = () => {
     const hasMounted = useHasMounted();
     const {
-        input,
-        handleInputChange,
         sendMessage,
         isLoading,
         stopMessageGeneration,
     } = useChatStore();
-
+    const [input, setInput] = useState('')
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
     // Handle keyboard shortcuts
@@ -44,7 +42,8 @@ const ChatBottombar = () => {
             input.trim()
         ) {
             e.preventDefault();
-            sendMessage();
+            sendMessage(input);
+            setInput('')
         }
     };
 
@@ -57,12 +56,20 @@ const ChatBottombar = () => {
 
     const isSubmitDisabled = isLoading || !input.trim();
 
+    const handleInputChange = (event: ChangeEvent<HTMLTextAreaElement>): void => {
+        const userInput = event.target.value
+        setInput(userInput)
+    }
+
     return (
         <div className="px-6 md:px-10">
             <div className="stretch flex flex-row gap-3 last:mb-2 md:last:mb-6 md:mx-auto md:max-w-2xl xl:max-w-3xl">
                 <div className="w-full relative mb-1 items-center">
                     <form
-                        onSubmit={sendMessage}
+                        onSubmit={() => {
+                            sendMessage(input)
+                            setInput('')
+                        }}
                         className="w-full items-center flex relative gap-2"
                     >
                         <TextareaAutosize
