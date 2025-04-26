@@ -68,6 +68,17 @@ export const useFileUploadStore = create<FileUploadState>()((set, get) => ({
                 parsedData: result,
                 isLoading: false
             });
+            // 新增：将解析结果发送到后端API
+            try {
+                await fetch("/api/data/upload", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ headers: result.headers, rows: result.rows })
+                });
+            } catch (apiErr) {
+                // 可以选择在此处设置错误信息或忽略
+                // set({ error: `API同步失败: ${apiErr instanceof Error ? apiErr.message : String(apiErr)}` });
+            }
         } catch (err) {
             set({
                 error: `文件解析错误: ${err instanceof Error ? err.message : String(err)}`,

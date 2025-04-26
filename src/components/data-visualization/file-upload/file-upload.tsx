@@ -118,8 +118,8 @@ export default function FileUpload({ onFileChange }: FileUploadProps) {
         <label
           htmlFor="file-upload"
           className={`mt-4 px-4 py-2 text-white text-sm font-medium rounded-md cursor-pointer ${error
-              ? "bg-red-500 hover:bg-red-600 focus:ring-red-500"
-              : "bg-primary hover:bg-primary/90 focus:ring-primary"
+            ? "bg-red-500 hover:bg-red-600 focus:ring-red-500"
+            : "bg-primary hover:bg-primary/90 focus:ring-primary"
             } focus:outline-hidden focus:ring-2 focus:ring-offset-2`}
         >
           选择文件

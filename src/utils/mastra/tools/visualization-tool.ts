@@ -15,7 +15,7 @@ const createChart = async ({
     xAxisColumn?: string;
     yAxisColumn?: string;
 }) => {
-    console.log('awdawdawd' + useFileUploadStore.getState().parsedData)
+    
     return true
 };
 
