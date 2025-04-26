@@ -15,7 +15,7 @@ const createChart = async ({
     xAxisColumn?: string;
     yAxisColumn?: string;
 }) => {
-    
+    console.log(useFileUploadStore.getState().parsedData)
     return true
 };
 
@@ -30,10 +30,7 @@ export const visualization = createTool({
     }),
     description: `Create visualization charts based on user's request. `,
     execute: async ({ context }) => {
-        // Complete params based on inputSchema
         const { chartType, title, xAxisColumn, yAxisColumn } = context;
-        console.log(`To create chart with context of ${JSON.stringify(context)}`)
-        // Invoke createChart with destructured params
         const result = await createChart({ chartType, title, xAxisColumn, yAxisColumn });
         return result
     },

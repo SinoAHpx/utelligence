@@ -1,6 +1,9 @@
 import { Message } from "ai/react";
 import { v4 as uuidv4 } from "uuid";
 import { useChatStore } from "@/store/chat-store";
+import { visualizationChartStore } from "@/store";
+import { useFileUploadStore } from "@/store/file-upload-store";
+import { processBarChartData } from "../data/data-processing";
 
 /**
  * Chat message type information
@@ -218,6 +221,24 @@ export const createMessage = async (userQuery: string) => {
 
 	setCurrentMessages([...currentMessages, userMessage, assistantMessage])
 	await streamResponse(assistantMessage.id)
+
+	const { addChart } = visualizationChartStore.getState()
+	const { parsedData } = useFileUploadStore.getState()
+	if (parsedData) {
+		addChart({
+			...processBarChartData(parsedData!, {
+				xAxisColumn: '年份',
+				yAxisColumn: '研究领域'
+			}),
+			id: "awd",
+			chartType: "bar",
+			title: "年份和研究领域",
+			xAxisColumn: "年份",
+			yAxisColumn: "研究领域"
+		})
+	}
+
+
 	setIsLoading(false)
 }
 
