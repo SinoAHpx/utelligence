@@ -152,23 +152,12 @@ export const visualizationChartStore = create<VisualizationChartState>()(
                 fileChartConfigs: state.fileChartConfigs,
             }),
             onRehydrateStorage: (state) => {
-                console.log("Hydrating visualization chart state...");
                 return (rehydratedState, error) => {
-                    if (error) {
-                        console.error("Failed to hydrate visualization chart state:", error);
-                    } else if (rehydratedState) {
-                        console.log("Visualization chart hydration success");
-                        // We can't call loadChartsForCurrentFile here directly
-                        // because fileDataStore might not be initialized yet
-                        setTimeout(() => {
-                            visualizationChartStore.getState().loadChartsForCurrentFile();
-                        }, 0);
+                    if (!error && rehydratedState) {
+                        state.loadChartsForCurrentFile();
                     }
                 };
             },
         },
     ),
 );
-
-// We'll initialize charts after both stores are initialized
-// This is moved to the index file that will re-export all stores 
