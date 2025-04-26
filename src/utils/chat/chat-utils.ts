@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { useChatStore } from "@/store/chat-store";
 import { visualizationChartStore } from "@/store";
 import { useFileUploadStore } from "@/store/file-upload-store";
-import { processBarChartData } from "../data/data-processing";
+import { processBarChartData, processLineChartData, processAreaChartData, processPieChartData, processScatterChartData, processRadarChartData } from "../data/data-processing";
 
 /**
  * Chat message type information
@@ -214,44 +214,123 @@ export const createMessage = async (userQuery: string) => {
 	// Create a new abort controller for this request
 	abortController = new AbortController();
 
-	// 创建用户消息和空的助手消息（助手消息包含一个不可见字符）
-	const assistantMessage = new AssistantMessage() // Zero-width space
+	const assistantMessage = new AssistantMessage()
 	const userMessage = new UserMessage(userQuery)
 
-
 	setCurrentMessages([...currentMessages, userMessage, assistantMessage])
-	await streamResponse(assistantMessage.id)
-
-	const { addChart } = visualizationChartStore.getState()
 	const { parsedData } = useFileUploadStore.getState()
-	if (parsedData) {
-		addChart({
-			...processBarChartData(parsedData!, {
-				xAxisColumn: '年份',
-				yAxisColumn: '研究领域'
-			}),
-			id: "awd",
-			chartType: "bar",
-			title: "年份和研究领域",
-			xAxisColumn: "年份",
-			yAxisColumn: "研究领域"
-		})
+	if (!parsedData) {
+		await streamResponse(assistantMessage.id, '注意，用户目前没有上传文件，请你提醒用户上传文件。然后，再回答用户的问题。')
+		setIsLoading(false)
+		return
 	}
 
+	if (userQuery.includes('图')) {
+		const { addChart } = visualizationChartStore.getState()
 
-	setIsLoading(false)
+		//todo: enhance, you know what I mean
+		// 关键词与列名的简单映射（可根据实际数据调整）
+		const barKeywords = ["柱状图", "bar"];
+		const lineKeywords = ["线形图", "折线图", "line"];
+		const areaKeywords = ["面积图", "area"];
+		const pieKeywords = ["饼图", "pie"];
+		const scatterKeywords = ["散点图", "scatter"];
+		const radarKeywords = ["雷达图", "radar"];
+
+		// 假设数据有这些列名
+		const xAxis = parsedData.headers.includes("年份") ? "年份" : parsedData.headers[0];
+		const yAxis = parsedData.headers.includes("研究领域") ? "研究领域" : parsedData.headers[1] || parsedData.headers[0];
+
+		// 柱状图
+		if (barKeywords.some(k => userQuery.includes(k))) {
+			addChart({
+				...processBarChartData(parsedData, { xAxisColumn: xAxis, yAxisColumn: yAxis }),
+				id: uuidv4(),
+				chartType: "bar",
+				title: `柱状图: ${xAxis} vs ${yAxis}`,
+				xAxisColumn: xAxis,
+				yAxisColumn: yAxis
+			})
+		}
+		// 线形图
+		if (lineKeywords.some(k => userQuery.includes(k))) {
+			addChart({
+				...processLineChartData(parsedData, { xAxisColumn: xAxis, yAxisColumn: yAxis }),
+				id: uuidv4(),
+				chartType: "line",
+				title: `线形图: ${xAxis} vs ${yAxis}`,
+				xAxisColumn: xAxis,
+				yAxisColumn: yAxis
+			})
+		}
+		// 面积图
+		if (areaKeywords.some(k => userQuery.includes(k))) {
+			addChart({
+				...processAreaChartData(parsedData, { xAxisColumn: xAxis, yAxisColumn: yAxis }),
+				id: uuidv4(),
+				chartType: "area",
+				title: `面积图: ${xAxis} vs ${yAxis}`,
+				xAxisColumn: xAxis,
+				yAxisColumn: yAxis
+			})
+		}
+		// 饼图
+		if (pieKeywords.some(k => userQuery.includes(k))) {
+			addChart({
+				...processPieChartData(parsedData, { valueColumn: yAxis }),
+				id: uuidv4(),
+				chartType: "pie",
+				title: `饼图: ${yAxis}`,
+				yAxisColumn: yAxis
+			})
+		}
+		// 散点图
+		if (scatterKeywords.some(k => userQuery.includes(k))) {
+			addChart({
+				...processScatterChartData(parsedData, { xAxisColumn: xAxis, yAxisColumn: yAxis }),
+				id: uuidv4(),
+				chartType: "scatter",
+				title: `散点图: ${xAxis} vs ${yAxis}`,
+				xAxisColumn: xAxis,
+				yAxisColumn: yAxis
+			})
+		}
+		// 雷达图
+		if (radarKeywords.some(k => userQuery.includes(k))) {
+			addChart({
+				...processRadarChartData(parsedData, { xAxisColumn: yAxis }),
+				id: uuidv4(),
+				chartType: "radar",
+				title: `雷达图: ${yAxis}`,
+				yAxisColumn: yAxis
+			})
+		}
+
+		await streamResponse(assistantMessage.id, '你只需要说创建成功就可以，不需要提供图片。')
+		setIsLoading(false)
+	}
+	else {
+		const rag = JSON.stringify(parsedData)
+		await streamResponse(assistantMessage.id, '请你根据以下内容回答用户的问题：' + rag)
+		setIsLoading(false)
+	}
 }
 
-export const streamResponse = async (assistantMessageId: string) => {
+export const streamResponse = async (assistantMessageId: string, additionalContent: string = '') => {
 	const { currentMessages, appendMessageContent } = useChatStore.getState()
-	//todo: get enhanced system prompt
+	// //todo: get enhanced system prompt
 	const requestBody = JSON.stringify({
 		messages: [
-			...currentMessages,
 			{
 				"role": "system",
 				"content": "You are a helpful assistant"
 			},
+			{
+				"role": "user",
+				"content": additionalContent
+			},
+			...currentMessages,
+
 		]
 	})
 	const response = await fetch('/api/chat', {
