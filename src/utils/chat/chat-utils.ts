@@ -199,7 +199,7 @@ export const clearAllChatData = (): void => {
 /**
  * Abort controller for canceling ongoing requests
  */
-let abortController: AbortController | null = null;
+let abortController: AbortController = new AbortController();
 
 /**
  * Create a new message in the message list
@@ -207,6 +207,9 @@ let abortController: AbortController | null = null;
 export const createMessage = async (userQuery: string) => {
 	const { setIsLoading, setCurrentMessages, currentMessages, currentChatId, appendMessageContent: updateMessage, chatOptions, getSystemPrompt } = useChatStore.getState()
 	setIsLoading(true)
+
+	// Create a new abort controller for this request
+	abortController = new AbortController();
 
 	// 创建用户消息和空的助手消息
 	const assistantMessage = new AssistantMessage()
@@ -219,7 +222,7 @@ export const createMessage = async (userQuery: string) => {
 }
 
 export const streamResponse = async (userMessage: Message, assistantMessageId: string) => {
-	const { currentMessages, appendMessageContent, getSystemPrompt, currentChatId } = useChatStore.getState()
+	const { currentMessages, appendMessageContent } = useChatStore.getState()
 	//todo: get enhanced system prompt
 	const response = await fetch('/api/chat', {
 		method: 'POST',
@@ -228,11 +231,12 @@ export const streamResponse = async (userMessage: Message, assistantMessageId: s
 				...currentMessages,
 				{
 					"role": "system",
-					"content": typeof getSystemPrompt === 'function' ? getSystemPrompt(currentChatId) : "test"
+					"content": "You are a helpful assistant"
 				},
 				userMessage
 			]
-		})
+		}),
+		signal: abortController.signal
 	})
 	if (!response.body) throw new Error("No response body to read from stream");
 	const reader = response.body.getReader();
@@ -243,6 +247,11 @@ export const streamResponse = async (userMessage: Message, assistantMessageId: s
 
 	try {
 		while (true) {
+			// Check for abort signal and exit if aborted
+			if (abortController.signal.aborted) {
+				reader.cancel();
+				break;
+			}
 			const { done, value } = await reader.read();
 			if (done) break;
 
@@ -265,24 +274,6 @@ export const streamResponse = async (userMessage: Message, assistantMessageId: s
 
 					messageContent += content;
 					appendMessageContent(assistantMessageId, content);
-				} else if (line.startsWith('f:')) {
-					// Message metadata - could extract messageId if needed
-					const metadataStr = line.substring(2);
-					try {
-						const metadata = JSON.parse(metadataStr);
-						// Could do something with metadata.messageId if needed
-					} catch (e) {
-						console.error('Error parsing message metadata:', e);
-					}
-				} else if (line.startsWith('e:') || line.startsWith('d:')) {
-					// End of message marker - could extract finish reason if needed
-					const endInfoStr = line.substring(2);
-					try {
-						const endInfo = JSON.parse(endInfoStr);
-						// Could do something with endInfo.finishReason if needed
-					} catch (e) {
-						console.error('Error parsing end marker:', e);
-					}
 				}
 			}
 		}
@@ -293,8 +284,10 @@ export const streamResponse = async (userMessage: Message, assistantMessageId: s
 		}
 
 	} catch (error) {
-		console.error('Error processing chat stream:', error);
-		throw error;
+		if (error instanceof Error && error.name !== 'AbortError') {
+			console.error('Error processing chat stream:', error);
+			throw error;
+		}
 	}
 };
 
@@ -302,8 +295,5 @@ export const streamResponse = async (userMessage: Message, assistantMessageId: s
  * Cancel any ongoing message streaming
  */
 export const cancelMessageStream = (): void => {
-	if (abortController) {
-		abortController.abort();
-		abortController = null;
-	}
+	abortController.abort();
 };
