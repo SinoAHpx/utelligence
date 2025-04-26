@@ -205,37 +205,37 @@ let abortController: AbortController = new AbortController();
  * Create a new message in the message list
  */
 export const createMessage = async (userQuery: string) => {
-	const { setIsLoading, setCurrentMessages, currentMessages, currentChatId, appendMessageContent: updateMessage, chatOptions, getSystemPrompt } = useChatStore.getState()
+	const { setIsLoading, setCurrentMessages, currentMessages } = useChatStore.getState()
 	setIsLoading(true)
 
 	// Create a new abort controller for this request
 	abortController = new AbortController();
 
-	// 创建用户消息和空的助手消息
-	const assistantMessage = new AssistantMessage()
+	// 创建用户消息和空的助手消息（助手消息包含一个不可见字符）
+	const assistantMessage = new AssistantMessage() // Zero-width space
 	const userMessage = new UserMessage(userQuery)
 
 
 	setCurrentMessages([...currentMessages, userMessage, assistantMessage])
-	await streamResponse(userMessage, assistantMessage.id)
+	await streamResponse(assistantMessage.id)
 	setIsLoading(false)
 }
 
-export const streamResponse = async (userMessage: Message, assistantMessageId: string) => {
+export const streamResponse = async (assistantMessageId: string) => {
 	const { currentMessages, appendMessageContent } = useChatStore.getState()
 	//todo: get enhanced system prompt
+	const requestBody = JSON.stringify({
+		messages: [
+			...currentMessages,
+			{
+				"role": "system",
+				"content": "You are a helpful assistant"
+			},
+		]
+	})
 	const response = await fetch('/api/chat', {
 		method: 'POST',
-		body: JSON.stringify({
-			messages: [
-				...currentMessages,
-				{
-					"role": "system",
-					"content": "You are a helpful assistant"
-				},
-				userMessage
-			]
-		}),
+		body: requestBody,
 		signal: abortController.signal
 	})
 	if (!response.body) throw new Error("No response body to read from stream");

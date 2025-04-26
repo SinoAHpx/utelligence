@@ -5,12 +5,17 @@ export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const json = await req.json();
+    const { messages } = json
+    console.log('--------------')
+    console.log(json)
+    console.log('--------------')
+
     const stream = await dataVisualizationAgent.stream(messages);
 
     return stream.toDataStreamResponse()
   } catch (error) {
-    console.error(error);
+    console.error(JSON.stringify(error));
     return NextResponse.json(
       {
         success: false,
