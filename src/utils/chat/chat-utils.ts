@@ -1,7 +1,5 @@
 import { Message } from "ai/react";
 import { v4 as uuidv4 } from "uuid";
-import { toast } from "sonner";
-import { basePath } from "@/utils/utils";
 import { useChatStore } from "@/store/chat-store";
 
 /**
@@ -176,77 +174,12 @@ export class AssistantMessage implements Message {
 	id: string;
 	role: 'assistant';
 	content: string;
-	constructor(content: string) {
+	constructor(content: string = '') {
 		this.id = uuidv4();
 		this.role = 'assistant';
 		this.content = content;
 	}
 }
-
-/**
- * Send a message to the chat API and process the streaming response
- * 
- * @param messages Current messages to send to API
- * @param chatOptions Chat configuration options
- * @param systemPrompt System prompt to use
- * @param onStreamChunk Callback for each chunk of the stream response
- * @param onComplete Callback when streaming is complete
- * @param onError Callback for error handling
- */
-export const sendChatCompletion = async (
-	messages: Message[],
-	chatOptions: ChatOptions,
-	systemPrompt: string,
-	onStreamChunk: (chunk: string) => void,
-	onComplete: () => void,
-	onError: (error: Error) => void
-): Promise<void> => {
-	try {
-		const response = await fetch(`${basePath}/api/chat`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify({
-				messages,
-				chatOptions: {
-					...chatOptions,
-					systemPrompt,
-				},
-			}),
-		});
-
-		if (!response.ok) {
-			throw new Error('Network response was not ok');
-		}
-
-		// Process the streaming response
-		const reader = response.body?.getReader();
-		if (!reader) {
-			throw new Error('Response body reader could not be obtained');
-		}
-
-		const decoder = new TextDecoder();
-		let done = false;
-
-		while (!done) {
-			const result = await reader.read();
-			done = result.done;
-
-			if (done) {
-				onComplete();
-				break;
-			}
-
-			// Decode the chunk and append to the message
-			const chunk = decoder.decode(result.value, { stream: true });
-			onStreamChunk(chunk);
-		}
-	} catch (error) {
-		onError(error instanceof Error ? error : new Error(String(error)));
-		toast.error(`Something went wrong: ${error instanceof Error ? error.message : String(error)}`);
-	}
-};
 
 /**
  * Clear all chat data from localStorage
@@ -271,15 +204,99 @@ let abortController: AbortController | null = null;
 /**
  * Create a new message in the message list
  */
-export const createMessage = (message: string) => {
-	const { setIsLoading, setCurrentMessages, currentMessages } = useChatStore.getState()
+export const createMessage = async (userQuery: string) => {
+	const { setIsLoading, setCurrentMessages, currentMessages, currentChatId, appendMessageContent: updateMessage, chatOptions, getSystemPrompt } = useChatStore.getState()
 	setIsLoading(true)
-	//todo: actually implement streaming message
-	setCurrentMessages([...currentMessages, new UserMessage(message), new AssistantMessage('')])
 
+	// 创建用户消息和空的助手消息
+	const assistantMessage = new AssistantMessage()
+	const userMessage = new UserMessage(userQuery)
+
+
+	setCurrentMessages([...currentMessages, userMessage, assistantMessage])
+	await streamResponse(userMessage, assistantMessage.id)
 	setIsLoading(false)
 }
 
+export const streamResponse = async (userMessage: Message, assistantMessageId: string) => {
+	const { currentMessages, appendMessageContent, getSystemPrompt, currentChatId } = useChatStore.getState()
+	//todo: get enhanced system prompt
+	const response = await fetch('/api/chat', {
+		method: 'POST',
+		body: JSON.stringify({
+			messages: [
+				...currentMessages,
+				{
+					"role": "system",
+					"content": typeof getSystemPrompt === 'function' ? getSystemPrompt(currentChatId) : "test"
+				},
+				userMessage
+			]
+		})
+	})
+	if (!response.body) throw new Error("No response body to read from stream");
+	const reader = response.body.getReader();
+	const decoder = new TextDecoder();
+
+	let buffer = '';
+	let messageContent = '';
+
+	try {
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+
+			// Add the new chunk to our buffer
+			buffer += decoder.decode(value, { stream: true });
+
+			// Process complete messages from the buffer
+			const lines = buffer.split('\n');
+			buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
+
+			for (const line of lines) {
+				if (!line) continue;
+
+				// Parse the specialized format
+				if (line.startsWith('0:"')) {
+					// Extract the content between quotes and handle escaping
+					const content = line.substring(3, line.length - 1)
+						.replace(/\\"/g, '"')
+						.replace(/\\n/g, '\n');
+
+					messageContent += content;
+					appendMessageContent(assistantMessageId, content);
+				} else if (line.startsWith('f:')) {
+					// Message metadata - could extract messageId if needed
+					const metadataStr = line.substring(2);
+					try {
+						const metadata = JSON.parse(metadataStr);
+						// Could do something with metadata.messageId if needed
+					} catch (e) {
+						console.error('Error parsing message metadata:', e);
+					}
+				} else if (line.startsWith('e:') || line.startsWith('d:')) {
+					// End of message marker - could extract finish reason if needed
+					const endInfoStr = line.substring(2);
+					try {
+						const endInfo = JSON.parse(endInfoStr);
+						// Could do something with endInfo.finishReason if needed
+					} catch (e) {
+						console.error('Error parsing end marker:', e);
+					}
+				}
+			}
+		}
+
+		// Process any remaining data in the buffer
+		if (buffer) {
+			appendMessageContent(assistantMessageId, buffer);
+		}
+
+	} catch (error) {
+		console.error('Error processing chat stream:', error);
+		throw error;
+	}
+};
 
 /**
  * Cancel any ongoing message streaming

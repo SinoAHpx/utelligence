@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { Message } from "ai/react";
+import { Message, useChat } from "ai/react";
 
 import {
 	ChatOptions,
@@ -50,8 +50,8 @@ export interface ChatState {
 	setCurrentMessages: (messagesOrUpdater: Message[]) => void;
 	/** 清除所有聊天记录 */
 	clearAllChats: () => void;
-
-	/** 发送消息 */
+	appendMessageContent: (id: string, content: string) => void;
+	/** 处理发送消息的行为 */
 	sendMessage: (message: string) => void;
 	/** 停止消息生成 */
 	stopMessageGeneration: () => void;
@@ -155,10 +155,23 @@ export const useChatStore = create<ChatState>()(
 					currentMessages: [],
 				});
 			},
+			appendMessageContent: (id: string, content: string) => {
+				const updatedCurrentMessages = get().currentMessages.map((message) => {
+					if (message.id == id) return {...message, content: `${message.content}${content}`}
+					else return message
+				});
 
-			// Chat actions
+				set(() => ({
+					currentMessages: updatedCurrentMessages,
+				}));
+
+				saveChatMessages(get().currentChatId, updatedCurrentMessages);
+			},
+
 			sendMessage: async (message: string) => {
 				createMessage(message)
+
+
 			},
 
 			stopMessageGeneration: () => {
