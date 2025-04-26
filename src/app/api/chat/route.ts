@@ -5,11 +5,7 @@ export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
-    const json = await req.json();
-    const { messages } = json
-    console.log('--------------')
-    console.log(json)
-    console.log('--------------')
+    const { messages } = await req.json();
 
     const stream = await dataVisualizationAgent.stream(messages);
 

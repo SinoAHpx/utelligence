@@ -10,8 +10,3 @@ export const dataVisualizationAgent = new Agent({
         visualization: visualization
     }
 });
-
-// const stream = await dataVisualizationAgent.stream('hi')
-// for await (const textPart of stream.textStream) {
-//     console.log(textPart);
-// }
