@@ -1,15 +1,14 @@
 "use client";
 
 import ClearChatsButton from "./settings/settings-clear-chats";
-import SystemPrompt, { SystemPromptProps } from "./system-prompt";
-import { Input } from "./ui/input";
-import { Slider } from "@/components/ui/slider";
-import { Label } from "@/components/ui/label";
-import { ChatOptions } from "./chat/options";
-import { useHasMounted } from "@/lib/utils";
 import { MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { Button } from "./ui/button";
+import { Button } from "./ui/shadcn/button";
+import { useHasMounted } from "@/utils/utils";
+import { Slider } from "@radix-ui/react-slider";
+import { Label } from "recharts";
+import SystemPrompt, { SystemPromptProps } from "./settings/system-prompt";
+import { Input } from "./ui/shadcn/input";
 
 const SettingsThemeToggle = () => {
   const hasMounted = useHasMounted();
@@ -23,7 +22,7 @@ const SettingsThemeToggle = () => {
 
   return (
     <div className="flex items-center justify-between px-2">
-      <Label htmlFor="theme-toggle">外观</Label>
+      <Label>外观</Label>
       <Button
         id="theme-toggle"
         className="gap-2"
@@ -69,7 +68,7 @@ const TemperatureSlider = ({
     <div className="space-y-4">
       <div className="grid gap-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="temperature">Temperature</Label>
+          <Label>Temperature</Label>
           <Input
             id="temperature-value"
             type="number"

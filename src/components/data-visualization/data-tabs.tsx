@@ -20,7 +20,7 @@ export default function DataTabs({ file }: DataTabsProps) {
   useEffect(() => {
     if (file) {
       setFile(file);
-      processFile(file, 30);
+      processFile(file);
     }
   }, [file, setFile, processFile]);
 

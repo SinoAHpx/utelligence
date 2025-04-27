@@ -131,8 +131,8 @@ export function simpleLinearRegression(
 
 	// Calculate means
 	const n = xValues.length;
-	const meanX = xValues.reduce((sum, val) => sum + val, 0) / n;
-	const meanY = yValues.reduce((sum, val) => sum + val, 0) / n;
+	const meanX = xValues.reduce<number>((sum, val) => sum + val, 0) / n;
+	const meanY = yValues.reduce<number>((sum, val) => sum + val, 0) / n;
 
 	// Calculate slope and intercept
 	let numerator = 0;
@@ -150,11 +150,11 @@ export function simpleLinearRegression(
 	const predictedValues = xValues.map((x) => slope * x + intercept);
 	const residuals = yValues.map((y, i) => y - predictedValues[i]);
 
-	const totalSumOfSquares = yValues.reduce(
+	const totalSumOfSquares = yValues.reduce<number>(
 		(sum, y) => sum + Math.pow(y - meanY, 2),
 		0,
 	);
-	const residualSumOfSquares = residuals.reduce(
+	const residualSumOfSquares = residuals.reduce<number>(
 		(sum, residual) => sum + Math.pow(residual, 2),
 		0,
 	);
@@ -249,12 +249,12 @@ export function multipleLinearRegression(
 	const residuals = yValues.map((y, i) => y - predictedValues[i]);
 
 	// Calculate R-squared
-	const meanY = yValues.reduce((sum, val) => sum + val, 0) / n;
-	const totalSumOfSquares = yValues.reduce(
+	const meanY = yValues.reduce<number>((sum, val) => sum + val, 0) / n;
+	const totalSumOfSquares = yValues.reduce<number>(
 		(sum, y) => sum + Math.pow(y - meanY, 2),
 		0,
 	);
-	const residualSumOfSquares = residuals.reduce(
+	const residualSumOfSquares = residuals.reduce<number>(
 		(sum, residual) => sum + Math.pow(residual, 2),
 		0,
 	);
@@ -349,7 +349,7 @@ export function logisticRegression(
 
 	// Calculate pseudo-R2 (McFadden's)
 	// Null model (intercept only)
-	const meanY = yValues.reduce((sum, val) => sum + val, 0) / n;
+	const meanY = yValues.reduce<number>((sum, val) => sum + val, 0) / n;
 	let nullLogLikelihood = 0;
 	for (let i = 0; i < n; i++) {
 		nullLogLikelihood +=
@@ -387,31 +387,36 @@ export function powerRegression(
 	y: CellValue[],
 ): RegressionResult | null {
 	// Filter out non-positive values which can't be log-transformed
-	const pairs: [number, number][] = [];
+	const validPairs: { x: number; y: number }[] = [];
 
 	for (let i = 0; i < Math.min(x.length, y.length); i++) {
-		const xValue =
-			typeof x[i] === "number" ? x[i] : Number(String(x[i]).trim());
-		const yValue =
-			typeof y[i] === "number" ? y[i] : Number(String(y[i]).trim());
+		const xRaw = x[i];
+		const yRaw = y[i];
+
+		if (xRaw === null || xRaw === undefined || yRaw === null || yRaw === undefined) {
+			continue;
+		}
+
+		const xValue = typeof xRaw === "number" ? xRaw : Number(String(xRaw).trim());
+		const yValue = typeof yRaw === "number" ? yRaw : Number(String(yRaw).trim());
 
 		if (!isNaN(xValue) && !isNaN(yValue) && xValue > 0 && yValue > 0) {
-			pairs.push([xValue, yValue]);
+			validPairs.push({ x: xValue, y: yValue });
 		}
 	}
 
-	if (pairs.length < 2) {
+	if (validPairs.length < 2) {
 		return null; // Not enough valid data points
 	}
 
 	// Transform data using logarithms
-	const logX = pairs.map((p) => Math.log(p[0]));
-	const logY = pairs.map((p) => Math.log(p[1]));
+	const logX = validPairs.map(p => Math.log(p.x));
+	const logY = validPairs.map(p => Math.log(p.y));
 
 	// Perform linear regression on transformed data
-	const n = pairs.length;
-	const meanLogX = logX.reduce((sum, val) => sum + val, 0) / n;
-	const meanLogY = logY.reduce((sum, val) => sum + val, 0) / n;
+	const n = validPairs.length;
+	const meanLogX = logX.reduce<number>((sum, val) => sum + val, 0) / n;
+	const meanLogY = logY.reduce<number>((sum, val) => sum + val, 0) / n;
 
 	let numerator = 0;
 	let denominator = 0;
@@ -430,19 +435,19 @@ export function powerRegression(
 	const predictedLogY = logX.map((x) => logA + b * x);
 	const residualsLogY = logY.map((y, i) => y - predictedLogY[i]);
 
-	const totalSumOfSquaresLog = logY.reduce(
+	const totalSumOfSquaresLog = logY.reduce<number>(
 		(sum, y) => sum + Math.pow(y - meanLogY, 2),
 		0,
 	);
-	const residualSumOfSquaresLog = residualsLogY.reduce(
+	const residualSumOfSquaresLog = residualsLogY.reduce<number>(
 		(sum, r) => sum + Math.pow(r, 2),
 		0,
 	);
 	const r2 = 1 - residualSumOfSquaresLog / totalSumOfSquaresLog;
 
 	// Calculate predictions and residuals in original scale
-	const xValues = pairs.map((p) => p[0]);
-	const yValues = pairs.map((p) => p[1]);
+	const xValues = validPairs.map(p => p.x);
+	const yValues = validPairs.map(p => p.y);
 	const predictedY = xValues.map((x) => a * Math.pow(x, b));
 	const residuals = yValues.map((y, i) => y - predictedY[i]);
 
@@ -450,7 +455,7 @@ export function powerRegression(
 	const adjustedR2 = 1 - ((1 - r2) * (n - 1)) / (n - 2);
 
 	// Calculate standard error
-	const residualSumOfSquares = residuals.reduce(
+	const residualSumOfSquares = residuals.reduce<number>(
 		(sum, r) => sum + Math.pow(r, 2),
 		0,
 	);
@@ -477,31 +482,36 @@ export function exponentialRegression(
 	y: CellValue[],
 ): RegressionResult | null {
 	// Filter out non-positive y values which can't be log-transformed
-	const pairs: [number, number][] = [];
+	const validPairs: { x: number; y: number }[] = [];
 
 	for (let i = 0; i < Math.min(x.length, y.length); i++) {
-		const xValue =
-			typeof x[i] === "number" ? x[i] : Number(String(x[i]).trim());
-		const yValue =
-			typeof y[i] === "number" ? y[i] : Number(String(y[i]).trim());
+		const xRaw = x[i];
+		const yRaw = y[i];
+
+		if (xRaw === null || xRaw === undefined || yRaw === null || yRaw === undefined) {
+			continue;
+		}
+
+		const xValue = typeof xRaw === "number" ? xRaw : Number(String(xRaw).trim());
+		const yValue = typeof yRaw === "number" ? yRaw : Number(String(yRaw).trim());
 
 		if (!isNaN(xValue) && !isNaN(yValue) && yValue > 0) {
-			pairs.push([xValue, yValue]);
+			validPairs.push({ x: xValue, y: yValue });
 		}
 	}
 
-	if (pairs.length < 2) {
+	if (validPairs.length < 2) {
 		return null; // Not enough valid data points
 	}
 
-	const xValues = pairs.map((p) => p[0]);
-	const yValues = pairs.map((p) => p[1]);
+	const xValues = validPairs.map(p => p.x);
+	const yValues = validPairs.map(p => p.y);
 	const logY = yValues.map((y) => Math.log(y));
 
 	// Perform linear regression on semi-log transformed data
-	const n = pairs.length;
-	const meanX = xValues.reduce((sum, val) => sum + val, 0) / n;
-	const meanLogY = logY.reduce((sum, val) => sum + val, 0) / n;
+	const n = validPairs.length;
+	const meanX = xValues.reduce<number>((sum, val) => sum + val, 0) / n;
+	const meanLogY = logY.reduce<number>((sum, val) => sum + val, 0) / n;
 
 	let numerator = 0;
 	let denominator = 0;
@@ -520,11 +530,11 @@ export function exponentialRegression(
 	const predictedLogY = xValues.map((x) => logA + b * x);
 	const residualsLogY = logY.map((y, i) => y - predictedLogY[i]);
 
-	const totalSumOfSquaresLog = logY.reduce(
+	const totalSumOfSquaresLog = logY.reduce<number>(
 		(sum, y) => sum + Math.pow(y - meanLogY, 2),
 		0,
 	);
-	const residualSumOfSquaresLog = residualsLogY.reduce(
+	const residualSumOfSquaresLog = residualsLogY.reduce<number>(
 		(sum, r) => sum + Math.pow(r, 2),
 		0,
 	);
@@ -538,7 +548,7 @@ export function exponentialRegression(
 	const adjustedR2 = 1 - ((1 - r2) * (n - 1)) / (n - 2);
 
 	// Calculate standard error
-	const residualSumOfSquares = residuals.reduce(
+	const residualSumOfSquares = residuals.reduce<number>(
 		(sum, r) => sum + Math.pow(r, 2),
 		0,
 	);
