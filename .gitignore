@@ -39,3 +39,7 @@ next-env.d.ts
 .env
 
 .codelf
+
+# markdown files (except README)
+*.md
+!README.md
