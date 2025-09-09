@@ -4,7 +4,7 @@
  */
 
 declare module "react-syntax-highlighter" {
-	import { ReactNode } from "react";
+	import type { ReactNode } from "react";
 
 	export interface SyntaxHighlighterProps {
 		language?: string;

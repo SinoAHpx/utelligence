@@ -1,4 +1,4 @@
-import { CellValue, CATEGORIES, StatisticResult } from "./types";
+import { CATEGORIES, type CellValue, type StatisticResult } from "./types";
 import { convertToNumericArray } from "./utils";
 
 /**

@@ -1,9 +1,16 @@
-import { Message } from "ai/react";
-import { v4 as uuidv4 } from "uuid";
-import { useChatStore } from "@/store/chat-store";
 import { visualizationChartStore } from "@/store";
-import { useFileUploadStore } from "@/store/file-upload-store";
-import { processBarChartData, processLineChartData, processAreaChartData, processPieChartData, processScatterChartData, processRadarChartData } from "../data/data-processing";
+import { useChatStore } from "@/store/chat-store";
+import { useUnifiedDataStore } from "@/store/unified-data-store";
+import type { Message } from "ai/react";
+import { v4 as uuidv4 } from "uuid";
+import {
+	processAreaChartData,
+	processBarChartData,
+	processLineChartData,
+	processPieChartData,
+	processRadarChartData,
+	processScatterChartData,
+} from "../data/data-processing";
 
 /**
  * Chat message type information
@@ -66,9 +73,7 @@ export const getLocalStorageChats = (): Record<
 	}
 
 	// Get all keys that start with 'chat_'
-	const chatKeys = Object.keys(localStorage).filter((key) =>
-		key.startsWith("chat_"),
-	);
+	const chatKeys = Object.keys(localStorage).filter((key) => key.startsWith("chat_"));
 
 	if (chatKeys.length === 0) {
 		return {};
@@ -91,9 +96,7 @@ export const getLocalStorageChats = (): Record<
 			}
 			return null;
 		})
-		.filter(
-			(chat): chat is { chatId: string; messages: Message[] } => chat !== null,
-		);
+		.filter((chat): chat is { chatId: string; messages: Message[] } => chat !== null);
 
 	// Sort chats by date (most recent first)
 	chatObjects.sort((a, b) => {
@@ -105,7 +108,6 @@ export const getLocalStorageChats = (): Record<
 	// Group chats by date
 	return groupChatsByDate(chatObjects);
 };
-
 
 // Define the Chats interface
 export interface Chats {
@@ -164,22 +166,22 @@ export const groupChatsByDate = (
 
 export class UserMessage implements Message {
 	id: string;
-	role: 'user';
+	role: "user";
 	content: string;
 	constructor(content: string) {
 		this.id = uuidv4();
-		this.role = 'user';
+		this.role = "user";
 		this.content = content;
 	}
 }
 
 export class AssistantMessage implements Message {
 	id: string;
-	role: 'assistant';
+	role: "assistant";
 	content: string;
-	constructor(content: string = '') {
+	constructor(content = "") {
 		this.id = uuidv4();
-		this.role = 'assistant';
+		this.role = "assistant";
 		this.content = content;
 	}
 }
@@ -192,8 +194,8 @@ export const clearAllChatData = (): void => {
 
 	// Clear all chat_ items from local storage
 	Object.keys(localStorage)
-		.filter(key => key.startsWith("chat_"))
-		.forEach(key => localStorage.removeItem(key));
+		.filter((key) => key.startsWith("chat_"))
+		.forEach((key) => localStorage.removeItem(key));
 
 	// Trigger the storage event for other components to detect changes
 	window.dispatchEvent(new Event("storage"));
@@ -208,25 +210,28 @@ let abortController: AbortController = new AbortController();
  * Create a new message in the message list
  */
 export const createMessage = async (userQuery: string) => {
-	const { setIsLoading, setCurrentMessages, currentMessages } = useChatStore.getState()
-	setIsLoading(true)
+	const { setIsLoading, setCurrentMessages, currentMessages } = useChatStore.getState();
+	setIsLoading(true);
 
 	// Create a new abort controller for this request
 	abortController = new AbortController();
 
-	const assistantMessage = new AssistantMessage()
-	const userMessage = new UserMessage(userQuery)
+	const assistantMessage = new AssistantMessage();
+	const userMessage = new UserMessage(userQuery);
 
-	setCurrentMessages([...currentMessages, userMessage, assistantMessage])
-	const { parsedData } = useFileUploadStore.getState()
+	setCurrentMessages([...currentMessages, userMessage, assistantMessage]);
+	const { rawData: parsedData } = useUnifiedDataStore.getState();
 	if (!parsedData) {
-		await streamResponse(assistantMessage.id, '注意，用户目前没有上传文件，请你提醒用户上传文件。然后，再回答用户的问题。')
-		setIsLoading(false)
-		return
+		await streamResponse(
+			assistantMessage.id,
+			"注意，用户目前没有上传文件，请你提醒用户上传文件。然后，再回答用户的问题。"
+		);
+		setIsLoading(false);
+		return;
 	}
 
-	if (userQuery.includes('图')) {
-		const { addChart } = visualizationChartStore.getState()
+	if (userQuery.includes("图")) {
+		const { addChart } = visualizationChartStore.getState();
 
 		//todo: enhance, you know what I mean
 		// 关键词与列名的简单映射（可根据实际数据调整）
@@ -239,111 +244,111 @@ export const createMessage = async (userQuery: string) => {
 
 		// 假设数据有这些列名
 		const xAxis = parsedData.headers.includes("年份") ? "年份" : parsedData.headers[0];
-		const yAxis = parsedData.headers.includes("研究领域") ? "研究领域" : parsedData.headers[1] || parsedData.headers[0];
+		const yAxis = parsedData.headers.includes("研究领域")
+			? "研究领域"
+			: parsedData.headers[1] || parsedData.headers[0];
 
 		// 柱状图
-		if (barKeywords.some(k => userQuery.includes(k))) {
+		if (barKeywords.some((k) => userQuery.includes(k))) {
 			addChart({
 				...processBarChartData(parsedData, { xAxisColumn: xAxis, yAxisColumn: yAxis }),
 				id: uuidv4(),
 				chartType: "bar",
 				title: `柱状图: ${xAxis} vs ${yAxis}`,
 				xAxisColumn: xAxis,
-				yAxisColumn: yAxis
-			})
+				yAxisColumn: yAxis,
+			});
 		}
 		// 线形图
-		if (lineKeywords.some(k => userQuery.includes(k))) {
+		if (lineKeywords.some((k) => userQuery.includes(k))) {
 			addChart({
 				...processLineChartData(parsedData, { xAxisColumn: xAxis, yAxisColumn: yAxis }),
 				id: uuidv4(),
 				chartType: "line",
 				title: `线形图: ${xAxis} vs ${yAxis}`,
 				xAxisColumn: xAxis,
-				yAxisColumn: yAxis
-			})
+				yAxisColumn: yAxis,
+			});
 		}
 		// 面积图
-		if (areaKeywords.some(k => userQuery.includes(k))) {
+		if (areaKeywords.some((k) => userQuery.includes(k))) {
 			addChart({
 				...processAreaChartData(parsedData, { xAxisColumn: xAxis, yAxisColumn: yAxis }),
 				id: uuidv4(),
 				chartType: "area",
 				title: `面积图: ${xAxis} vs ${yAxis}`,
 				xAxisColumn: xAxis,
-				yAxisColumn: yAxis
-			})
+				yAxisColumn: yAxis,
+			});
 		}
 		// 饼图
-		if (pieKeywords.some(k => userQuery.includes(k))) {
+		if (pieKeywords.some((k) => userQuery.includes(k))) {
 			addChart({
 				...processPieChartData(parsedData, { valueColumn: yAxis }),
 				id: uuidv4(),
 				chartType: "pie",
 				title: `饼图: ${yAxis}`,
-				yAxisColumn: yAxis
-			})
+				yAxisColumn: yAxis,
+			});
 		}
 		// 散点图
-		if (scatterKeywords.some(k => userQuery.includes(k))) {
+		if (scatterKeywords.some((k) => userQuery.includes(k))) {
 			addChart({
 				...processScatterChartData(parsedData, { xAxisColumn: xAxis, yAxisColumn: yAxis }),
 				id: uuidv4(),
 				chartType: "scatter",
 				title: `散点图: ${xAxis} vs ${yAxis}`,
 				xAxisColumn: xAxis,
-				yAxisColumn: yAxis
-			})
+				yAxisColumn: yAxis,
+			});
 		}
 		// 雷达图
-		if (radarKeywords.some(k => userQuery.includes(k))) {
+		if (radarKeywords.some((k) => userQuery.includes(k))) {
 			addChart({
 				...processRadarChartData(parsedData, { xAxisColumn: yAxis }),
 				id: uuidv4(),
 				chartType: "radar",
 				title: `雷达图: ${yAxis}`,
-				yAxisColumn: yAxis
-			})
+				yAxisColumn: yAxis,
+			});
 		}
 
-		await streamResponse(assistantMessage.id, '你只需要说创建成功就可以，不需要提供图片。')
-		setIsLoading(false)
+		await streamResponse(assistantMessage.id, "你只需要说创建成功就可以，不需要提供图片。");
+		setIsLoading(false);
+	} else {
+		const rag = JSON.stringify(parsedData);
+		await streamResponse(assistantMessage.id, "请你根据以下内容回答用户的问题：" + rag);
+		setIsLoading(false);
 	}
-	else {
-		const rag = JSON.stringify(parsedData)
-		await streamResponse(assistantMessage.id, '请你根据以下内容回答用户的问题：' + rag)
-		setIsLoading(false)
-	}
-}
+};
 
-export const streamResponse = async (assistantMessageId: string, additionalContent: string = '') => {
-	const { currentMessages, appendMessageContent } = useChatStore.getState()
+export const streamResponse = async (assistantMessageId: string, additionalContent = "") => {
+	const { currentMessages, appendMessageContent } = useChatStore.getState();
 	// //todo: get enhanced system prompt
 	const requestBody = JSON.stringify({
 		messages: [
 			{
-				"role": "system",
-				"content": "You are a helpful assistant"
+				role: "system",
+				content: "You are a helpful assistant",
 			},
 			{
-				"role": "user",
-				"content": additionalContent
+				role: "user",
+				content: additionalContent,
 			},
 			...currentMessages,
-
-		]
-	})
-	const response = await fetch('/api/chat', {
-		method: 'POST',
+		],
+	});
+	const response = await fetch("/api/chat", {
+		method: "POST",
 		body: requestBody,
-		signal: abortController.signal
-	})
+		signal: abortController.signal,
+	});
 	if (!response.body) throw new Error("No response body to read from stream");
 	const reader = response.body.getReader();
 	const decoder = new TextDecoder();
 
-	let buffer = '';
-	let messageContent = '';
+	let buffer = "";
+	let messageContent = "";
 
 	try {
 		while (true) {
@@ -359,8 +364,8 @@ export const streamResponse = async (assistantMessageId: string, additionalConte
 			buffer += decoder.decode(value, { stream: true });
 
 			// Process complete messages from the buffer
-			const lines = buffer.split('\n');
-			buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
+			const lines = buffer.split("\n");
+			buffer = lines.pop() || ""; // Keep the last incomplete line in the buffer
 
 			for (const line of lines) {
 				if (!line) continue;
@@ -368,9 +373,10 @@ export const streamResponse = async (assistantMessageId: string, additionalConte
 				// Parse the specialized format
 				if (line.startsWith('0:"')) {
 					// Extract the content between quotes and handle escaping
-					const content = line.substring(3, line.length - 1)
+					const content = line
+						.substring(3, line.length - 1)
 						.replace(/\\"/g, '"')
-						.replace(/\\n/g, '\n');
+						.replace(/\\n/g, "\n");
 
 					messageContent += content;
 					appendMessageContent(assistantMessageId, content);
@@ -382,10 +388,9 @@ export const streamResponse = async (assistantMessageId: string, additionalConte
 		if (buffer) {
 			appendMessageContent(assistantMessageId, buffer);
 		}
-
 	} catch (error) {
-		if (error instanceof Error && error.name !== 'AbortError') {
-			console.error('Error processing chat stream:', error);
+		if (error instanceof Error && error.name !== "AbortError") {
+			console.error("Error processing chat stream:", error);
 			throw error;
 		}
 	}

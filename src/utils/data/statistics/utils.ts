@@ -1,21 +1,11 @@
-import { CellValue } from "./types";
+import type { CellValue } from "./types";
 
 /**
  * 将各种类型的数据转换为数字数组，过滤掉非数值项
  */
 export function convertToNumericArray(data: CellValue[]): number[] {
 	// Common invalid value representations
-	const invalidValues = [
-		"n/a",
-		"na",
-		"null",
-		"undefined",
-		"-",
-		"nan",
-		"#n/a",
-		"#null",
-		"#value!",
-	];
+	const invalidValues = ["n/a", "na", "null", "undefined", "-", "nan", "#n/a", "#null", "#value!"];
 
 	return data
 		.filter((v) => {
@@ -42,16 +32,13 @@ export function formatJarqueBera(result: {
 	pValue: number | null;
 	isNormal: boolean | null;
 }): string {
-	if (
-		result.statistic === null ||
-		result.pValue === null ||
-		result.isNormal === null
-	) {
+	if (result.statistic === null || result.pValue === null || result.isNormal === null) {
 		return "样本量不足";
 	}
 
-	return `统计量: ${result.statistic.toFixed(4)}, p值: ${result.pValue.toFixed(4)}, ${result.isNormal ? "符合正态分布" : "不符合正态分布"
-		}`;
+	return `统计量: ${result.statistic.toFixed(4)}, p值: ${result.pValue.toFixed(4)}, ${
+		result.isNormal ? "符合正态分布" : "不符合正态分布"
+	}`;
 }
 
 /**
@@ -83,7 +70,7 @@ export function stdev(data: number[]): number {
 	const avg = sum / data.length;
 
 	// Calculate sum of squared differences
-	const squareDiffs = data.map(value => {
+	const squareDiffs = data.map((value) => {
 		const diff = value - avg;
 		return diff * diff;
 	});

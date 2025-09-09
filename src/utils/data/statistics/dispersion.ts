@@ -1,5 +1,5 @@
 import * as ss from "simple-statistics";
-import { CellValue, CATEGORIES, StatisticResult } from "./types";
+import { CATEGORIES, type CellValue, type StatisticResult } from "./types";
 import { convertToNumericArray } from "./utils";
 
 /**
@@ -52,9 +52,7 @@ export function meanAbsoluteDeviation(data: CellValue[]): number | null {
 	const meanValue = ss.mean(numericData);
 
 	// Calculate the mean of absolute deviations from the mean
-	const absoluteDeviations = numericData.map((val) =>
-		Math.abs(val - meanValue),
-	);
+	const absoluteDeviations = numericData.map((val) => Math.abs(val - meanValue));
 	return ss.mean(absoluteDeviations);
 }
 

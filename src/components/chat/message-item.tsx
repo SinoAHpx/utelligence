@@ -1,8 +1,7 @@
-import React from "react";
+import { useChatStore } from "@/store/chat-store";
+import type { Message } from "ai";
 import Image from "next/image";
 import UCASSLogo from "../../../public/ucass_logo.png";
-import { Message } from "ai";
-import { useChatStore } from "@/store/chat-store";
 import MessageFormatter from "./message-formatter";
 
 /**
@@ -12,24 +11,24 @@ import MessageFormatter from "./message-formatter";
 const UserAvatar = () => <div className="dark:invert h-full w-full bg-black" />;
 
 const AssistantAvatar = () => (
-  <Image
-    src={UCASSLogo}
-    alt="AI"
-    className="object-contain dark:invert aspect-square h-full w-full"
-    priority
-  />
+	<Image
+		src={UCASSLogo}
+		alt="AI"
+		className="object-contain dark:invert aspect-square h-full w-full"
+		priority
+	/>
 );
 
 type AvatarProps = {
-  role: string;
+	role: string;
 };
 
 const Avatar = ({ role }: AvatarProps) => (
-  <div className="shrink-0">
-    <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
-      {role === "user" ? <UserAvatar /> : <AssistantAvatar />}
-    </div>
-  </div>
+	<div className="shrink-0">
+		<div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
+			{role === "user" ? <UserAvatar /> : <AssistantAvatar />}
+		</div>
+	</div>
 );
 
 /**
@@ -37,40 +36,37 @@ const Avatar = ({ role }: AvatarProps) => (
  * Renders different content based on message role
  */
 type UserMessageProps = {
-  content: string;
+	content: string;
 };
 
 const UserMessage = ({ content }: UserMessageProps) => (
-  <div className="flex flex-col flex-1 min-w-0 overflow-hidden w-full">
-    <div className="font-semibold pb-2">You</div>
-    <div className="break-words w-full">{content}</div>
-  </div>
+	<div className="flex flex-col flex-1 min-w-0 overflow-hidden w-full">
+		<div className="font-semibold pb-2">You</div>
+		<div className="break-words w-full">{content}</div>
+	</div>
 );
 
 type AssistantMessageProps = {
-  content: string;
-  isLastMessage: boolean;
+	content: string;
+	isLastMessage: boolean;
 };
 
 const AssistantMessage = ({ content, isLastMessage }: AssistantMessageProps) => {
-  const { isLoading } = useChatStore();
+	const { isLoading } = useChatStore();
 
-  return (
-    <div className="flex flex-col flex-1 min-w-0 overflow-hidden w-full">
-      <div className="font-semibold pb-2">Assistant</div>
-      <div className="break-words overflow-hidden w-full">
-        <MessageFormatter content={content} />
-        {isLoading && isLastMessage && (
-          <span
-            className="animate-pulse inline-block w-6 text-center"
-            aria-label="Typing"
-          >
-            ...
-          </span>
-        )}
-      </div>
-    </div>
-  );
+	return (
+		<div className="flex flex-col flex-1 min-w-0 overflow-hidden w-full">
+			<div className="font-semibold pb-2">Assistant</div>
+			<div className="break-words overflow-hidden w-full">
+				<MessageFormatter content={content} />
+				{isLoading && isLastMessage && (
+					<span className="animate-pulse inline-block w-6 text-center" aria-label="Typing">
+						...
+					</span>
+				)}
+			</div>
+		</div>
+	);
 };
 
 /**
@@ -78,24 +74,21 @@ const AssistantMessage = ({ content, isLastMessage }: AssistantMessageProps) => 
  * Renders a complete chat message with avatar and formatted content
  */
 interface MessageItemProps {
-  message: Message;
-  isLastMessage: boolean;
+	message: Message;
+	isLastMessage: boolean;
 }
 
 const MessageItem = ({ message, isLastMessage }: MessageItemProps) => (
-  <div className="flex flex-col w-full py-4 border-b border-gray-100 dark:border-gray-800">
-    <div className="flex items-start gap-3">
-      <Avatar role={message.role} />
-      {message.role === "user" ? (
-        <UserMessage content={message.content} />
-      ) : (
-        <AssistantMessage
-          content={message.content}
-          isLastMessage={isLastMessage}
-        />
-      )}
-    </div>
-  </div>
+	<div className="flex flex-col w-full py-4 border-b border-gray-100 dark:border-gray-800">
+		<div className="flex items-start gap-3">
+			<Avatar role={message.role} />
+			{message.role === "user" ? (
+				<UserMessage content={message.content} />
+			) : (
+				<AssistantMessage content={message.content} isLastMessage={isLastMessage} />
+			)}
+		</div>
+	</div>
 );
 
 export default MessageItem;

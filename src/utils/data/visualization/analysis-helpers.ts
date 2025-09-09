@@ -1,33 +1,22 @@
-import { CellValue, StatisticResult } from "@/utils/data/statistics/types";
 import {
+	kurtosis,
+	max,
 	mean,
 	median,
-	mode,
 	min,
-	max,
-	count,
-	variance,
-	standardDeviation,
+	mode,
 	skewness,
-	kurtosis,
+	standardDeviation,
+	variance,
 } from "@/utils/data/statistics";
+import type { CellValue, StatisticResult } from "@/utils/data/statistics/types";
 
 /**
  * 提取数值型数据
  */
 export function extractNumericData(data: CellValue[]): number[] {
 	// Common invalid value representations
-	const invalidValues = [
-		"n/a",
-		"na",
-		"null",
-		"undefined",
-		"-",
-		"nan",
-		"#n/a",
-		"#null",
-		"#value!",
-	];
+	const invalidValues = ["n/a", "na", "null", "undefined", "-", "nan", "#n/a", "#null", "#value!"];
 
 	return data
 		.filter((v) => {
@@ -129,9 +118,7 @@ export function getDistributionMetrics(data: CellValue[]) {
 /**
  * 按类别分组统计数据
  */
-export function groupStatsByCategory(
-	stats: StatisticResult[],
-): Record<string, StatisticResult[]> {
+export function groupStatsByCategory(stats: StatisticResult[]): Record<string, StatisticResult[]> {
 	return stats.reduce((acc: Record<string, StatisticResult[]>, stat) => {
 		if (!acc[stat.category]) {
 			acc[stat.category] = [];

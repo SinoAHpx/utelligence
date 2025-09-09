@@ -1,17 +1,17 @@
+import type { ChartConfig } from "@/types/chart-types";
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
-import { ChartConfig } from "@/types/chart-types";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 /**
  * Column visualizability status configuration
  * Tracks whether a column is suitable for visualization
  */
 export interface ColumnVisualizableConfig {
-    column: string;
-    isVisualizable: boolean;
-    uniqueValues: number;
-    totalValues: number;
-    reason?: string;
+	column: string;
+	isVisualizable: boolean;
+	uniqueValues: number;
+	totalValues: number;
+	reason?: string;
 }
 
 /**
@@ -19,145 +19,166 @@ export interface ColumnVisualizableConfig {
  * Manages all state related to chart visualization features
  */
 interface VisualizationChartState {
-    // Chart configurations per file identifier (persistent)
-    fileChartConfigs: Record<string, ChartConfig[]>;
+	// Current file identifier (managed internally)
+	currentFileIdentifier: string | null;
+	setCurrentFileIdentifier: (identifier: string | null) => void;
 
-    // Active charts for the current file (derived, non-persistent)
-    userCharts: ChartConfig[];
+	// Chart configurations per file identifier (persistent)
+	fileChartConfigs: Record<string, ChartConfig[]>;
 
-    // Actions for active charts
-    addChart: (chart: ChartConfig) => void;
-    removeChart: (chartId: string) => void;
-    clearCurrentFileCharts: () => void;
+	// Active charts for the current file (derived, non-persistent)
+	userCharts: ChartConfig[];
 
-    // Chart creation state
-    selectedChartType: string;
-    setSelectedChartType: (type: string) => void;
+	// Actions for active charts
+	addChart: (chart: ChartConfig) => void;
+	removeChart: (chartId: string) => void;
+	clearCurrentFileCharts: () => void;
 
-    selectedColumnsForChart: string[];
-    setSelectedColumnsForChart: (columns: string[]) => void;
+	// Chart creation state
+	selectedChartType: string;
+	setSelectedChartType: (type: string) => void;
 
-    chartTitle: string;
-    setChartTitle: (title: string) => void;
+	selectedColumnsForChart: string[];
+	setSelectedColumnsForChart: (columns: string[]) => void;
 
-    xAxisColumn: string;
-    setXAxisColumn: (column: string) => void;
+	chartTitle: string;
+	setChartTitle: (title: string) => void;
 
-    yAxisColumn: string;
-    setYAxisColumn: (column: string) => void;
+	xAxisColumn: string;
+	setXAxisColumn: (column: string) => void;
 
-    // Column visualization status
-    columnsVisualizableStatus: ColumnVisualizableConfig[];
-    setColumnsVisualizableStatus: (status: ColumnVisualizableConfig[]) => void;
+	yAxisColumn: string;
+	setYAxisColumn: (column: string) => void;
 
-    // Helper to load charts for the current file
-    loadChartsForCurrentFile: () => void;
+	// Column visualization status
+	columnsVisualizableStatus: ColumnVisualizableConfig[];
+	setColumnsVisualizableStatus: (status: ColumnVisualizableConfig[]) => void;
+
+	// Helper to load charts for the current file
+	loadChartsForFile: (fileIdentifier: string) => void;
+	clearChartsForFile: (fileIdentifier: string) => void;
 }
-
-// Function to get the current file identifier from fileDataStore
-// This breaks the circular dependency
-const getCurrentFileIdentifier = () => {
-    // Dynamic import to avoid circular dependency
-    const { fileDataStore } = require('./file-data-store');
-    return fileDataStore.getState().currentFileIdentifier;
-};
 
 /**
  * Zustand store for visualization chart data
  * Persists chart configurations to localStorage for session continuity
  */
 export const visualizationChartStore = create<VisualizationChartState>()(
-    persist(
-        (set, get) => ({
-            // --- State ---
-            fileChartConfigs: {},
-            userCharts: [],
-            columnsVisualizableStatus: [],
-            selectedChartType: "bar",
-            selectedColumnsForChart: [],
-            chartTitle: "",
-            xAxisColumn: "",
-            yAxisColumn: "",
+	persist(
+		(set, get) => ({
+			// --- State ---
+			currentFileIdentifier: null,
+			fileChartConfigs: {},
+			userCharts: [],
+			columnsVisualizableStatus: [],
+			selectedChartType: "bar",
+			selectedColumnsForChart: [],
+			chartTitle: "",
+			xAxisColumn: "",
+			yAxisColumn: "",
 
-            // --- Setters ---
-            setColumnsVisualizableStatus: (status) =>
-                set({ columnsVisualizableStatus: status }),
-            setSelectedChartType: (type) => set({ selectedChartType: type }),
-            setSelectedColumnsForChart: (columns) =>
-                set({ selectedColumnsForChart: columns }),
-            setChartTitle: (title) => set({ chartTitle: title }),
-            setXAxisColumn: (column) => set({ xAxisColumn: column }),
-            setYAxisColumn: (column) => set({ yAxisColumn: column }),
+			// --- Setters ---
+			setCurrentFileIdentifier: (identifier) => {
+				set({ currentFileIdentifier: identifier });
+				// Load charts for this file when identifier changes
+				if (identifier) {
+					get().loadChartsForFile(identifier);
+				} else {
+					set({ userCharts: [] });
+				}
+			},
+			setColumnsVisualizableStatus: (status) => set({ columnsVisualizableStatus: status }),
+			setSelectedChartType: (type) => set({ selectedChartType: type }),
+			setSelectedColumnsForChart: (columns) => set({ selectedColumnsForChart: columns }),
+			setChartTitle: (title) => set({ chartTitle: title }),
+			setXAxisColumn: (column) => set({ xAxisColumn: column }),
+			setYAxisColumn: (column) => set({ yAxisColumn: column }),
 
-            // --- Actions operating on the CURRENT file's charts ---
-            addChart: (chart) => {
-                const currentId = getCurrentFileIdentifier();
-                if (!currentId) return;
-                set((state) => {
-                    const currentConfigs = state.fileChartConfigs[currentId] || [];
-                    const updatedConfigs = [...currentConfigs, chart];
-                    return {
-                        fileChartConfigs: {
-                            ...state.fileChartConfigs,
-                            [currentId]: updatedConfigs,
-                        },
-                        userCharts: updatedConfigs,
-                    };
-                });
-            },
-            removeChart: (chartId) => {
-                const currentId = getCurrentFileIdentifier();
-                if (!currentId) return;
-                set((state) => {
-                    const currentConfigs = state.fileChartConfigs[currentId] || [];
-                    const updatedConfigs = currentConfigs.filter(
-                        (chart) => chart.id !== chartId,
-                    );
-                    return {
-                        fileChartConfigs: {
-                            ...state.fileChartConfigs,
-                            [currentId]: updatedConfigs,
-                        },
-                        userCharts: updatedConfigs,
-                    };
-                });
-            },
-            clearCurrentFileCharts: () => {
-                const currentId = getCurrentFileIdentifier();
-                if (!currentId) return;
-                set((state) => ({
-                    fileChartConfigs: {
-                        ...state.fileChartConfigs,
-                        [currentId]: [],
-                    },
-                    userCharts: [],
-                }));
-            },
+			// --- Actions operating on the CURRENT file's charts ---
+			addChart: (chart) => {
+				const currentId = get().currentFileIdentifier;
+				if (!currentId) return;
+				set((state) => {
+					const currentConfigs = state.fileChartConfigs[currentId] || [];
+					const updatedConfigs = [...currentConfigs, chart];
+					return {
+						fileChartConfigs: {
+							...state.fileChartConfigs,
+							[currentId]: updatedConfigs,
+						},
+						userCharts: updatedConfigs,
+					};
+				});
+			},
+			removeChart: (chartId) => {
+				const currentId = get().currentFileIdentifier;
+				if (!currentId) return;
+				set((state) => {
+					const currentConfigs = state.fileChartConfigs[currentId] || [];
+					const updatedConfigs = currentConfigs.filter((chart) => chart.id !== chartId);
+					return {
+						fileChartConfigs: {
+							...state.fileChartConfigs,
+							[currentId]: updatedConfigs,
+						},
+						userCharts: updatedConfigs,
+					};
+				});
+			},
+			clearCurrentFileCharts: () => {
+				const currentId = get().currentFileIdentifier;
+				if (!currentId) return;
+				set((state) => ({
+					fileChartConfigs: {
+						...state.fileChartConfigs,
+						[currentId]: [],
+					},
+					userCharts: [],
+				}));
+			},
 
-            // --- Helper to load charts for current file ---
-            loadChartsForCurrentFile: () => {
-                const currentId = getCurrentFileIdentifier();
-                const fileConfigs = get().fileChartConfigs;
-                if (currentId && fileConfigs[currentId]) {
-                    set({ userCharts: fileConfigs[currentId] });
-                } else {
-                    set({ userCharts: [] });
-                }
-            },
-        }),
-        {
-            name: "visualization-chart-storage",
-            storage: createJSONStorage(() => localStorage),
-            partialize: (state) => ({
-                fileChartConfigs: state.fileChartConfigs,
-            }),
-            onRehydrateStorage: (state) => {
-                return (rehydratedState, error) => {
-                    if (!error && rehydratedState) {
-                        state.loadChartsForCurrentFile();
-                    }
-                };
-            },
-        },
-    ),
+			// --- Helper methods for file management ---
+			loadChartsForFile: (fileIdentifier) => {
+				const fileConfigs = get().fileChartConfigs;
+				if (fileIdentifier && fileConfigs[fileIdentifier]) {
+					set({
+						userCharts: fileConfigs[fileIdentifier],
+						currentFileIdentifier: fileIdentifier,
+					});
+				} else {
+					set({
+						userCharts: [],
+						currentFileIdentifier: fileIdentifier,
+					});
+				}
+			},
+
+			clearChartsForFile: (fileIdentifier) => {
+				set((state) => {
+					const newConfigs = { ...state.fileChartConfigs };
+					delete newConfigs[fileIdentifier];
+					return {
+						fileChartConfigs: newConfigs,
+						userCharts: state.currentFileIdentifier === fileIdentifier ? [] : state.userCharts,
+					};
+				});
+			},
+		}),
+		{
+			name: "visualization-chart-storage",
+			storage: createJSONStorage(() => localStorage),
+			partialize: (state) => ({
+				fileChartConfigs: state.fileChartConfigs,
+				currentFileIdentifier: state.currentFileIdentifier,
+			}),
+			onRehydrateStorage: () => {
+				return (rehydratedState, error) => {
+					if (!error && rehydratedState) {
+						// Charts will be loaded when currentFileIdentifier is set
+						console.log("Visualization chart store hydrated");
+					}
+				};
+			},
+		}
+	)
 );

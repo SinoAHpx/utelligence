@@ -1,6 +1,6 @@
 import * as ss from "simple-statistics";
-import { CellValue, CATEGORIES, StatisticResult } from "./types";
-import { convertToNumericArray, chiSquareCDF, formatJarqueBera } from "./utils";
+import { CATEGORIES, type CellValue, type StatisticResult } from "./types";
+import { chiSquareCDF, convertToNumericArray, formatJarqueBera } from "./utils";
 
 /**
  * Fisher 偏度 (Fisher Skewness)
@@ -81,8 +81,7 @@ export function jarqueBera(data: CellValue[]): {
 	const kurtosis = ss.sampleKurtosis(numericData);
 
 	// Calculate JB statistic
-	const jbStatistic =
-		(n / 6) * (Math.pow(skewness, 2) + Math.pow(kurtosis, 2) / 4);
+	const jbStatistic = (n / 6) * (Math.pow(skewness, 2) + Math.pow(kurtosis, 2) / 4);
 
 	// Approximate p-value from chi-square distribution with 2 degrees of freedom
 	const pValue = 1 - chiSquareCDF(jbStatistic, 2);
@@ -96,9 +95,7 @@ export function jarqueBera(data: CellValue[]): {
 /**
  * 获取所有分布形态测度的统计量
  */
-export function getDistributionShapeStatistics(
-	data: CellValue[],
-): StatisticResult[] {
+export function getDistributionShapeStatistics(data: CellValue[]): StatisticResult[] {
 	return [
 		{
 			name: "Fisher偏度 (Skewness)",

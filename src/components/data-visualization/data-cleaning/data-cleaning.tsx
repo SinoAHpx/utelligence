@@ -1,292 +1,265 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
-} from "@/components/ui/shadcn/tabs";
-import { Button } from "@/components/ui/shadcn/button";
 import { Alert, AlertDescription } from "@/components/ui/shadcn/alert";
+import { Button } from "@/components/ui/shadcn/button";
+import { Progress } from "@/components/ui/shadcn/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcn/tabs";
+import { useUnifiedDataStore } from "@/store/unified-data-store";
+import { exportCleanedData } from "@/utils/data/data-processing";
+import { useToast } from "@/utils/hooks/use-toast";
+import { AlertCircle, FileDown } from "lucide-react";
+import { useEffect, useState } from "react";
+import DuplicatesTab from "./duplicates-tab";
 import MissingValuesTab from "./missing-value-tab";
 import OutliersTab from "./outliers-tab";
-import DuplicatesTab from "./duplicates-tab";
 import { TransformTab } from "./transform-tab";
-import { exportCleanedData } from "@/utils/data/data-processing";
-import { CheckIcon, FileDown, AlertCircle } from "lucide-react";
-import { Progress } from "@/components/ui/shadcn/progress";
-import { useToast } from "@/utils/hooks/use-toast";
-import { fileDataStore } from "@/store/index";
-import { dataCleaningStore } from "@/store/index";
-import { useFileUploadStore } from "@/store/file-upload-store";
 
 interface DataCleaningProps {
-    file: File | null;
+	file: File | null;
 }
 
-export default function DataCleaning({
-    file,
-}: DataCleaningProps) {
-    const [activeTab, setActiveTab] = useState("missing");
-    const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [cleaningComplete, setCleaningComplete] = useState(false);
-    const [cleaningInProgress, setCleaningInProgress] = useState(false);
-    const [progress, setProgress] = useState(0);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const { toast } = useToast();
+export default function DataCleaning({ file }: DataCleaningProps) {
+	const [activeTab, setActiveTab] = useState("missing");
+	const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+	const [isLoading, setIsLoading] = useState(false);
+	const [cleaningComplete, setCleaningComplete] = useState(false);
+	const [cleaningInProgress, setCleaningInProgress] = useState(false);
+	const [progress, setProgress] = useState(0);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+	const { toast } = useToast();
 
-    // Get parsed data from FilePreviewStore
-    const { parsedData } = useFileUploadStore();
+	// Get data from unified store
+	const { rawData: parsedData, processAndAnalyze, cleanedData } = useUnifiedDataStore();
 
-    // Zustand stores
-    const {
-        processAndAnalyzeFile,
-    } = fileDataStore();
+	// Get all available columns
+	const availableColumns = parsedData?.headers || [];
 
-    const {
-        cleanedData
-    } = dataCleaningStore();
+	// Missing values state
+	const [missingValues, setMissingValues] = useState<{
+		[key: string]: { strategy: string; value?: string | number };
+	}>({});
 
-    // Get all available columns
-    const availableColumns = parsedData?.headers || [];
+	// Outliers state
+	const [outlierSettings, setOutlierSettings] = useState<{
+		[key: string]: {
+			method: string;
+			action: string;
+			lowerThreshold?: number;
+			upperThreshold?: number;
+			multiplier?: number;
+			replacementMethod?: string;
+			replacementValue?: number;
+		};
+	}>({});
 
-    // Missing values state
-    const [missingValues, setMissingValues] = useState<{
-        [key: string]: { strategy: string; value?: string | number };
-    }>({});
+	// Duplicates state
+	const [duplicateSettings, setDuplicateSettings] = useState<{
+		columnsToCheck: string[];
+		strategy: string;
+	}>({
+		columnsToCheck: [],
+		strategy: "remove_first",
+	});
 
-    // Outliers state
-    const [outlierSettings, setOutlierSettings] = useState<{
-        [key: string]: {
-            method: string;
-            action: string;
-            lowerThreshold?: number;
-            upperThreshold?: number;
-            multiplier?: number;
-            replacementMethod?: string;
-            replacementValue?: number;
-        };
-    }>({});
+	const tabOptions = [
+		{ id: "missing", name: "缺失值处理" },
+		{ id: "outliers", name: "异常值处理" },
+		{ id: "duplicates", name: "重复值处理" },
+		{ id: "transform", name: "数据转换" },
+	];
 
-    // Duplicates state
-    const [duplicateSettings, setDuplicateSettings] = useState<{
-        columnsToCheck: string[];
-        strategy: string;
-    }>({
-        columnsToCheck: [],
-        strategy: "remove_first",
-    });
+	// Load data from file when it changes
+	useEffect(() => {
+		if (file && (!parsedData || parsedData.headers.length === 0)) {
+			setIsLoading(true);
+			setErrorMessage(null);
+			setCleaningComplete(false);
 
-    const tabOptions = [
-        { id: "missing", name: "缺失值处理" },
-        { id: "outliers", name: "异常值处理" },
-        { id: "duplicates", name: "重复值处理" },
-        { id: "transform", name: "数据转换" },
-    ];
+			// Get all columns from parsed data or use an empty array
+			const columnsToAnalyze = parsedData?.headers || [];
 
-    // Load data from file when it changes
-    useEffect(() => {
-        if (file && (!parsedData || parsedData.headers.length === 0)) {
-            setIsLoading(true);
-            setErrorMessage(null);
-            setCleaningComplete(false);
+			processAndAnalyze(columnsToAnalyze)
+				.then(() => {
+					setIsLoading(false);
+				})
+				.catch((error) => {
+					console.error("Error processing file:", error);
+					setErrorMessage(`处理文件出错: ${error}`);
+					setIsLoading(false);
+				});
+		}
+	}, [file, parsedData, processAndAnalyze]);
 
-            // Get all columns from parsed data or use an empty array
-            const columnsToAnalyze = parsedData?.headers || [];
+	// Update selected columns when available columns change
+	useEffect(() => {
+		if (parsedData && parsedData.headers.length > 0) {
+			setSelectedColumns(parsedData.headers);
+		}
+	}, [parsedData]);
 
-            processAndAnalyzeFile(file, columnsToAnalyze)
-                .then(() => {
-                    setIsLoading(false);
-                })
-                .catch((error) => {
-                    console.error("Error processing file:", error);
-                    setErrorMessage(`处理文件出错: ${error}`);
-                    setIsLoading(false);
-                });
-        }
-    }, [file, parsedData, parsedData, processAndAnalyzeFile]);
+	// Reset cleaning status when tab changes
+	useEffect(() => {
+		setCleaningComplete(false);
+		setErrorMessage(null);
+	}, [activeTab]);
 
-    // Update selected columns when available columns change
-    useEffect(() => {
-        if (parsedData && parsedData.headers.length > 0) {
-            setSelectedColumns(parsedData.headers);
-        }
-    }, [parsedData]);
+	// Reset cleaning status when settings change
+	useEffect(() => {
+		if (activeTab === "missing" && Object.keys(missingValues).length > 0) {
+			setCleaningComplete(false);
+		}
+	}, [missingValues, activeTab]);
 
-    // Reset cleaning status when tab changes
-    useEffect(() => {
-        setCleaningComplete(false);
-        setErrorMessage(null);
-    }, [activeTab]);
+	useEffect(() => {
+		if (activeTab === "outliers" && Object.keys(outlierSettings).length > 0) {
+			setCleaningComplete(false);
+		}
+	}, [outlierSettings, activeTab]);
 
-    // Reset cleaning status when settings change
-    useEffect(() => {
-        if (activeTab === "missing" && Object.keys(missingValues).length > 0) {
-            setCleaningComplete(false);
-        }
-    }, [missingValues, activeTab]);
+	useEffect(() => {
+		if (activeTab === "duplicates" && duplicateSettings.columnsToCheck.length > 0) {
+			setCleaningComplete(false);
+		}
+	}, [duplicateSettings, activeTab]);
 
-    useEffect(() => {
-        if (activeTab === "outliers" && Object.keys(outlierSettings).length > 0) {
-            setCleaningComplete(false);
-        }
-    }, [outlierSettings, activeTab]);
+	// Handle data export
+	const handleExport = async () => {
+		if (!file || !cleanedData) return;
 
-    useEffect(() => {
-        if (activeTab === "duplicates" && duplicateSettings.columnsToCheck.length > 0) {
-            setCleaningComplete(false);
-        }
-    }, [duplicateSettings, activeTab]);
+		try {
+			const originalFilename = file.name;
+			const baseName = originalFilename.substring(0, originalFilename.lastIndexOf("."));
+			const extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+			const cleanedFilename = `${baseName}_cleaned${extension}`;
 
-    // Handle data export
-    const handleExport = async () => {
-        if (!file || !cleanedData) return;
+			await exportCleanedData(cleanedData, cleanedFilename);
 
-        try {
-            const originalFilename = file.name;
-            const baseName = originalFilename.substring(
-                0,
-                originalFilename.lastIndexOf(".")
-            );
-            const extension = originalFilename.substring(
-                originalFilename.lastIndexOf(".")
-            );
-            const cleanedFilename = `${baseName}_cleaned${extension}`;
+			toast({
+				title: "数据导出成功",
+				description: `清洗后的数据已成功导出到文件: ${cleanedFilename}`,
+			});
+		} catch (error) {
+			console.error("Error exporting data:", error);
+			toast({
+				title: "导出失败",
+				description: `导出数据时发生错误: ${error}`,
+				variant: "destructive",
+			});
+		}
+	};
 
-            await exportCleanedData(cleanedData, cleanedFilename);
+	// Common props for all tab components
+	const tabProps = {
+		file,
+		availableColumns,
+		rawData: parsedData,
+		onComplete: () => setCleaningComplete(true),
+		onProgress: (value: number) => setProgress(value),
+		onProcessingStart: () => {
+			setCleaningInProgress(true);
+			setErrorMessage(null);
+			setProgress(0);
+		},
+		onProcessingEnd: () => {
+			setCleaningInProgress(false);
+		},
+		onError: (error: string) => {
+			setErrorMessage(error);
+			setCleaningInProgress(false);
+		},
+	};
 
-            toast({
-                title: "数据导出成功",
-                description: `清洗后的数据已成功导出到文件: ${cleanedFilename}`,
-            });
-        } catch (error) {
-            console.error("Error exporting data:", error);
-            toast({
-                title: "导出失败",
-                description: `导出数据时发生错误: ${error}`,
-                variant: "destructive",
-            });
-        }
-    };
+	if (!file) {
+		return (
+			<div className="flex items-center justify-center h-full">
+				<p className="text-gray-500 dark:text-gray-400">请先上传文件</p>
+			</div>
+		);
+	}
 
-    // Common props for all tab components
-    const tabProps = {
-        file,
-        availableColumns,
-        rawData: parsedData,
-        onComplete: () => setCleaningComplete(true),
-        onProgress: (value: number) => setProgress(value),
-        onProcessingStart: () => {
-            setCleaningInProgress(true);
-            setErrorMessage(null);
-            setProgress(0);
-        },
-        onProcessingEnd: () => {
-            setCleaningInProgress(false);
-        },
-        onError: (error: string) => {
-            setErrorMessage(error);
-            setCleaningInProgress(false);
-        }
-    };
+	return (
+		<div className="w-full space-y-4">
+			<Tabs
+				defaultValue="missing"
+				value={activeTab}
+				onValueChange={setActiveTab}
+				className="w-full"
+			>
+				<TabsList>
+					{tabOptions.map((tab) => (
+						<TabsTrigger key={tab.id} value={tab.id}>
+							{tab.name}
+						</TabsTrigger>
+					))}
+				</TabsList>
 
-    if (!file) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500 dark:text-gray-400">请先上传文件</p>
-            </div>
-        );
-    }
+				{errorMessage && (
+					<Alert className="my-4" variant="destructive">
+						<AlertCircle className="h-4 w-4" />
+						<AlertDescription>{errorMessage}</AlertDescription>
+					</Alert>
+				)}
 
-    return (
-        <div className="w-full space-y-4">
-            <Tabs
-                defaultValue="missing"
-                value={activeTab}
-                onValueChange={setActiveTab}
-                className="w-full"
-            >
-                <TabsList>
-                    {tabOptions.map((tab) => (
-                        <TabsTrigger key={tab.id} value={tab.id}>
-                            {tab.name}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
+				{cleaningInProgress && (
+					<div className="my-4 space-y-2">
+						<p>正在处理数据，请稍候...</p>
+						<Progress value={progress} className="w-full" />
+					</div>
+				)}
 
-                {errorMessage && (
-                    <Alert className="my-4" variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>{errorMessage}</AlertDescription>
-                    </Alert>
-                )}
+				{isLoading ? (
+					<div className="flex items-center justify-center h-40">
+						<p>正在加载数据，请稍候...</p>
+					</div>
+				) : (
+					<>
+						<TabsContent value="missing" className="mt-4">
+							<MissingValuesTab
+								{...tabProps}
+								columns={selectedColumns}
+								onSettingsChange={setMissingValues}
+							/>
+						</TabsContent>
 
-                {cleaningInProgress && (
-                    <div className="my-4 space-y-2">
-                        <p>正在处理数据，请稍候...</p>
-                        <Progress value={progress} className="w-full" />
-                    </div>
-                )}
+						<TabsContent value="outliers" className="mt-4">
+							<OutliersTab
+								{...tabProps}
+								columns={selectedColumns}
+								onSettingsChange={setOutlierSettings}
+							/>
+						</TabsContent>
 
-                {isLoading ? (
-                    <div className="flex items-center justify-center h-40">
-                        <p>正在加载数据，请稍候...</p>
-                    </div>
-                ) : (
-                    <>
-                        <TabsContent value="missing" className="mt-4">
-                            <MissingValuesTab
-                                {...tabProps}
-                                columns={selectedColumns}
-                                onSettingsChange={setMissingValues}
-                            />
-                        </TabsContent>
+						<TabsContent value="duplicates" className="mt-4">
+							<DuplicatesTab
+								{...tabProps}
+								columns={selectedColumns}
+								onSettingsChange={setDuplicateSettings}
+							/>
+						</TabsContent>
 
-                        <TabsContent value="outliers" className="mt-4">
-                            <OutliersTab
-                                {...tabProps}
-                                columns={selectedColumns}
-                                onSettingsChange={setOutlierSettings}
-                            />
-                        </TabsContent>
+						<TabsContent value="transform" className="mt-4">
+							<TransformTab
+								{...tabProps}
+								selectedColumn=""
+								selectedColumns={selectedColumns}
+								setMessage={(message) => setErrorMessage(message)}
+								setProcessedFileUrl={() => {}}
+								setCleaned={(cleaned) => setCleaningComplete(cleaned)}
+								rawFileData={parsedData}
+							/>
+						</TabsContent>
 
-                        <TabsContent value="duplicates" className="mt-4">
-                            <DuplicatesTab
-                                {...tabProps}
-                                columns={selectedColumns}
-                                onSettingsChange={setDuplicateSettings}
-                            />
-                        </TabsContent>
-
-                        <TabsContent value="transform" className="mt-4">
-                            <TransformTab
-                                {...tabProps}
-                                selectedColumn=""
-                                selectedColumns={selectedColumns}
-                                setMessage={(message) => setErrorMessage(message)}
-                                setProcessedFileUrl={() => { }}
-                                setCleaned={(cleaned) => setCleaningComplete(cleaned)}
-                                rawFileData={parsedData}
-                            />
-                        </TabsContent>
-
-                        <div className="flex justify-end mt-6">
-                            {cleanedData && cleanedData.headers.length > 0 && cleaningComplete && (
-                                <Button
-                                    variant="outline"
-                                    onClick={handleExport}
-                                    className="ml-2"
-                                >
-                                    <FileDown className="mr-2 h-4 w-4" />
-                                    导出清洗后的数据
-                                </Button>
-                            )}
-                        </div>
-                    </>
-                )}
-            </Tabs>
-        </div>
-    );
-} 
+						<div className="flex justify-end mt-6">
+							{cleanedData && cleanedData.headers.length > 0 && cleaningComplete && (
+								<Button variant="outline" onClick={handleExport} className="ml-2">
+									<FileDown className="mr-2 h-4 w-4" />
+									导出清洗后的数据
+								</Button>
+							)}
+						</div>
+					</>
+				)}
+			</Tabs>
+		</div>
+	);
+}

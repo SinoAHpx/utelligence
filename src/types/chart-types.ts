@@ -36,7 +36,6 @@ export interface ChartConfig {
 	isTruncated?: boolean;
 }
 
-
 // Chart type definition with metadata
 export interface ChartTypeDefinition {
 	id: ChartType;

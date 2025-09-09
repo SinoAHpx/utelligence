@@ -19,5 +19,4 @@ export const CHART_COLORS = [
 ];
 
 // 获取颜色的辅助函数
-export const getChartColor = (index: number) =>
-	CHART_COLORS[index % CHART_COLORS.length];
+export const getChartColor = (index: number) => CHART_COLORS[index % CHART_COLORS.length];

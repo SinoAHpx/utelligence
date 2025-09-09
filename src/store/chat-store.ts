@@ -1,14 +1,14 @@
+import type { Message } from "ai/react";
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
-import { Message, useChat } from "ai/react";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 import {
-	ChatOptions,
-	getLocalStorageChats,
-	saveChatMessages,
+	type ChatOptions,
 	cancelMessageStream,
 	clearAllChatData,
-	createMessage
+	createMessage,
+	getLocalStorageChats,
+	saveChatMessages,
 } from "@/utils/chat/chat-utils";
 
 /**
@@ -157,8 +157,8 @@ export const useChatStore = create<ChatState>()(
 			},
 			appendMessageContent: (id: string, content: string) => {
 				const updatedCurrentMessages = get().currentMessages.map((message) => {
-					if (message.id == id) return {...message, content: `${message.content}${content}`}
-					else return message
+					if (message.id == id) return { ...message, content: `${message.content}${content}` };
+					else return message;
 				});
 
 				set(() => ({
@@ -169,9 +169,7 @@ export const useChatStore = create<ChatState>()(
 			},
 
 			sendMessage: async (message: string) => {
-				createMessage(message)
-
-
+				createMessage(message);
 			},
 
 			stopMessageGeneration: () => {
@@ -195,6 +193,6 @@ export const useChatStore = create<ChatState>()(
 				// Don't store messages or available models in persisted state
 				// as they're already managed separately
 			}),
-		},
-	),
+		}
+	)
 );

@@ -26,5 +26,4 @@ export const CHART_COLORS = [
  * @param index 颜色索引
  * @returns 颜色代码
  */
-export const getChartColor = (index: number): string =>
-	CHART_COLORS[index % CHART_COLORS.length];
+export const getChartColor = (index: number): string => CHART_COLORS[index % CHART_COLORS.length];

@@ -1,6 +1,6 @@
+import type { ChartConfig, ChartDataItem } from "@/types/chart-types";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { ChartDataItem, ChartConfig } from "@/types/chart-types";
 
 // Define a constant for max data points
 const MAX_DATA_POINTS = 500; // Adjust as needed
@@ -25,12 +25,9 @@ export type FileData = FileRow[];
  * @param columnName The name of the column
  * @returns Analysis results including type, uniqueness, and visualization suitability
  */
-export const analyzeColumnData = (
-	columnData: CellValue[],
-	columnName: string,
-) => {
+export const analyzeColumnData = (columnData: CellValue[], columnName: string) => {
 	const cleanedData = columnData.filter(
-		(v) => v !== undefined && v !== null && String(v).trim() !== "",
+		(v) => v !== undefined && v !== null && String(v).trim() !== ""
 	);
 	if (cleanedData.length === 0) {
 		return {
@@ -66,10 +63,8 @@ export const analyzeColumnData = (
 	// Heuristics for determining categorical vs. continuous/high-cardinality
 	// Consider a column categorical if it's not all numeric OR if it is numeric but has relatively few unique values.
 	const isCategorical =
-		!allNumeric ||
-		(allNumeric && uniqueCount <= Math.max(15, totalValues * 0.1)); // Adjust threshold as needed
-	const isValidForVisualization =
-		uniqueCount > 1 && uniqueCount < totalValues * 0.9; // Generally, avoid constant or unique-per-row columns
+		!allNumeric || (allNumeric && uniqueCount <= Math.max(15, totalValues * 0.1)); // Adjust threshold as needed
+	const isValidForVisualization = uniqueCount > 1 && uniqueCount < totalValues * 0.9; // Generally, avoid constant or unique-per-row columns
 
 	return {
 		column: columnName,
@@ -98,14 +93,14 @@ const validateAndExtractAxisInfo = (
 	rows: FileData,
 	xAxisColumn: string | undefined,
 	yAxisColumn: string | undefined,
-	chartTypeName: string,
+	chartTypeName: string
 ):
 	| {
-		success: true;
-		xAxisIndex: number;
-		yAxisIndex: number;
-		yAxisAnalysis: ReturnType<typeof analyzeColumnData>;
-	}
+			success: true;
+			xAxisIndex: number;
+			yAxisIndex: number;
+			yAxisAnalysis: ReturnType<typeof analyzeColumnData>;
+	  }
 	| { success: false; error: string } => {
 	if (!xAxisColumn || !yAxisColumn) {
 		return {
@@ -154,7 +149,7 @@ const validateAndExtractAxisInfo = (
 const groupDataByXAxis = (
 	rows: FileData,
 	xAxisIndex: number,
-	headers: string[],
+	headers: string[]
 ): {
 	groupedData: { [key: string]: FileData };
 	sortedXValues: (string | number)[];
@@ -213,7 +208,7 @@ const groupDataByXAxis = (
 export const processFileData = async (
 	file: File,
 	onSuccess: (data: { headers: string[]; rows: FileData }) => void,
-	onError: (error: string) => void,
+	onError: (error: string) => void
 ) => {
 	if (!file) {
 		onError("No file selected");
@@ -232,7 +227,7 @@ export const processFileData = async (
 			});
 			if (results.errors.length > 0) {
 				throw new Error(
-					`CSV Parsing Error: ${results.errors[0].message} on row ${results.errors[0].row}`,
+					`CSV Parsing Error: ${results.errors[0].message} on row ${results.errors[0].row}`
 				);
 			}
 			if (results.data.length > 0) {
@@ -262,12 +257,8 @@ export const processFileData = async (
 		// Clean data: trim strings, handle potential nulls/undefined explicitly
 		const cleanedRows = rows.map((row) =>
 			row.map((cell) =>
-				typeof cell === "string"
-					? cell.trim()
-					: cell !== null && cell !== undefined
-						? cell
-						: null,
-			),
+				typeof cell === "string" ? cell.trim() : cell !== null && cell !== undefined ? cell : null
+			)
 		);
 
 		onSuccess({ headers, rows: cleanedRows });
@@ -287,11 +278,8 @@ const MAX_Y_CATEGORIES_FOR_BAR_CHART = 10; // Define a threshold
 
 export const processBarChartData = (
 	rawData: { headers: string[]; rows: FileData },
-	config: Pick<ChartConfig, "xAxisColumn" | "yAxisColumn">,
-): Pick<
-	ChartConfig,
-	"processedData" | "layout" | "yCategories" | "yKey" | "isTruncated"
-> & {
+	config: Pick<ChartConfig, "xAxisColumn" | "yAxisColumn">
+): Pick<ChartConfig, "processedData" | "layout" | "yCategories" | "yKey" | "isTruncated"> & {
 	error?: string;
 } => {
 	const { headers, rows } = rawData;
@@ -302,7 +290,7 @@ export const processBarChartData = (
 		rows,
 		xAxisColumn,
 		yAxisColumn,
-		"bar charts",
+		"bar charts"
 	);
 
 	if (!axisInfo.success) {
@@ -324,11 +312,7 @@ export const processBarChartData = (
 	}
 
 	// Use the new helper for grouping and sorting
-	const { groupedData, sortedXValues } = groupDataByXAxis(
-		rows,
-		xAxisIndex,
-		headers,
-	);
+	const { groupedData, sortedXValues } = groupDataByXAxis(rows, xAxisIndex, headers);
 
 	let processedData: ChartDataItem[] = [];
 	let layout: "stacked" | "simple" = "simple";
@@ -358,7 +342,7 @@ export const processBarChartData = (
 				(row) =>
 					row[yAxisIndex] !== null &&
 					row[yAxisIndex] !== undefined &&
-					String(row[yAxisIndex]).trim() !== "",
+					String(row[yAxisIndex]).trim() !== ""
 			).length;
 			processedData.push({ name: xValue, [yKey]: count });
 		}
@@ -367,7 +351,7 @@ export const processBarChartData = (
 	let isTruncated = false;
 	if (processedData.length > MAX_DATA_POINTS) {
 		console.warn(
-			`Bar chart data truncated from ${processedData.length} to ${MAX_DATA_POINTS} points.`,
+			`Bar chart data truncated from ${processedData.length} to ${MAX_DATA_POINTS} points.`
 		);
 		processedData = processedData.slice(0, MAX_DATA_POINTS);
 		isTruncated = true;
@@ -390,11 +374,8 @@ export const processBarChartData = (
  */
 export const processLineChartData = (
 	rawData: { headers: string[]; rows: FileData },
-	config: Pick<ChartConfig, "xAxisColumn" | "yAxisColumn">,
-): Pick<
-	ChartConfig,
-	"processedData" | "yCategories" | "numericYKey" | "isTruncated"
-> & {
+	config: Pick<ChartConfig, "xAxisColumn" | "yAxisColumn">
+): Pick<ChartConfig, "processedData" | "yCategories" | "numericYKey" | "isTruncated"> & {
 	error?: string;
 } => {
 	const { headers, rows } = rawData;
@@ -405,7 +386,7 @@ export const processLineChartData = (
 		rows,
 		xAxisColumn,
 		yAxisColumn,
-		"line charts",
+		"line charts"
 	);
 
 	if (!axisInfo.success) {
@@ -424,7 +405,7 @@ export const processLineChartData = (
 	const { groupedData, sortedXValues, allXAreNumeric } = groupDataByXAxis(
 		rows,
 		xAxisIndex,
-		headers,
+		headers
 	);
 
 	let processedData: ChartDataItem[] = [];
@@ -497,7 +478,7 @@ export const processLineChartData = (
 	let isTruncated = false;
 	if (processedData.length > MAX_DATA_POINTS) {
 		console.warn(
-			`Line chart data truncated from ${processedData.length} to ${MAX_DATA_POINTS} points.`,
+			`Line chart data truncated from ${processedData.length} to ${MAX_DATA_POINTS} points.`
 		);
 		processedData = processedData.slice(0, MAX_DATA_POINTS);
 		isTruncated = true;
@@ -520,11 +501,8 @@ export const processLineChartData = (
  */
 export const processAreaChartData = (
 	rawData: { headers: string[]; rows: FileData },
-	config: Pick<ChartConfig, "xAxisColumn" | "yAxisColumn">,
-): Pick<
-	ChartConfig,
-	"processedData" | "yCategories" | "numericYKey" | "isTruncated"
-> & {
+	config: Pick<ChartConfig, "xAxisColumn" | "yAxisColumn">
+): Pick<ChartConfig, "processedData" | "yCategories" | "numericYKey" | "isTruncated"> & {
 	error?: string;
 } => {
 	const { headers, rows } = rawData;
@@ -535,7 +513,7 @@ export const processAreaChartData = (
 		rows,
 		xAxisColumn,
 		yAxisColumn,
-		"area charts",
+		"area charts"
 	);
 
 	if (!axisInfo.success) {
@@ -554,7 +532,7 @@ export const processAreaChartData = (
 	const { groupedData, sortedXValues, allXAreNumeric } = groupDataByXAxis(
 		rows,
 		xAxisIndex,
-		headers,
+		headers
 	);
 
 	let processedData: ChartDataItem[] = [];
@@ -624,7 +602,7 @@ export const processAreaChartData = (
 	let isTruncated = false;
 	if (processedData.length > MAX_DATA_POINTS) {
 		console.warn(
-			`Area chart data truncated from ${processedData.length} to ${MAX_DATA_POINTS} points.`,
+			`Area chart data truncated from ${processedData.length} to ${MAX_DATA_POINTS} points.`
 		);
 		processedData = processedData.slice(0, MAX_DATA_POINTS);
 		isTruncated = true;
@@ -647,7 +625,7 @@ export const processAreaChartData = (
  */
 export const processPieChartData = (
 	rawData: { headers: string[]; rows: FileData },
-	config: { valueColumn: string },
+	config: { valueColumn: string }
 ): Pick<ChartConfig, "processedData" | "isTruncated"> & { error?: string } => {
 	const { headers, rows } = rawData;
 	const { valueColumn } = config;
@@ -687,11 +665,9 @@ export const processPieChartData = (
 	let isTruncated = false;
 
 	if (analysis.uniqueValues > MAX_PIE_SLICES) {
-		console.warn(
-			`为饼图 (${analysis.uniqueValues}) 提供过多的唯一值。正在对最小的切片进行分组。`,
-		);
+		console.warn(`为饼图 (${analysis.uniqueValues}) 提供过多的唯一值。正在对最小的切片进行分组。`);
 		const sortedFrequencies = Object.entries(analysis.frequencies).sort(
-			([, countA], [, countB]) => countB - countA,
+			([, countA], [, countB]) => countB - countA
 		);
 		const topSlices = sortedFrequencies.slice(0, MAX_PIE_SLICES - 1);
 		const otherSliceCount = sortedFrequencies
@@ -722,7 +698,7 @@ export const processPieChartData = (
 const isColumnSuitableForScatter = (
 	columnData: CellValue[],
 	columnName: string,
-	minNumericPercent: number = 0.2,
+	minNumericPercent = 0.2
 ): {
 	suitable: boolean;
 	numericCount: number;
@@ -730,7 +706,7 @@ const isColumnSuitableForScatter = (
 	reason?: string;
 } => {
 	const cleanedData = columnData.filter(
-		(v) => v !== null && v !== undefined && String(v).trim() !== "",
+		(v) => v !== null && v !== undefined && String(v).trim() !== ""
 	);
 	const totalCount = cleanedData.length;
 	if (totalCount === 0) {
@@ -773,7 +749,7 @@ const isColumnSuitableForScatter = (
  */
 export const processScatterChartData = (
 	rawData: { headers: string[]; rows: FileData },
-	config: { xAxisColumn: string; yAxisColumn: string },
+	config: { xAxisColumn: string; yAxisColumn: string }
 ): Pick<ChartConfig, "processedData" | "isTruncated"> & { error?: string } => {
 	const { headers, rows } = rawData;
 	const { xAxisColumn, yAxisColumn } = config;
@@ -865,7 +841,7 @@ export const processScatterChartData = (
 	let isTruncated = false;
 	if (processedData.length > MAX_DATA_POINTS) {
 		console.warn(
-			`Scatter plot data truncated from ${processedData.length} to ${MAX_DATA_POINTS} points.`,
+			`Scatter plot data truncated from ${processedData.length} to ${MAX_DATA_POINTS} points.`
 		);
 		processedData = processedData.slice(0, MAX_DATA_POINTS);
 		isTruncated = true;
@@ -883,7 +859,7 @@ export const processScatterChartData = (
  */
 export const processRadarChartData = (
 	rawData: { headers: string[]; rows: FileData },
-	config: { xAxisColumn: string },
+	config: { xAxisColumn: string }
 ): Pick<ChartConfig, "processedData" | "isTruncated"> & { error?: string } => {
 	const { headers, rows } = rawData;
 	const { xAxisColumn } = config;
@@ -980,10 +956,13 @@ export const exportCleanedData = async (
 	try {
 		if (fileExtension === "csv") {
 			// Prepare CSV data: headers row + data rows
-			const csvData = [headers, ...rows.map(row =>
-				// Replace null/undefined with empty string
-				row.map(cell => cell === null || cell === undefined ? "" : cell)
-			)];
+			const csvData = [
+				headers,
+				...rows.map((row) =>
+					// Replace null/undefined with empty string
+					row.map((cell) => (cell === null || cell === undefined ? "" : cell))
+				),
+			];
 
 			// Convert to CSV string using PapaParse
 			const csv = Papa.unparse(csvData);

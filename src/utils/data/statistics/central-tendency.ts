@@ -1,5 +1,5 @@
 import * as ss from "simple-statistics";
-import { CellValue, CATEGORIES, StatisticResult } from "./types";
+import { CATEGORIES, type CellValue, type StatisticResult } from "./types";
 import { convertToNumericArray } from "./utils";
 
 /**
@@ -52,9 +52,7 @@ export function median(data: CellValue[]): number | null {
  * 众数 (Mode) - can return multiple values
  */
 export function mode(data: CellValue[]): (string | number)[] {
-	const cleanedData = data.filter(
-		(v) => v !== null && v !== undefined && String(v).trim() !== "",
-	);
+	const cleanedData = data.filter((v) => v !== null && v !== undefined && String(v).trim() !== "");
 	if (cleanedData.length === 0) return [];
 
 	// Count frequencies
@@ -88,9 +86,7 @@ export function mode(data: CellValue[]): (string | number)[] {
 /**
  * 获取所有集中趋势测度的统计量
  */
-export function getCentralTendencyStatistics(
-	data: CellValue[],
-): StatisticResult[] {
+export function getCentralTendencyStatistics(data: CellValue[]): StatisticResult[] {
 	return [
 		{
 			name: "平均值 (Mean)",

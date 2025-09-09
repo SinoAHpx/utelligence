@@ -1,9 +1,5 @@
-import {
-	processFileData,
-	analyzeColumnData,
-	FileData,
-} from "../data-processing";
-import { ColumnVisualizableConfig } from "@/store/visualization-chart-store"; // Need this type
+import type { ColumnVisualizableConfig } from "@/store/visualization-chart-store"; // Need this type
+import { type FileData, analyzeColumnData, processFileData } from "../data-processing";
 
 /**
  * Processes a file, extracts raw data, and analyzes specified columns for visualizability.
@@ -16,28 +12,24 @@ import { ColumnVisualizableConfig } from "@/store/visualization-chart-store"; //
  */
 export const processAndAnalyzeFileData = async (
 	file: File,
-	columnsToAnalyze: string[] = [],
+	columnsToAnalyze: string[] = []
 ): Promise<{
 	rawData: { headers: string[]; rows: FileData };
 	columnsVisualizableStatus: ColumnVisualizableConfig[];
 }> => {
 	// Wrap processFileData in a Promise to handle its callbacks
-	const rawData = await new Promise<{ headers: string[]; rows: FileData }>(
-		(resolve, reject) => {
-			processFileData(file, resolve, (errorMsg) => {
-				console.error("File processing failed in helper:", errorMsg);
-				reject(new Error(errorMsg)); // Reject the promise on error
-			});
-		},
-	);
+	const rawData = await new Promise<{ headers: string[]; rows: FileData }>((resolve, reject) => {
+		processFileData(file, resolve, (errorMsg) => {
+			console.error("File processing failed in helper:", errorMsg);
+			reject(new Error(errorMsg)); // Reject the promise on error
+		});
+	});
 
 	// Use all columns if none are specified
-	const columnsToProcess = columnsToAnalyze.length > 0
-		? columnsToAnalyze
-		: rawData.headers;
+	const columnsToProcess = columnsToAnalyze.length > 0 ? columnsToAnalyze : rawData.headers;
 
 	// Analyze columns after successful processing
-	let columnsVisualizableStatus: ColumnVisualizableConfig[] = [];
+	const columnsVisualizableStatus: ColumnVisualizableConfig[] = [];
 	if (columnsToProcess.length > 0 && rawData.rows.length > 0) {
 		try {
 			// Replicate logic from analyzeColumnsForVisualization
