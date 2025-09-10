@@ -1,4 +1,4 @@
-import { getChartColor } from "@/components/constants/chart-colors";
+import { getChartColor } from "@/utils/constants/chart-colors";
 import {
 	Card,
 	CardContent,
