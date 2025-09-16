@@ -222,10 +222,14 @@ export const createMessage = async (userQuery: string) => {
 	setCurrentMessages([...currentMessages, userMessage, assistantMessage]);
 	const { rawData: parsedData } = useUnifiedDataStore.getState();
 	if (!parsedData) {
-		await streamResponse(
-			assistantMessage.id,
-			"注意，用户目前没有上传文件，请你提醒用户上传文件。然后，再回答用户的问题。"
-		);
+		try {
+			await streamResponse(
+				assistantMessage.id,
+				"注意，用户目前没有上传文件，请你提醒用户上传文件。然后，再回答用户的问题。"
+			);
+		} catch (error) {
+			console.error("Error in streamResponse:", error);
+		}
 		setIsLoading(false);
 		return;
 	}
@@ -313,11 +317,19 @@ export const createMessage = async (userQuery: string) => {
 			});
 		}
 
-		await streamResponse(assistantMessage.id, "你只需要说创建成功就可以，不需要提供图片。");
+		try {
+			await streamResponse(assistantMessage.id, "你只需要说创建成功就可以，不需要提供图片。");
+		} catch (error) {
+			console.error("Error in streamResponse:", error);
+		}
 		setIsLoading(false);
 	} else {
 		const rag = JSON.stringify(parsedData);
-		await streamResponse(assistantMessage.id, "请你根据以下内容回答用户的问题：" + rag);
+		try {
+			await streamResponse(assistantMessage.id, "请你根据以下内容回答用户的问题：" + rag);
+		} catch (error) {
+			console.error("Error in streamResponse:", error);
+		}
 		setIsLoading(false);
 	}
 };
@@ -338,12 +350,39 @@ export const streamResponse = async (assistantMessageId: string, additionalConte
 			...currentMessages,
 		],
 	});
+	
 	const response = await fetch("/api/chat", {
 		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
 		body: requestBody,
 		signal: abortController.signal,
 	});
-	if (!response.body) throw new Error("No response body to read from stream");
+
+	// Handle non-200 responses
+	if (!response.ok) {
+		let errorMessage = `HTTP Error ${response.status}: ${response.statusText}`;
+		
+		try {
+			const errorData = await response.json();
+			if (errorData.error) {
+				errorMessage = errorData.error;
+			}
+		} catch {
+			// If we can't parse the error response, use the default message
+		}
+
+		// Add error message to assistant message
+		appendMessageContent(assistantMessageId, `❌ **错误**: ${errorMessage}`);
+		throw new Error(errorMessage);
+	}
+
+	if (!response.body) {
+		const errorMsg = "服务器未返回响应内容";
+		appendMessageContent(assistantMessageId, `❌ **错误**: ${errorMsg}`);
+		throw new Error(errorMsg);
+	}
 	const reader = response.body.getReader();
 	const decoder = new TextDecoder();
 
