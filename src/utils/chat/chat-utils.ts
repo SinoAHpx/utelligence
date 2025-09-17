@@ -374,13 +374,13 @@ export const streamResponse = async (assistantMessageId: string, additionalConte
 		}
 
 		// Add error message to assistant message
-		appendMessageContent(assistantMessageId, `❌ **错误**: ${errorMessage}`);
+		appendMessageContent(assistantMessageId, `**错误**: ${errorMessage}`);
 		throw new Error(errorMessage);
 	}
 
 	if (!response.body) {
 		const errorMsg = "服务器未返回响应内容";
-		appendMessageContent(assistantMessageId, `❌ **错误**: ${errorMsg}`);
+		appendMessageContent(assistantMessageId, `**错误**: ${errorMsg}`);
 		throw new Error(errorMsg);
 	}
 	const reader = response.body.getReader();
