@@ -40,8 +40,10 @@ next-env.d.ts
 
 .codelf
 
-# markdown files (except README)
+# markdown files
 *.md
+!CLAUDE.md
+!AGENTS.md
 !README.md
 *.typ
 *.bib
