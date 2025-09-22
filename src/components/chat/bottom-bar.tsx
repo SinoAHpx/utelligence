@@ -2,8 +2,7 @@
 
 import { PaperPlaneIcon, StopIcon } from "@radix-ui/react-icons";
 import dynamic from "next/dynamic";
-import type React from "react";
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { useChatStore } from "@/store/chat-store";
 import { useHasMounted } from "@/utils/utils";
@@ -31,7 +30,7 @@ const ChatBottombar = () => {
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 
 	// Handle keyboard shortcuts
-	const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+	const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
 		if (e.key === "Enter" && !e.shiftKey && !isLoading && input.trim()) {
 			e.preventDefault();
 			sendMessage(input);
@@ -58,7 +57,9 @@ const ChatBottombar = () => {
 			<div className="stretch flex flex-row gap-3 last:mb-2 md:last:mb-6 md:mx-auto md:max-w-2xl xl:max-w-3xl">
 				<div className="w-full relative mb-1 items-center">
 					<form
-						onSubmit={() => {
+						onSubmit={(event: FormEvent<HTMLFormElement>) => {
+							event.preventDefault();
+							if (isSubmitDisabled) return;
 							sendMessage(input);
 							setInput("");
 						}}
