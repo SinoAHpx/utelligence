@@ -2,6 +2,7 @@ import { useChatStore } from "@/store/chat-store";
 import type { Message } from "ai";
 import Image from "next/image";
 import UCASSLogo from "../../../public/ucass_logo.png";
+import { ChatLoadingSkeleton } from "./chat-loading-skeleton";
 import MessageFormatter from "./message-formatter";
 
 /**
@@ -59,11 +60,7 @@ const AssistantMessage = ({ content, isLastMessage }: AssistantMessageProps) => 
 			<div className="font-semibold pb-2">Assistant</div>
 			<div className="break-words overflow-hidden w-full">
 				<MessageFormatter content={content} />
-				{isLoading && isLastMessage && (
-					<span className="animate-pulse inline-block w-6 text-center" aria-label="Typing">
-						...
-					</span>
-				)}
+				{isLoading && isLastMessage && <ChatLoadingSkeleton />}
 			</div>
 		</div>
 	);
