@@ -336,19 +336,38 @@ export const createMessage = async (userQuery: string) => {
 
 export const streamResponse = async (assistantMessageId: string, additionalContent = "") => {
 	const { currentMessages, appendMessageContent } = useChatStore.getState();
-	// //todo: get enhanced system prompt
+
+	// Filter and validate messages to ensure they have required role and content fields
+	const validMessages = currentMessages.filter(message =>
+		message &&
+		message.role &&
+		message.content &&
+		typeof message.role === 'string' &&
+		typeof message.content === 'string' &&
+		message.content.trim() !== ''
+	);
+
+	// Build the messages array
+	const messages = [
+		{
+			role: "system",
+			content: "You are a helpful assistant",
+		}
+	];
+
+	// Only add user message if additionalContent is not empty
+	if (additionalContent && additionalContent.trim() !== '') {
+		messages.push({
+			role: "user",
+			content: additionalContent,
+		});
+	}
+
+	// Add valid current messages
+	messages.push(...validMessages);
+
 	const requestBody = JSON.stringify({
-		messages: [
-			{
-				role: "system",
-				content: "You are a helpful assistant",
-			},
-			{
-				role: "user",
-				content: additionalContent,
-			},
-			...currentMessages,
-		],
+		messages,
 	});
 	
 	const response = await fetch("/api/chat", {
