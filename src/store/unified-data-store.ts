@@ -183,8 +183,7 @@ export const useUnifiedDataStore = create<UnifiedDataState>()(
 						rawData: result,
 						isLoading: false,
 					});
-					visualizationChartStore.getState().setAvailableColumns(result.headers);
-					visualizationChartStore.getState().setColumnsVisualizableStatus([]);
+					// Don't set visualization chart store data here - let processAndAnalyze handle it
 
 					// Sync with backend if needed
 					await fetch("/api/data/upload", {

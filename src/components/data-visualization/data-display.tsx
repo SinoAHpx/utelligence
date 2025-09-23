@@ -19,7 +19,8 @@ export default function DataDisplay() {
 	// Get data from unified store
 	const {
 		currentFile: file,
-		rawData: parsedData,
+		rawData,
+		processedData: parsedData,
 		currentFileIdentifier,
 		isLoading: isFileLoading,
 		error: fileError,
@@ -47,29 +48,49 @@ export default function DataDisplay() {
 			return;
 		}
 
-		const fileSignature = `${file.name}-${file.size}`;
-
-		if (fileSignature !== currentFileIdentifier) {
-			const headers = parsedData?.headers || [];
-			processAndAnalyze(headers);
+		// Check if we have rawData and haven't processed it yet
+		if (rawData && rawData.headers && !parsedData) {
+			processAndAnalyze(rawData.headers);
 		}
 	}, [
 		file,
+		rawData,
 		parsedData,
 		currentFileIdentifier,
 		processAndAnalyze,
 		clearFile,
 	]);
 
+	// Get columnsVisualizableStatus for validation
+	const columnsVisualizableStatus = visualizationChartStore((state) => state.columnsVisualizableStatus);
+
 	// 打开添加图表对话框
 	const openAddChartModal = () => {
 		// Check for fileError from the store instead of rawFileData presence
 		if (fileError) {
 			console.error("Cannot open add chart modal due to file error:", fileError);
-			return; // Prevent opening modal if there's a file error
+			return;
 		}
 		if (isFileLoading) {
 			console.warn("Data is still loading, please wait.");
+			return;
+		}
+
+		// Check if processed data exists
+		if (!parsedData || !parsedData.headers || parsedData.headers.length === 0) {
+			console.warn("No processed data available yet, please wait.");
+			return;
+		}
+
+		// Check if available columns are set in visualization chart store
+		if (availableColumns.length === 0) {
+			console.warn("Available columns not ready yet, please wait.");
+			return;
+		}
+
+		// Check if columns have been analyzed for visualization
+		if (columnsVisualizableStatus.length === 0) {
+			console.warn("Column visualization analysis not completed yet, please wait.");
 			return;
 		}
 

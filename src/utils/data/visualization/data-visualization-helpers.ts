@@ -40,7 +40,7 @@ export const processAndAnalyzeFileData = async (
 				const analysis = analyzeColumnData(columnData, colName);
 				columnsVisualizableStatus.push({
 					column: colName,
-					isVisualizable: analysis.isCategorical || analysis.isNumeric,
+					isVisualizable: (analysis.isCategorical || analysis.isNumeric) && analysis.isValidForVisualization,
 					uniqueValues: analysis.uniqueValues,
 					totalValues: analysis.totalValues,
 					reason: !analysis.isValidForVisualization
