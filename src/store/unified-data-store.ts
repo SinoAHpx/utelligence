@@ -160,10 +160,10 @@ export const useUnifiedDataStore = create<UnifiedDataState>()(
 			// File Management Actions
 			uploadFile: async (file) => {
 				const fileKey = `${file.name}-${file.size}`;
-				const { currentFileIdentifier } = get();
+				const { currentFileIdentifier, rawData, processedData } = get();
 
-				// Avoid reprocessing the same file
-				if (fileKey === currentFileIdentifier) {
+				// Avoid reprocessing the same file only if we already have data loaded
+				if (fileKey === currentFileIdentifier && (rawData || processedData)) {
 					return;
 				}
 
@@ -173,6 +173,9 @@ export const useUnifiedDataStore = create<UnifiedDataState>()(
 					currentFile: file,
 					currentFileIdentifier: fileKey,
 					columnAnalysis: [],
+					// Reset derived data when (re)uploading
+					processedData: null,
+					cleanedData: null,
 				});
 
 				visualizationChartStore.getState().setCurrentFileIdentifier(fileKey);
@@ -225,34 +228,34 @@ export const useUnifiedDataStore = create<UnifiedDataState>()(
 
 				set({ isLoading: true, error: null });
 
-			try {
-				const { rawData, columnsVisualizableStatus } = await processAndAnalyzeFileData(
-					currentFile,
-					columnsToAnalyze
-				);
+				try {
+					const { rawData, columnsVisualizableStatus } = await processAndAnalyzeFileData(
+						currentFile,
+						columnsToAnalyze
+					);
 
-				set({
-					processedData: rawData,
-					columnAnalysis: columnsVisualizableStatus,
-					isLoading: false,
-				});
-
-				const fileIdentifier = get().currentFileIdentifier;
-				if (fileIdentifier) {
-					visualizationChartStore.getState().initializeFileContext({
-						identifier: fileIdentifier,
-						columns: rawData.headers,
-						columnStatus: columnsVisualizableStatus,
+					set({
+						processedData: rawData,
+						columnAnalysis: columnsVisualizableStatus,
+						isLoading: false,
 					});
+
+					const fileIdentifier = get().currentFileIdentifier;
+					if (fileIdentifier) {
+						visualizationChartStore.getState().initializeFileContext({
+							identifier: fileIdentifier,
+							columns: rawData.headers,
+							columnStatus: columnsVisualizableStatus,
+						});
+					}
+				} catch (error: any) {
+					set({
+						error: error.message || "Processing failed",
+						isLoading: false,
+						columnAnalysis: [],
+					});
+					visualizationChartStore.getState().setColumnsVisualizableStatus([]);
 				}
-			} catch (error: any) {
-				set({
-					error: error.message || "Processing failed",
-					isLoading: false,
-					columnAnalysis: [],
-				});
-				visualizationChartStore.getState().setColumnsVisualizableStatus([]);
-			}
 			},
 
 			cleanData: async (operationType, params) => {
@@ -405,4 +408,4 @@ export const useUnifiedDataStore = create<UnifiedDataState>()(
 			}),
 		}
 	)
-);
+);;
