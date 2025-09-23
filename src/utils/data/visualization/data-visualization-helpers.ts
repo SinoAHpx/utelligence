@@ -1,4 +1,4 @@
-import type { ColumnVisualizableConfig } from "@/store/visualization-chart-store"; // Need this type
+import type { ColumnVisualizableConfig } from "@/types/visualization";
 import { type FileData, analyzeColumnData, processFileData } from "../data-processing";
 
 /**

@@ -1,165 +1,250 @@
-import type { ChartConfig } from "@/types/chart-types";
+import { CHART_TYPES, type ChartConfig, type ChartType } from "@/types/chart-types";
+import type { ChartBuilderState, ColumnVisualizableConfig } from "@/types/visualization";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-/**
- * Column visualizability status configuration
- * Tracks whether a column is suitable for visualization
- */
-export interface ColumnVisualizableConfig {
-	column: string;
-	isVisualizable: boolean;
-	uniqueValues: number;
-	totalValues: number;
-	reason?: string;
-}
+const buildDefaultBuilder = (): ChartBuilderState => ({
+	chartType: "bar",
+	title: "",
+	xAxis: null,
+	yAxis: null,
+});
 
-/**
- * Visualization chart state interface
- * Manages all state related to chart visualization features
- */
+const requiresAxis = (type: ChartType): boolean =>
+	CHART_TYPES.find((definition) => definition.id === type)?.requiresAxis ?? false;
+
+const sanitizeBuilder = (
+	builder: ChartBuilderState,
+	columns: string[],
+	status: ColumnVisualizableConfig[]
+): ChartBuilderState => {
+	const needsAxis = requiresAxis(builder.chartType);
+	const normalizedColumns = new Set(columns);
+
+	const sanitizeAxis = (axis: string | null) =>
+		axis && normalizedColumns.has(axis) ? axis : null;
+
+	const nextXAxis = needsAxis ? sanitizeAxis(builder.xAxis) : null;
+
+	let nextYAxis = sanitizeAxis(builder.yAxis);
+	if (needsAxis && nextYAxis && nextYAxis === nextXAxis) {
+		nextYAxis = null;
+	}
+
+	if (nextYAxis) {
+		const columnStatus = status.find((item) => item.column === nextYAxis);
+		if (!columnStatus || (!columnStatus.isVisualizable && columnStatus.uniqueValues <= 0)) {
+			nextYAxis = null;
+		}
+	}
+
+	return {
+		chartType: builder.chartType,
+		title: builder.title,
+		xAxis: nextXAxis,
+		yAxis: nextYAxis,
+	};
+};
+
 interface VisualizationChartState {
-	// Current file identifier (managed internally)
 	currentFileIdentifier: string | null;
-	setCurrentFileIdentifier: (identifier: string | null) => void;
-
-	// Chart configurations per file identifier (persistent)
+	availableColumns: string[];
+	columnsVisualizableStatus: ColumnVisualizableConfig[];
 	fileChartConfigs: Record<string, ChartConfig[]>;
-
-	// Active charts for the current file (derived, non-persistent)
 	userCharts: ChartConfig[];
+	builder: ChartBuilderState;
 
-	// Actions for active charts
+	setCurrentFileIdentifier: (identifier: string | null) => void;
+	initializeFileContext: (payload: {
+		identifier: string;
+		columns: string[];
+		columnStatus: ColumnVisualizableConfig[];
+	}) => void;
+	resetCurrentFile: () => void;
+
+	setAvailableColumns: (columns: string[]) => void;
+	setColumnsVisualizableStatus: (status: ColumnVisualizableConfig[]) => void;
+	setChartType: (type: ChartType) => void;
+	setChartTitle: (title: string) => void;
+	setXAxisColumn: (column: string | null) => void;
+	setYAxisColumn: (column: string | null) => void;
+	resetBuilder: () => void;
+
 	addChart: (chart: ChartConfig) => void;
 	removeChart: (chartId: string) => void;
-	clearCurrentFileCharts: () => void;
-
-	// Chart creation state
-	selectedChartType: string;
-	setSelectedChartType: (type: string) => void;
-
-	selectedColumnsForChart: string[];
-	setSelectedColumnsForChart: (columns: string[]) => void;
-
-	chartTitle: string;
-	setChartTitle: (title: string) => void;
-
-	xAxisColumn: string;
-	setXAxisColumn: (column: string) => void;
-
-	yAxisColumn: string;
-	setYAxisColumn: (column: string) => void;
-
-	// Column visualization status
-	columnsVisualizableStatus: ColumnVisualizableConfig[];
-	setColumnsVisualizableStatus: (status: ColumnVisualizableConfig[]) => void;
-
-	// Helper to load charts for the current file
-	loadChartsForFile: (fileIdentifier: string) => void;
 	clearChartsForFile: (fileIdentifier: string) => void;
 }
 
-/**
- * Zustand store for visualization chart data
- * Persists chart configurations to localStorage for session continuity
- */
 export const visualizationChartStore = create<VisualizationChartState>()(
 	persist(
-		(set, get) => ({
-			// --- State ---
+		(set) => ({
 			currentFileIdentifier: null,
+			availableColumns: [],
+			columnsVisualizableStatus: [],
 			fileChartConfigs: {},
 			userCharts: [],
-			columnsVisualizableStatus: [],
-			selectedChartType: "bar",
-			selectedColumnsForChart: [],
-			chartTitle: "",
-			xAxisColumn: "",
-			yAxisColumn: "",
+			builder: buildDefaultBuilder(),
 
-			// --- Setters ---
 			setCurrentFileIdentifier: (identifier) => {
-				set({ currentFileIdentifier: identifier });
-				// Load charts for this file when identifier changes
-				if (identifier) {
-					get().loadChartsForFile(identifier);
-				} else {
-					set({ userCharts: [] });
-				}
-			},
-			setColumnsVisualizableStatus: (status) => set({ columnsVisualizableStatus: status }),
-			setSelectedChartType: (type) => set({ selectedChartType: type }),
-			setSelectedColumnsForChart: (columns) => set({ selectedColumnsForChart: columns }),
-			setChartTitle: (title) => set({ chartTitle: title }),
-			setXAxisColumn: (column) => set({ xAxisColumn: column }),
-			setYAxisColumn: (column) => set({ yAxisColumn: column }),
+				set((state) => {
+					if (!identifier) {
+						return {
+							currentFileIdentifier: null,
+							userCharts: [],
+							availableColumns: [],
+							columnsVisualizableStatus: [],
+							builder: buildDefaultBuilder(),
+						};
+					}
 
-			// --- Actions operating on the CURRENT file's charts ---
-			addChart: (chart) => {
-				const currentId = get().currentFileIdentifier;
-				if (!currentId) return;
-				set((state) => {
-					const currentConfigs = state.fileChartConfigs[currentId] || [];
-					const updatedConfigs = [...currentConfigs, chart];
+					const chartsForFile = state.fileChartConfigs[identifier] ?? [];
 					return {
-						fileChartConfigs: {
-							...state.fileChartConfigs,
-							[currentId]: updatedConfigs,
-						},
-						userCharts: updatedConfigs,
+						currentFileIdentifier: identifier,
+						userCharts: chartsForFile,
+						builder: buildDefaultBuilder(),
 					};
 				});
 			},
-			removeChart: (chartId) => {
-				const currentId = get().currentFileIdentifier;
-				if (!currentId) return;
+
+			initializeFileContext: ({ identifier, columns, columnStatus }) => {
 				set((state) => {
-					const currentConfigs = state.fileChartConfigs[currentId] || [];
-					const updatedConfigs = currentConfigs.filter((chart) => chart.id !== chartId);
+					const chartsForFile = state.fileChartConfigs[identifier] ?? [];
 					return {
-						fileChartConfigs: {
-							...state.fileChartConfigs,
-							[currentId]: updatedConfigs,
-						},
-						userCharts: updatedConfigs,
+						currentFileIdentifier: identifier,
+						availableColumns: columns,
+						columnsVisualizableStatus: columnStatus,
+						userCharts: chartsForFile,
+						builder: sanitizeBuilder(state.builder, columns, columnStatus),
 					};
 				});
 			},
-			clearCurrentFileCharts: () => {
-				const currentId = get().currentFileIdentifier;
-				if (!currentId) return;
-				set((state) => ({
-					fileChartConfigs: {
-						...state.fileChartConfigs,
-						[currentId]: [],
-					},
+
+			resetCurrentFile: () => {
+				set({
+					currentFileIdentifier: null,
+					availableColumns: [],
+					columnsVisualizableStatus: [],
 					userCharts: [],
+					builder: buildDefaultBuilder(),
+				});
+			},
+
+			setAvailableColumns: (columns) => {
+				set((state) => ({
+					availableColumns: columns,
+					builder: sanitizeBuilder(state.builder, columns, state.columnsVisualizableStatus),
 				}));
 			},
 
-			// --- Helper methods for file management ---
-			loadChartsForFile: (fileIdentifier) => {
-				const fileConfigs = get().fileChartConfigs;
-				if (fileIdentifier && fileConfigs[fileIdentifier]) {
-					set({
-						userCharts: fileConfigs[fileIdentifier],
-						currentFileIdentifier: fileIdentifier,
-					});
-				} else {
-					set({
-						userCharts: [],
-						currentFileIdentifier: fileIdentifier,
-					});
-				}
+			setColumnsVisualizableStatus: (status) => {
+				set((state) => ({
+					columnsVisualizableStatus: status,
+					builder: sanitizeBuilder(state.builder, state.availableColumns, status),
+				}));
+			},
+
+			setChartType: (type) => {
+				set((state) => ({
+					builder: {
+						chartType: type,
+						title: state.builder.title,
+						xAxis: requiresAxis(type) ? null : state.builder.xAxis,
+						yAxis: null,
+					},
+				}));
+			},
+
+			setChartTitle: (title) => {
+				set((state) => ({
+					builder: { ...state.builder, title },
+				}));
+			},
+
+			setXAxisColumn: (column) => {
+				set((state) => {
+					const normalized = column && column.length > 0 ? column : null;
+					return {
+						builder: {
+							...state.builder,
+							xAxis: normalized,
+							yAxis:
+								normalized && state.builder.yAxis === normalized
+									? null
+									: state.builder.yAxis,
+						},
+					};
+				});
+			},
+
+			setYAxisColumn: (column) => {
+				set((state) => {
+					const normalized = column && column.length > 0 ? column : null;
+					return {
+						builder: {
+							...state.builder,
+							yAxis:
+								normalized && state.builder.xAxis === normalized
+									? null
+									: normalized,
+						},
+					};
+				});
+			},
+
+			resetBuilder: () => {
+				set({ builder: buildDefaultBuilder() });
+			},
+
+			addChart: (chart) => {
+				set((state) => {
+					const currentId = state.currentFileIdentifier;
+					if (!currentId) {
+						console.warn("Attempted to add a chart without an active file context.");
+						return state;
+					}
+
+					const existingCharts = state.fileChartConfigs[currentId] ?? [];
+					const updatedCharts = [...existingCharts, chart];
+
+					return {
+						fileChartConfigs: {
+							...state.fileChartConfigs,
+							[currentId]: updatedCharts,
+						},
+						userCharts: updatedCharts,
+					};
+				});
+			},
+
+			removeChart: (chartId) => {
+				set((state) => {
+					const currentId = state.currentFileIdentifier;
+					if (!currentId) {
+						return state;
+					}
+
+					const existingCharts = state.fileChartConfigs[currentId] ?? [];
+					const updatedCharts = existingCharts.filter((chart) => chart.id !== chartId);
+
+					return {
+						fileChartConfigs: {
+							...state.fileChartConfigs,
+							[currentId]: updatedCharts,
+						},
+						userCharts: updatedCharts,
+					};
+				});
 			},
 
 			clearChartsForFile: (fileIdentifier) => {
 				set((state) => {
-					const newConfigs = { ...state.fileChartConfigs };
-					delete newConfigs[fileIdentifier];
+					const nextConfigs = { ...state.fileChartConfigs };
+					delete nextConfigs[fileIdentifier];
+
 					return {
-						fileChartConfigs: newConfigs,
-						userCharts: state.currentFileIdentifier === fileIdentifier ? [] : state.userCharts,
+						fileChartConfigs: nextConfigs,
+						userCharts:
+							state.currentFileIdentifier === fileIdentifier ? [] : state.userCharts,
 					};
 				});
 			},
@@ -174,7 +259,6 @@ export const visualizationChartStore = create<VisualizationChartState>()(
 			onRehydrateStorage: () => {
 				return (rehydratedState, error) => {
 					if (!error && rehydratedState) {
-						// Charts will be loaded when currentFileIdentifier is set
 						console.log("Visualization chart store hydrated");
 					}
 				};

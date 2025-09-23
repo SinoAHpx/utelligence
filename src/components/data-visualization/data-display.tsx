@@ -27,41 +27,31 @@ export default function DataDisplay() {
 		clearFile
 	} = useUnifiedDataStore();
 
-	// Get visualization chart state
-	const {
-		userCharts,
-		removeChart,
-		setSelectedChartType,
-		setSelectedColumnsForChart,
-		setChartTitle,
-		setXAxisColumn,
-		setYAxisColumn,
-		columnsVisualizableStatus,
-		setColumnsVisualizableStatus,
-		setCurrentFileIdentifier,
-	} = visualizationChartStore();
+	// Get visualization chart state - using individual selectors to avoid infinite loop
+	const userCharts = visualizationChartStore((state) => state.userCharts);
+	const removeChart = visualizationChartStore((state) => state.removeChart);
+	const setChartType = visualizationChartStore((state) => state.setChartType);
+	const setChartTitle = visualizationChartStore((state) => state.setChartTitle);
+	const setXAxisColumn = visualizationChartStore((state) => state.setXAxisColumn);
+	const setYAxisColumn = visualizationChartStore((state) => state.setYAxisColumn);
+	const resetBuilder = visualizationChartStore((state) => state.resetBuilder);
+	const availableColumns = visualizationChartStore((state) => state.availableColumns);
 
 	// Local state only for modal open/close
 	const [addChartModalOpen, setAddChartModalOpen] = useState<boolean>(false);
 
 	// Simplified useEffect to trigger file processing via store action
 	useEffect(() => {
-		if (file) {
-			// Check if the file needs processing (based on currentFileIdentifier state)
-			const fileSignature = `${file.name}-${file.size}`;
-
-			if (fileSignature !== currentFileIdentifier) {
-				// Process all columns for visualization and analysis
-				const allColumns = parsedData?.headers || [];
-				processAndAnalyze(allColumns);
-				// Update visualization chart store file identifier
-				setCurrentFileIdentifier(fileSignature);
-			}
-		} else {
-			// Clear relevant state if file is removed
+		if (!file) {
 			clearFile();
-			setCurrentFileIdentifier(null);
-			setColumnsVisualizableStatus([]);
+			return;
+		}
+
+		const fileSignature = `${file.name}-${file.size}`;
+
+		if (fileSignature !== currentFileIdentifier) {
+			const headers = parsedData?.headers || [];
+			processAndAnalyze(headers);
 		}
 	}, [
 		file,
@@ -69,8 +59,6 @@ export default function DataDisplay() {
 		currentFileIdentifier,
 		processAndAnalyze,
 		clearFile,
-		setCurrentFileIdentifier,
-		setColumnsVisualizableStatus,
 	]);
 
 	// 打开添加图表对话框
@@ -86,17 +74,17 @@ export default function DataDisplay() {
 		}
 
 		setAddChartModalOpen(true);
-		// Reset temporary chart config state in the store when modal opens
-		setSelectedColumnsForChart([]);
-		setSelectedChartType("bar");
+		// Reset builder state each time the modal opens
+		resetBuilder();
+		setChartType("bar");
 		setChartTitle("");
-		setXAxisColumn("");
-		// Reset yAxisColumn to empty string
-		setYAxisColumn("");
+		setXAxisColumn(null);
+		setYAxisColumn(null);
 	};
 
-	// Get all available columns from the raw file data
-	const allColumns = parsedData?.headers || [];
+	// Determine available columns for display
+	const columnsForDisplay =
+		availableColumns.length > 0 ? availableColumns : parsedData?.headers || [];
 
 	// Render loading and error states based on store state
 	if (!file) {
@@ -133,9 +121,9 @@ export default function DataDisplay() {
 					<div className="flex justify-between items-center">
 						<div>
 							<h3 className="text-sm font-medium mb-2">数据可视化总览</h3>
-							<p className="text-xs text-muted-foreground mb-2">可用列数: {allColumns.length}</p>
+							<p className="text-xs text-muted-foreground mb-2">可用列数: {columnsForDisplay.length}</p>
 							<div className="flex flex-wrap gap-2">
-								{allColumns.map((col) => (
+								{columnsForDisplay.map((col) => (
 									<Badge key={col} variant="outline" className="text-xs">
 										{col}
 									</Badge>
@@ -198,11 +186,7 @@ export default function DataDisplay() {
 			)}
 
 			{/* 添加图表对话框 */}
-			<AddChartModal
-				open={addChartModalOpen}
-				onOpenChange={setAddChartModalOpen}
-				allColumns={allColumns}
-			/>
+			<AddChartModal open={addChartModalOpen} onOpenChange={setAddChartModalOpen} />
 		</div>
 	);
 }

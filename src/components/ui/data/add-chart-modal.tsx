@@ -35,26 +35,26 @@ import ChartTypeSelector from "./chart-type-selector";
 interface AddChartModalProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	allColumns: string[];
 }
 
 /**
  * 添加图表对话框组件
  * 允许用户配置和添加新的可视化图表
  */
-export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange, allColumns }) => {
-	const {
-		selectedChartType,
-		setSelectedChartType,
-		chartTitle,
-		setChartTitle,
-		xAxisColumn,
-		setXAxisColumn,
-		yAxisColumn,
-		setYAxisColumn,
-		columnsVisualizableStatus,
-		addChart,
-	} = visualizationChartStore();
+export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange }) => {
+	// Get chart builder state - using individual selectors to avoid infinite loop
+	const chartType = visualizationChartStore((state) => state.builder.chartType);
+	const title = visualizationChartStore((state) => state.builder.title);
+	const xAxis = visualizationChartStore((state) => state.builder.xAxis);
+	const yAxis = visualizationChartStore((state) => state.builder.yAxis);
+	const setChartType = visualizationChartStore((state) => state.setChartType);
+	const setChartTitle = visualizationChartStore((state) => state.setChartTitle);
+	const setXAxisColumn = visualizationChartStore((state) => state.setXAxisColumn);
+	const setYAxisColumn = visualizationChartStore((state) => state.setYAxisColumn);
+	const resetBuilder = visualizationChartStore((state) => state.resetBuilder);
+	const columnsVisualizableStatus = visualizationChartStore((state) => state.columnsVisualizableStatus);
+	const availableColumns = visualizationChartStore((state) => state.availableColumns);
+	const addChart = visualizationChartStore((state) => state.addChart);
 
 	const { processedData: rawFileData } = useUnifiedDataStore();
 
@@ -63,15 +63,15 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 
 	// Determine chart properties based on selected type
 	const currentChartType = useMemo(
-		() => CHART_TYPES.find((type) => type.id === selectedChartType),
-		[selectedChartType]
+		() => CHART_TYPES.find((type) => type.id === chartType),
+		[chartType]
 	);
 	const requiresAxis = currentChartType?.requiresAxis ?? false;
 
 	// Filter visualizable columns
 	const visualizableColumns = useMemo(
 		() =>
-			allColumns.filter((col) => {
+			availableColumns.filter((col) => {
 				const status = columnsVisualizableStatus.find((s) => s.column === col);
 				if (!status) return false;
 				if (requiresAxis) {
@@ -80,24 +80,25 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 					return status.isVisualizable || status.uniqueValues > 0;
 				}
 			}),
-		[allColumns, columnsVisualizableStatus, requiresAxis]
+		[availableColumns, columnsVisualizableStatus, requiresAxis]
 	);
 
 	// Reset form when modal opens or chart type changes
 	useEffect(() => {
 		if (open) {
-			resetForm(selectedChartType);
+			resetForm(chartType);
 		}
-	}, [open]);
+	}, [open, chartType]);
 
 	// Reset selection when chart type changes
 	useEffect(() => {
 		resetSelection();
 		setValidationError("");
-	}, [selectedChartType]);
+	}, [chartType]);
 
-	const resetForm = (chartType = "bar") => {
-		setSelectedChartType(chartType);
+	const resetForm = (nextType: ChartType = "bar") => {
+		resetBuilder();
+		setChartType(nextType);
 		setChartTitle("");
 		resetSelection();
 		setValidationError("");
@@ -105,22 +106,22 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 	};
 
 	const resetSelection = () => {
-		setXAxisColumn("");
-		setYAxisColumn("");
+		setXAxisColumn(null);
+		setYAxisColumn(null);
 	};
 
 	// --- Axis/Column Selection Handlers ---
 
 	const handleXAxisChange = (value: string) => {
 		setXAxisColumn(value);
-		if (yAxisColumn === value) {
-			setYAxisColumn("");
+		if (yAxis === value) {
+			setYAxisColumn(null);
 		}
 		setValidationError("");
 	};
 
 	const handleYAxisChange = (value: string) => {
-		if (requiresAxis && value === xAxisColumn) {
+		if (requiresAxis && value === xAxis) {
 			return;
 		}
 		setYAxisColumn(value);
@@ -137,33 +138,33 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 		}
 
 		// Special handling for radar charts which only need X axis
-		if (selectedChartType === "radar") {
-			if (!xAxisColumn) {
+		if (chartType === "radar") {
+			if (!xAxis) {
 				setValidationError(`${currentChartType.name} 需要选择分类列`);
 				return false;
 			}
-			const xStatus = columnsVisualizableStatus.find((s) => s.column === xAxisColumn);
+			const xStatus = columnsVisualizableStatus.find((s) => s.column === xAxis);
 			if (!xStatus) {
-				setValidationError(`列 "${xAxisColumn}" 状态未知`);
+				setValidationError(`列 "${xAxis}" 状态未知`);
 				return false;
 			}
 
 			// Check if column is appropriate for radar chart
 			if (!xStatus.isVisualizable) {
 				if (xStatus.uniqueValues <= 1) {
-					setValidationError(`列 "${xAxisColumn}" 不适合用于雷达图：值过少`);
+					setValidationError(`列 "${xAxis}" 不适合用于雷达图：值过少`);
 					return false;
 				}
 
 				if (xStatus.uniqueValues >= xStatus.totalValues * 0.9) {
-					setValidationError(`列 "${xAxisColumn}" 不适合用于雷达图：几乎每行都有唯一值`);
+					setValidationError(`列 "${xAxis}" 不适合用于雷达图：几乎每行都有唯一值`);
 					return false;
 				}
 			}
 
 			// Warn if there might not be enough values after filtering empty values
 			if (xStatus.uniqueValues < 3) {
-				setValidationError(`列 "${xAxisColumn}" 可能没有足够的不同值用于雷达图 (至少需要3个)`);
+				setValidationError(`列 "${xAxis}" 可能没有足够的不同值用于雷达图 (至少需要3个)`);
 				return false;
 			}
 
@@ -171,38 +172,38 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 		}
 
 		if (requiresAxis) {
-			if (!xAxisColumn) {
+			if (!xAxis) {
 				setValidationError(`${currentChartType.name} 需要选择 X 轴`);
 				return false;
 			}
-			if (!yAxisColumn) {
+			if (!yAxis) {
 				setValidationError(`${currentChartType.name} 需要选择 Y 轴`);
 				return false;
 			}
-			if (xAxisColumn === yAxisColumn) {
+			if (xAxis === yAxis) {
 				setValidationError("X 轴和 Y 轴不能选择同一列");
 				return false;
 			}
-			const xStatus = columnsVisualizableStatus.find((s) => s.column === xAxisColumn);
-			const yStatus = columnsVisualizableStatus.find((s) => s.column === yAxisColumn);
+			const xStatus = columnsVisualizableStatus.find((s) => s.column === xAxis);
+			const yStatus = columnsVisualizableStatus.find((s) => s.column === yAxis);
 			if (
-				selectedChartType === "scatter" &&
+				chartType === "scatter" &&
 				(!xStatus?.isVisualizable || !yStatus?.isVisualizable)
 			) {
 				console.warn("Selected columns might not be ideal for scatter plot.");
 			}
 		} else {
-			if (!yAxisColumn) {
+			if (!yAxis) {
 				setValidationError(`${currentChartType.name} 需要选择 1 列数据`);
 				return false;
 			}
-			const statusItem = columnsVisualizableStatus.find((status) => status.column === yAxisColumn);
+			const statusItem = columnsVisualizableStatus.find((status) => status.column === yAxis);
 			if (!statusItem || statusItem.uniqueValues <= 0) {
-				setValidationError(`列 "${yAxisColumn}" 数据为空或无效`);
+				setValidationError(`列 "${yAxis}" 数据为空或无效`);
 				return false;
 			}
 			if (statusItem.uniqueValues === 1) {
-				setValidationError(`列 "${yAxisColumn}" 数据值单一，不适合生成饼图`);
+				setValidationError(`列 "${yAxis}" 数据值单一，不适合生成饼图`);
 				return false;
 			}
 		}
@@ -229,30 +230,46 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 		let processedResult: Partial<ChartConfig> & { error?: string; isTruncated?: boolean } = {};
 
 		try {
-			const configParams = { xAxisColumn, yAxisColumn };
-
-			switch (selectedChartType) {
+			switch (chartType) {
 				case "bar":
-					if (!yAxisColumn) throw new Error("柱状图需要一个 Y 轴。");
-					processedResult = processBarChartData(rawFileData, configParams);
+					if (!yAxis) throw new Error("柱状图需要一个 Y 轴。");
+					if (!xAxis) throw new Error("柱状图需要一个 X 轴。");
+					processedResult = processBarChartData(rawFileData, {
+						xAxisColumn: xAxis,
+						yAxisColumn: yAxis,
+					});
 					break;
 				case "line":
-					processedResult = processLineChartData(rawFileData, configParams);
+					if (!xAxis || !yAxis) throw new Error("折线图需要 X 轴和 Y 轴。");
+					processedResult = processLineChartData(rawFileData, {
+						xAxisColumn: xAxis,
+						yAxisColumn: yAxis,
+					});
 					break;
 				case "area":
-					processedResult = processAreaChartData(rawFileData, configParams);
+					if (!xAxis || !yAxis) throw new Error("面积图需要 X 轴和 Y 轴。");
+					processedResult = processAreaChartData(rawFileData, {
+						xAxisColumn: xAxis,
+						yAxisColumn: yAxis,
+					});
 					break;
 				case "pie":
-					processedResult = processPieChartData(rawFileData, { valueColumn: yAxisColumn });
+					if (!yAxis) throw new Error("饼图需要一个数值列。");
+					processedResult = processPieChartData(rawFileData, { valueColumn: yAxis });
 					break;
 				case "scatter":
-					processedResult = processScatterChartData(rawFileData, configParams);
+					if (!xAxis || !yAxis) throw new Error("散点图需要 X 轴和 Y 轴。");
+					processedResult = processScatterChartData(rawFileData, {
+						xAxisColumn: xAxis,
+						yAxisColumn: yAxis,
+					});
 					break;
 				case "radar":
-					processedResult = processRadarChartData(rawFileData, { xAxisColumn });
+					if (!xAxis) throw new Error("雷达图需要一个分类列。");
+					processedResult = processRadarChartData(rawFileData, { xAxisColumn: xAxis });
 					break;
 				default:
-					console.warn(`Processing logic for chart type '${selectedChartType}' not implemented.`);
+					console.warn(`Processing logic for chart type '${chartType}' not implemented.`);
 					processedResult = { processedData: [] };
 			}
 
@@ -262,33 +279,33 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 
 			// Create chart config with different parameters based on chart type
 			const chartConfig: Omit<ChartConfig, "id"> = {
-				chartType: selectedChartType as ChartType,
+				chartType,
 				...processedResult,
 				processedData: processedResult.processedData || [],
-				title: chartTitle || `Chart-${Date.now()}`, // Default title to ensure it's never undefined
+				title: title || `Chart-${Date.now()}`, // Default title to ensure it's never undefined
 			};
 
 			// Set title based on chart type
-			if (!chartTitle) {
-				if (selectedChartType === "radar") {
-					chartConfig.title = `${currentChartType?.name || "雷达图"} - ${xAxisColumn} 值分布`;
+			if (!title) {
+				if (chartType === "radar") {
+					chartConfig.title = `${currentChartType?.name || "雷达图"} - ${xAxis} 值分布`;
 				} else if (requiresAxis) {
-					chartConfig.title = `${currentChartType?.name || "Chart"} for ${xAxisColumn} vs ${yAxisColumn}`;
+					chartConfig.title = `${currentChartType?.name || "Chart"} for ${xAxis} vs ${yAxis}`;
 				} else {
-					chartConfig.title = `${currentChartType?.name || "Chart"} of ${yAxisColumn}`;
+					chartConfig.title = `${currentChartType?.name || "Chart"} of ${yAxis}`;
 				}
 			}
 
 			// Set axes based on chart type
-			if (selectedChartType === "radar") {
-				chartConfig.xAxisColumn = xAxisColumn;
+			if (chartType === "radar") {
+				chartConfig.xAxisColumn = xAxis ?? undefined;
 				chartConfig.yAxisColumn = undefined;
 			} else if (requiresAxis) {
-				chartConfig.xAxisColumn = xAxisColumn;
-				chartConfig.yAxisColumn = yAxisColumn;
+				chartConfig.xAxisColumn = xAxis ?? undefined;
+				chartConfig.yAxisColumn = yAxis ?? undefined;
 			} else {
 				chartConfig.xAxisColumn = undefined;
-				chartConfig.yAxisColumn = yAxisColumn;
+				chartConfig.yAxisColumn = yAxis ?? undefined;
 			}
 
 			const newChart: ChartConfig = {
@@ -317,8 +334,8 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 				<div className="space-y-4 py-4">
 					{/* 1. Chart Type Selection */}
 					<ChartTypeSelector
-						selectedChartType={selectedChartType}
-						onChartTypeChange={setSelectedChartType}
+						selectedChartType={chartType}
+						onChartTypeChange={(type) => setChartType(type as ChartType)}
 					/>
 
 					{/* 2. Title Input */}
@@ -326,9 +343,9 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 						<Label htmlFor="chart-title">图表标题 (可选)</Label>
 						<Input
 							id="chart-title"
-							value={chartTitle}
+							value={title}
 							onChange={(e) => setChartTitle(e.target.value)}
-							placeholder={`例如: ${currentChartType?.name || "图表"} ${requiresAxis ? `by ${xAxisColumn || "X"}` : `of ${yAxisColumn || "列"}`}`}
+							placeholder={`例如: ${currentChartType?.name || "图表"} ${requiresAxis ? `by ${xAxis || "X"}` : `of ${yAxis || "列"}`}`}
 						/>
 					</div>
 
@@ -340,29 +357,29 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 								{/* X Axis Selector */}
 								<div className="space-y-2">
 									<Label>
-										{selectedChartType === "radar"
+										{chartType === "radar"
 											? "分类列"
-											: `X 轴 ${selectedChartType === "scatter" ? " (数值)" : ""}`}
+											: `X 轴 ${chartType === "scatter" ? " (数值)" : ""}`}
 									</Label>
 									<Select
-										value={xAxisColumn}
+										value={xAxis ?? undefined}
 										onValueChange={handleXAxisChange}
 										disabled={visualizableColumns.length === 0}
 									>
 										<SelectTrigger>
 											<SelectValue
-												placeholder={selectedChartType === "radar" ? "选择分类列" : "选择 X 轴"}
+												placeholder={chartType === "radar" ? "选择分类列" : "选择 X 轴"}
 											/>
 										</SelectTrigger>
 										<SelectContent>
 											{visualizableColumns.map((col) => (
-												<SelectItem key={`x-${col}`} value={col} disabled={col === yAxisColumn}>
+												<SelectItem key={`x-${col}`} value={col} disabled={col === yAxis}>
 													{col}
 												</SelectItem>
 											))}
 										</SelectContent>
 									</Select>
-									{selectedChartType === "radar" && (
+									{chartType === "radar" && (
 										<p className="text-xs text-muted-foreground mt-1">
 											雷达图将会统计此列中不同值的出现次数，空值(包括null、N/A、undefined、空字符串等)会被自动忽略
 										</p>
@@ -370,11 +387,11 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 								</div>
 
 								{/* Y Axis Selector (Not shown for Radar charts) */}
-								{selectedChartType !== "radar" && (
+								{chartType !== "radar" && (
 									<div className="space-y-2">
-										<Label>Y 轴 {selectedChartType === "scatter" ? " (数值)" : ""}</Label>
+										<Label>Y 轴 {chartType === "scatter" ? " (数值)" : ""}</Label>
 										<Select
-											value={yAxisColumn}
+											value={yAxis ?? undefined}
 											onValueChange={handleYAxisChange}
 											disabled={visualizableColumns.length === 0}
 										>
@@ -383,7 +400,7 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 											</SelectTrigger>
 											<SelectContent>
 												{visualizableColumns.map((col) => (
-													<SelectItem key={`y-${col}`} value={col} disabled={col === xAxisColumn}>
+													<SelectItem key={`y-${col}`} value={col} disabled={col === xAxis}>
 														{col}
 													</SelectItem>
 												))}
@@ -399,8 +416,8 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 					{!requiresAxis && (
 						<div className="space-y-2 p-4 border rounded-md">
 							<Label>选择数据列</Label>
-							<Select
-								value={yAxisColumn}
+										<Select
+											value={yAxis ?? undefined}
 								onValueChange={handleYAxisChange}
 								disabled={visualizableColumns.length === 0}
 							>

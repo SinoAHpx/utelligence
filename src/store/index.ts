@@ -8,7 +8,7 @@ export { visualizationChartStore } from "./visualization-chart-store";
 export { useChatStore } from "./chat-store";
 
 // Re-export types
-export type { ColumnVisualizableConfig } from "./visualization-chart-store";
+export type { ColumnVisualizableConfig } from "@/types/visualization";
 
 // Export compatibility layer for backwards compatibility
 // These exports will be removed after full migration

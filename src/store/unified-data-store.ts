@@ -1,8 +1,10 @@
+import type { ColumnVisualizableConfig } from "@/types/visualization";
 import type { FileData } from "@/utils/data/data-processing";
 import { processFile } from "@/utils/data/file-upload/upload-utils";
 import { processAndAnalyzeFileData } from "@/utils/data/visualization/data-visualization-helpers";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { visualizationChartStore } from "./visualization-chart-store";
 
 // Types
 interface ParsedData {
@@ -58,6 +60,7 @@ interface UnifiedDataState {
 	rawData: ParsedData | null;
 	processedData: { headers: string[]; rows: FileData } | null;
 	cleanedData: { headers: string[]; rows: any[] } | null;
+	columnAnalysis: ColumnVisualizableConfig[];
 
 	// Loading & Error States
 	isLoading: boolean;
@@ -119,6 +122,7 @@ export const useUnifiedDataStore = create<UnifiedDataState>()(
 			rawData: null,
 			processedData: null,
 			cleanedData: null,
+			columnAnalysis: [],
 			isLoading: false,
 			error: null,
 
@@ -168,7 +172,10 @@ export const useUnifiedDataStore = create<UnifiedDataState>()(
 					error: null,
 					currentFile: file,
 					currentFileIdentifier: fileKey,
+					columnAnalysis: [],
 				});
+
+				visualizationChartStore.getState().setCurrentFileIdentifier(fileKey);
 
 				try {
 					const result = await processFile(file);
@@ -176,6 +183,8 @@ export const useUnifiedDataStore = create<UnifiedDataState>()(
 						rawData: result,
 						isLoading: false,
 					});
+					visualizationChartStore.getState().setAvailableColumns(result.headers);
+					visualizationChartStore.getState().setColumnsVisualizableStatus([]);
 
 					// Sync with backend if needed
 					await fetch("/api/data/upload", {
@@ -195,6 +204,7 @@ export const useUnifiedDataStore = create<UnifiedDataState>()(
 			},
 
 			clearFile: () => {
+				visualizationChartStore.getState().resetCurrentFile();
 				set({
 					currentFile: null,
 					currentFileIdentifier: null,
@@ -202,6 +212,7 @@ export const useUnifiedDataStore = create<UnifiedDataState>()(
 					processedData: null,
 					cleanedData: null,
 					error: null,
+					columnAnalysis: [],
 				});
 			},
 
@@ -215,19 +226,34 @@ export const useUnifiedDataStore = create<UnifiedDataState>()(
 
 				set({ isLoading: true, error: null });
 
-				try {
-					const { rawData } = await processAndAnalyzeFileData(currentFile, columnsToAnalyze);
+			try {
+				const { rawData, columnsVisualizableStatus } = await processAndAnalyzeFileData(
+					currentFile,
+					columnsToAnalyze
+				);
 
-					set({
-						processedData: rawData,
-						isLoading: false,
-					});
-				} catch (error: any) {
-					set({
-						error: error.message || "Processing failed",
-						isLoading: false,
+				set({
+					processedData: rawData,
+					columnAnalysis: columnsVisualizableStatus,
+					isLoading: false,
+				});
+
+				const fileIdentifier = get().currentFileIdentifier;
+				if (fileIdentifier) {
+					visualizationChartStore.getState().initializeFileContext({
+						identifier: fileIdentifier,
+						columns: rawData.headers,
+						columnStatus: columnsVisualizableStatus,
 					});
 				}
+			} catch (error: any) {
+				set({
+					error: error.message || "Processing failed",
+					isLoading: false,
+					columnAnalysis: [],
+				});
+				visualizationChartStore.getState().setColumnsVisualizableStatus([]);
+			}
 			},
 
 			cleanData: async (operationType, params) => {
