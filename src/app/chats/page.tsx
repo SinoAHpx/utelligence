@@ -2,6 +2,7 @@
 
 import { useChatStore } from "@/store/chat-store";
 import type { Chats } from "@/utils/chat/chat-utils";
+import { getMessageContent } from "@/utils/chat/chat-utils";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
@@ -57,8 +58,10 @@ export default function ChatsPage() {
 									// Get the first user message as the title, or use a default
 									const firstUserMessage = chat.messages.find((msg) => msg.role === "user");
 									const title = firstUserMessage
-										? firstUserMessage.content.substring(0, 60) +
-											(firstUserMessage.content.length > 60 ? "..." : "")
+										? (() => {
+											const content = getMessageContent(firstUserMessage);
+											return content.substring(0, 60) + (content.length > 60 ? "..." : "");
+										})()
 										: `对话 ${chat.chatId.substring(5, 13)}`; // Use chatId substring
 
 									// Extract raw chat ID for the link

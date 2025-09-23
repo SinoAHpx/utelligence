@@ -20,6 +20,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/shadcn/dialog";
 import { useChatStore } from "@/store/chat-store";
+import { getMessageContent } from "@/utils/chat/chat-utils";
 import { useHasMounted } from "@/utils/utils";
 
 /**
@@ -75,9 +76,10 @@ const ChatTopbar = () => {
 	const chatTitle = useMemo(() => {
 		const firstUserMessage = messages.find((msg) => msg.role === "user");
 		if (firstUserMessage) {
-			return firstUserMessage.content.length > 30
-				? `${firstUserMessage.content.substring(0, 30)}...`
-				: firstUserMessage.content;
+			const content = getMessageContent(firstUserMessage);
+			return content.length > 30
+				? `${content.substring(0, 30)}...`
+				: content;
 		}
 		return currentChatId ? `对话 ${currentChatId.substring(0, 8)}` : "新对话";
 	}, [messages, currentChatId]);

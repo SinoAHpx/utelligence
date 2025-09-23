@@ -1,5 +1,6 @@
 import { useChatStore } from "@/store/chat-store";
-import type { Message } from "ai";
+import { getMessageContent } from "@/utils/chat/chat-utils";
+import type { UIMessage } from "ai";
 import Image from "next/image";
 import UCASSLogo from "../../../public/ucass_logo.png";
 import { ChatLoadingSkeleton } from "./chat-loading-skeleton";
@@ -71,7 +72,7 @@ const AssistantMessage = ({ content, isLastMessage }: AssistantMessageProps) => 
  * Renders a complete chat message with avatar and formatted content
  */
 interface MessageItemProps {
-	message: Message;
+	message: UIMessage;
 	isLastMessage: boolean;
 }
 
@@ -80,9 +81,9 @@ const MessageItem = ({ message, isLastMessage }: MessageItemProps) => (
 		<div className="flex items-start gap-3">
 			<Avatar role={message.role} />
 			{message.role === "user" ? (
-				<UserMessage content={message.content} />
+				<UserMessage content={getMessageContent(message)} />
 			) : (
-				<AssistantMessage content={message.content} isLastMessage={isLastMessage} />
+				<AssistantMessage content={getMessageContent(message)} isLastMessage={isLastMessage} />
 			)}
 		</div>
 	</div>

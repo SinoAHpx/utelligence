@@ -1,7 +1,7 @@
 import { visualizationChartStore } from "@/store";
 import { useChatStore } from "@/store/chat-store";
 import { useUnifiedDataStore } from "@/store/unified-data-store";
-import type { Message } from "ai/react";
+import type { UIMessage } from "ai";
 import { v4 as uuidv4 } from "uuid";
 import {
 	processAreaChartData,
@@ -31,7 +31,7 @@ export interface ChatOptions {
  * @param chatId Chat ID
  * @param messages Messages to save
  */
-export const saveChatMessages = (chatId: string, messages: Message[]): void => {
+export const saveChatMessages = (chatId: string, messages: UIMessage[]): void => {
 	if (!chatId) return;
 
 	// Save to local storage with chat_ prefix
@@ -47,7 +47,7 @@ export const saveChatMessages = (chatId: string, messages: Message[]): void => {
  * @param chatId Chat ID
  * @returns Messages array or empty array if not found
  */
-export const loadChatMessages = (chatId: string): Message[] => {
+export const loadChatMessages = (chatId: string): UIMessage[] => {
 	if (!chatId || typeof window === "undefined") return [];
 
 	const storageKey = `chat_${chatId}`;
@@ -66,7 +66,7 @@ export const loadChatMessages = (chatId: string): Message[] => {
  */
 export const getLocalStorageChats = (): Record<
 	string,
-	{ chatId: string; messages: Message[] }[]
+	{ chatId: string; messages: UIMessage[] }[]
 > => {
 	if (typeof window === "undefined" || !localStorage) {
 		return {};
@@ -88,7 +88,7 @@ export const getLocalStorageChats = (): Record<
 				if (Array.isArray(messages) && messages.length > 0) {
 					return {
 						chatId: chatKey.replace("chat_", ""),
-						messages: messages as Message[],
+						messages: messages as UIMessage[],
 					};
 				}
 			} catch (error) {
@@ -96,12 +96,12 @@ export const getLocalStorageChats = (): Record<
 			}
 			return null;
 		})
-		.filter((chat): chat is { chatId: string; messages: Message[] } => chat !== null);
+		.filter((chat): chat is { chatId: string; messages: UIMessage[] } => chat !== null);
 
 	// Sort chats by date (most recent first)
 	chatObjects.sort((a, b) => {
-		const aDate = new Date(a.messages[0]?.createdAt ?? 0);
-		const bDate = new Date(b.messages[0]?.createdAt ?? 0);
+		const aDate = new Date(a.messages[0] ? getMessageCreatedAt(a.messages[0]) : 0);
+		const bDate = new Date(b.messages[0] ? getMessageCreatedAt(b.messages[0]) : 0);
 		return bDate.getTime() - aDate.getTime();
 	});
 
@@ -111,12 +111,12 @@ export const getLocalStorageChats = (): Record<
 
 // Define the Chats interface
 export interface Chats {
-	[key: string]: { chatId: string; messages: Message[] }[];
+	[key: string]: { chatId: string; messages: UIMessage[] }[];
 }
 
 // Helper function to group chats by date
 export const groupChatsByDate = (
-	chatsToGroup: { chatId: string; messages: Message[] }[]
+	chatsToGroup: { chatId: string; messages: UIMessage[] }[]
 ): Chats => {
 	const today = new Date();
 	const yesterday = new Date(today);
@@ -126,8 +126,8 @@ export const groupChatsByDate = (
 
 	chatsToGroup.forEach((chat) => {
 		// Add null/undefined check for createdAt
-		const createdAt = chat.messages[0]?.createdAt
-			? new Date(chat.messages[0].createdAt)
+		const createdAt = chat.messages[0]
+			? new Date(getMessageCreatedAt(chat.messages[0]))
 			: new Date(0);
 		// Handle cases where createdAt might be invalid
 		if (isNaN(createdAt.getTime())) {
@@ -164,27 +164,97 @@ export const groupChatsByDate = (
 	return groupedChats;
 };
 
-export class UserMessage implements Message {
+export class UserMessage implements UIMessage {
 	id: string;
 	role: "user";
-	content: string;
+	parts: Array<{ type: 'text'; text: string }>;
+	createdAt: string;
+
 	constructor(content: string) {
 		this.id = uuidv4();
 		this.role = "user";
-		this.content = content;
+		this.parts = [{ type: 'text', text: content }];
+		this.createdAt = new Date().toISOString();
+	}
+
+	get content(): string {
+		const textPart = this.parts.find(part => part.type === 'text');
+		return textPart?.text ?? '';
+	}
+
+	set content(value: string) {
+		const textPart = this.parts.find(part => part.type === 'text');
+		if (textPart) {
+			textPart.text = value;
+		} else {
+			this.parts.push({ type: 'text', text: value });
+		}
 	}
 }
 
-export class AssistantMessage implements Message {
+export class AssistantMessage implements UIMessage {
 	id: string;
 	role: "assistant";
-	content: string;
+	parts: Array<{ type: 'text'; text: string }>;
+	createdAt: string;
+
 	constructor(content = "") {
 		this.id = uuidv4();
 		this.role = "assistant";
-		this.content = content;
+		this.parts = [{ type: 'text', text: content }];
+		this.createdAt = new Date().toISOString();
+	}
+
+	get content(): string {
+		const textPart = this.parts.find(part => part.type === 'text');
+		return textPart?.text ?? '';
+	}
+
+	set content(value: string) {
+		const textPart = this.parts.find(part => part.type === 'text');
+		if (textPart) {
+			textPart.text = value;
+		} else {
+			this.parts.push({ type: 'text', text: value });
+		}
 	}
 }
+
+/**
+ * Get text content from UIMessage parts
+ */
+export const getMessageContent = (message: UIMessage): string => {
+	const textPart = message.parts?.find(part => part.type === 'text') as { text: string } | undefined;
+	return textPart?.text ?? '';
+};
+
+/**
+ * Set text content in UIMessage parts
+ */
+export const setMessageContent = (message: UIMessage, content: string): void => {
+	const textPart = message.parts?.find(part => part.type === 'text') as { text: string } | undefined;
+	if (textPart) {
+		textPart.text = content;
+	} else {
+		message.parts = message.parts || [];
+		message.parts.push({ type: 'text', text: content });
+	}
+};
+
+/**
+ * Get createdAt from UIMessage with fallback
+ */
+export const getMessageCreatedAt = (message: UIMessage): string => {
+	// Check if message has createdAt property (for our custom classes)
+	const messageWithCreatedAt = message as UIMessage & { createdAt?: string };
+	if (messageWithCreatedAt.createdAt) {
+		return messageWithCreatedAt.createdAt;
+	}
+
+	// Fallback: use current time (this is not ideal but necessary)
+	// In a real app, you'd want to store timestamps when messages are created
+	return new Date().toISOString();
+};
 
 /**
  * Clear all chat data from localStorage
@@ -338,14 +408,15 @@ export const streamResponse = async (assistantMessageId: string, additionalConte
 	const { currentMessages, appendMessageContent } = useChatStore.getState();
 
 	// Filter and validate messages to ensure they have required role and content fields
-	const validMessages = currentMessages.filter(message =>
-		message &&
-		message.role &&
-		message.content &&
-		typeof message.role === 'string' &&
-		typeof message.content === 'string' &&
-		message.content.trim() !== ''
-	);
+	const validMessages = currentMessages.filter(message => {
+		const content = getMessageContent(message);
+		return message &&
+			message.role &&
+			content &&
+			typeof message.role === 'string' &&
+			typeof content === 'string' &&
+			content.trim() !== '';
+	});
 
 	// Build the messages array
 	const messages = [
@@ -363,8 +434,11 @@ export const streamResponse = async (assistantMessageId: string, additionalConte
 		});
 	}
 
-	// Add valid current messages
-	messages.push(...validMessages);
+	// Add valid current messages, transforming UIMessage to expected format
+	messages.push(...validMessages.map(message => ({
+		role: message.role,
+		content: getMessageContent(message)
+	})));
 
 	const requestBody = JSON.stringify({
 		messages,

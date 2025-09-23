@@ -5,7 +5,7 @@ import { visualization } from "../tools/visualization-tool";
 export const dataVisualizationAgent = new Agent({
 	name: "Data Visualization Agent",
 	instructions: "You are a helpful assistant.",
-	model: customProvider.chatModel(process.env.MODEL!),
+	model: customProvider.chat(process.env.MODEL ?? "gpt-4o"),
 	tools: {
 		visualization: visualization,
 	},

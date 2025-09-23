@@ -1,7 +1,7 @@
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createOpenAI } from "@ai-sdk/openai";
 
-export const customProvider = createOpenAICompatible({
+export const customProvider = createOpenAI({
 	name: "Volcano Engine",
 	apiKey: process.env.API_KEY,
-	baseURL: process.env.URL!,
+	baseURL: process.env.URL,
 });

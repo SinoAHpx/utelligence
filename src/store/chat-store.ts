@@ -1,4 +1,4 @@
-import type { Message } from "ai/react";
+import type { UIMessage } from "ai";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -8,7 +8,9 @@ import {
 	clearAllChatData,
 	createMessage,
 	getLocalStorageChats,
+	getMessageContent,
 	saveChatMessages,
+	setMessageContent,
 } from "@/utils/chat/chat-utils";
 
 /**
@@ -41,13 +43,13 @@ export interface ChatState {
 	getSystemPrompt: (chatId: string) => string;
 
 	/** 聊天消息记录，按聊天ID分组 */
-	messages: Record<string, Message[]>;
+	messages: Record<string, UIMessage[]>;
 	/** 当前聊天的消息 */
-	currentMessages: Message[];
+	currentMessages: UIMessage[];
 	/** 设置指定聊天的消息 */
-	setMessages: (chatId: string, messages: Message[]) => void;
+	setMessages: (chatId: string, messages: UIMessage[]) => void;
 	/** 设置当前聊天的消息 */
-	setCurrentMessages: (messagesOrUpdater: Message[]) => void;
+	setCurrentMessages: (messagesOrUpdater: UIMessage[]) => void;
 	/** 清除所有聊天记录 */
 	clearAllChats: () => void;
 	appendMessageContent: (id: string, content: string) => void;
@@ -157,8 +159,12 @@ export const useChatStore = create<ChatState>()(
 			},
 			appendMessageContent: (id: string, content: string) => {
 				const updatedCurrentMessages = get().currentMessages.map((message) => {
-					if (message.id == id) return { ...message, content: `${message.content}${content}` };
-					else return message;
+					if (message.id == id) {
+						const updatedMessage = { ...message };
+						const currentContent = getMessageContent(message);
+						setMessageContent(updatedMessage, `${currentContent}${content}`);
+						return updatedMessage;
+					} else return message;
 				});
 
 				set(() => ({
