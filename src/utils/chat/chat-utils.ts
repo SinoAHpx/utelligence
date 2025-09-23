@@ -23,7 +23,6 @@ export type ChatRole = "user" | "assistant" | "system";
 export interface ChatOptions {
 	selectedModel: string;
 	systemPrompt: string;
-	temperature: number;
 }
 
 /**
@@ -405,7 +404,7 @@ export const createMessage = async (userQuery: string) => {
 };
 
 export const streamResponse = async (assistantMessageId: string, additionalContent = "") => {
-	const { currentMessages, appendMessageContent } = useChatStore.getState();
+	const { currentMessages, appendMessageContent, currentChatId, getSystemPrompt } = useChatStore.getState();
 
 	// Filter and validate messages to ensure they have required role and content fields
 	const validMessages = currentMessages.filter(message => {
@@ -418,11 +417,14 @@ export const streamResponse = async (assistantMessageId: string, additionalConte
 			content.trim() !== '';
 	});
 
+	// Get the system prompt for the current chat
+	const systemPrompt = getSystemPrompt(currentChatId);
+
 	// Build the messages array
 	const messages = [
 		{
 			role: "system",
-			content: "You are a helpful assistant",
+			content: systemPrompt,
 		}
 	];
 
@@ -442,6 +444,7 @@ export const streamResponse = async (assistantMessageId: string, additionalConte
 
 	const requestBody = JSON.stringify({
 		messages,
+		systemPrompt,
 	});
 	
 	const response = await fetch("/api/chat", {

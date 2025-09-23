@@ -1,4 +1,7 @@
 import { dataVisualizationAgent } from "@/utils/mastra/agents/data-visualization-agent";
+import { Agent } from "@mastra/core/agent";
+import { customProvider } from "@/utils/mastra/providers/custom-provider";
+import { visualization } from "@/utils/mastra/tools/visualization-tool";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -6,7 +9,7 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { messages } = body;
+    const { messages, systemPrompt } = body;
 
     // Validate request body
     if (!messages || !Array.isArray(messages)) {
@@ -43,7 +46,17 @@ export async function POST(req: Request) {
       }
     }
 
-    const stream = await dataVisualizationAgent.streamVNext(messages);
+    // Create a new agent instance with the custom system prompt
+    const agentWithCustomPrompt = new Agent({
+      name: "Data Visualization Agent",
+      instructions: systemPrompt || "You are a helpful assistant specialized in data visualization and analysis.",
+      model: customProvider.chat(process.env.MODEL ?? "gpt-4o"),
+      tools: {
+        visualization: visualization,
+      },
+    });
+
+    const stream = await agentWithCustomPrompt.streamVNext(messages);
 
     // Convert string stream to Uint8Array stream for Response compatibility
     const textEncoder = new TextEncoder();
@@ -51,7 +64,7 @@ export async function POST(req: Request) {
       start(controller) {
         const reader = stream.textStream.getReader();
         function pump(): any {
-          return reader.read().then(({ done, value }) => {
+          return reader.read().then(({ done, value }: { done: boolean; value?: string }) => {
             if (done) {
               controller.close();
               return;

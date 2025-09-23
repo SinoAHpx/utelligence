@@ -82,7 +82,6 @@ export const useChatStore = create<ChatState>()(
 			chatOptions: {
 				selectedModel: "",
 				systemPrompt: "你是孔子，你回答任何问题都只会用文言文。",
-				temperature: 0.9,
 			},
 			setChatOptions: (options) => set({ chatOptions: options }),
 
