@@ -1,4 +1,5 @@
-import { getChartColor } from "@/utils/constants/chart-colors";
+"use client";
+
 import {
 	Card,
 	CardContent,
@@ -7,114 +8,79 @@ import {
 	CardTitle,
 } from "@/components/ui/shadcn/card";
 import type { ChartConfig } from "@/types/chart-types";
-import { AlertTriangle, Ban, Loader2 } from "lucide-react";
-import React from "react";
-import {
-	Legend,
-	PolarAngleAxis,
-	PolarGrid,
-	PolarRadiusAxis,
-	Radar,
-	RadarChart,
-	ResponsiveContainer,
-	Tooltip,
-} from "recharts";
+import type { EChartsCoreOption } from "echarts";
+import { useMemo, type FC } from "react";
+import BaseEChart from "./base-echart";
+import { getChartColor } from "@/utils/constants/chart-colors";
 
 interface RadarChartComponentProps {
 	chartConfig: ChartConfig;
 }
 
-const RadarChartComponent: React.FC<RadarChartComponentProps> = ({ chartConfig }) => {
-	const { title = "雷达图", processedData = [], xAxisColumn, isTruncated = false } = chartConfig;
+const RadarChartComponent: FC<RadarChartComponentProps> = ({ chartConfig }) => {
+	const {
+		title = "Radar Chart",
+		processedData = [],
+		xAxisColumn,
+		isTruncated = false,
+	} = chartConfig;
 
-	const description = `分类列: ${xAxisColumn || "N/A"} (计数统计)`;
+	const option = useMemo<EChartsCoreOption>(() => {
+		const maxValue = processedData.reduce((max, item) => {
+			const current = Number(item.value ?? 0);
+			return current > max ? current : max;
+		}, 0);
 
-	// If data is completely empty or undefined
-	if (!processedData) {
-		return (
-			<Card className="h-[400px]">
-				<CardHeader className="pb-2">
-					<CardTitle className="text-sm">{title}</CardTitle>
-					<CardDescription className="text-xs">{description} - 正在加载数据...</CardDescription>
-				</CardHeader>
-				<CardContent className="flex flex-col items-center justify-center h-[340px]">
-					<Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
-					<p className="text-muted-foreground">正在处理图表数据</p>
-				</CardContent>
-			</Card>
-		);
-	}
+		const indicators = processedData.map((item) => ({
+			name: String(item.subject ?? item.name ?? "类别"),
+			max: maxValue || 1,
+		}));
 
-	// If data is empty array (no valid data found)
-	if (processedData.length === 0) {
-		return (
-			<Card className="h-[400px]">
-				<CardHeader className="pb-2">
-					<CardTitle className="text-sm">{title}</CardTitle>
-					<CardDescription className="text-xs">{description}</CardDescription>
-				</CardHeader>
-				<CardContent className="flex flex-col items-center justify-center h-[340px]">
-					<Ban className="h-8 w-8 text-muted-foreground mb-4" />
-					<p className="text-muted-foreground">此分类列没有可用于雷达图的有效数据</p>
-					<p className="text-xs text-muted-foreground mt-2">所有值为空或N/A，请选择其他列</p>
-				</CardContent>
-			</Card>
-		);
-	}
+		const values = processedData.map((item) => Number(item.value ?? 0));
 
-	// If there are too few data points (fewer than 3)
-	if (processedData.length < 3) {
-		return (
-			<Card className="h-[400px]">
-				<CardHeader className="pb-2">
-					<CardTitle className="text-sm">{title}</CardTitle>
-					<CardDescription className="text-xs flex items-center">{description}</CardDescription>
-				</CardHeader>
-				<CardContent className="flex flex-col items-center justify-center h-[340px]">
-					<AlertTriangle className="h-8 w-8 text-amber-500 mb-4" />
-					<p className="text-muted-foreground">雷达图需要至少 3 个不同的分类值</p>
-					<p className="text-xs text-muted-foreground mt-2">
-						当前只有 {processedData.length} 个不同的值
-					</p>
-				</CardContent>
-			</Card>
-		);
-	}
+		return {
+			tooltip: { trigger: "item" },
+			radar: {
+				indicator: indicators,
+				shape: "circle",
+				radius: "65%",
+				splitNumber: 5,
+				splitArea: {
+					areaStyle: {
+						color: ["rgba(136, 132, 216, 0.1)", "rgba(130, 202, 157, 0.1)"]
+					},
+				},
+				splitLine: { lineStyle: { color: "rgba(136, 132, 216, 0.3)" } },
+				axisName: { color: "var(--muted-foreground)" },
+			},
+			series: [
+				{
+					name: title,
+					type: "radar",
+					areaStyle: { opacity: 0.25, color: getChartColor(0) },
+					lineStyle: { color: getChartColor(0) },
+					itemStyle: { color: getChartColor(0) },
+					data: [values],
+				},
+			],
+		};
+	}, [processedData, title]);
 
 	return (
 		<Card className="h-[400px]">
 			<CardHeader className="pb-2">
 				<CardTitle className="text-sm">{title}</CardTitle>
-				<CardDescription className="text-xs flex items-center">
-					{description}
-					{isTruncated && (
-						<span
-							className="ml-2 flex items-center text-amber-600 dark:text-amber-400"
-							title="数据点过多，已截断显示"
-						>
-							<AlertTriangle size={12} className="mr-1" />
-							(已截断)
-						</span>
-					)}
+				<CardDescription className="text-xs">
+					分类列: {xAxisColumn || "N/A"}
+					{isTruncated && " (已截断)"}
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="h-[340px]">
-				<ResponsiveContainer width="100%" height="100%">
-					<RadarChart outerRadius="70%" data={processedData}>
-						<PolarGrid />
-						<PolarAngleAxis dataKey="subject" />
-						<PolarRadiusAxis />
-						<Radar
-							name="计数"
-							dataKey="value"
-							stroke={getChartColor(0)}
-							fill={getChartColor(0)}
-							fillOpacity={0.6}
-						/>
-						<Tooltip formatter={(value: number) => [`${value} 项`, "计数"]} />
-						<Legend />
-					</RadarChart>
-				</ResponsiveContainer>
+				{processedData.length === 0 ? (
+					<div className="flex items-center justify-center h-full text-muted-foreground">暂无雷达图数据</div>
+				) : (
+					<BaseEChart option={option} style={{ height: "100%" }} />
+				)}
 			</CardContent>
 		</Card>
 	);
@@ -122,4 +88,4 @@ const RadarChartComponent: React.FC<RadarChartComponentProps> = ({ chartConfig }
 
 RadarChartComponent.displayName = "RadarChartComponent";
 
-export default React.memo(RadarChartComponent);
+export default RadarChartComponent;

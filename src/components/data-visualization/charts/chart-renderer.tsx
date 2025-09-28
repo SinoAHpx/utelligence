@@ -1,3 +1,5 @@
+"use client";
+
 import {
 	Card,
 	CardContent,
@@ -7,11 +9,14 @@ import {
 } from "@/components/ui/shadcn/card";
 import type { ChartConfig, ChartType } from "@/types/chart-types";
 import { Loader2 } from "lucide-react";
-import React from "react";
+import { memo, type FC } from "react";
 import AreaChartComponent from "./area-chart";
 import BarChartComponent from "./bar-chart";
 import LineChartComponent from "./line-chart";
 import PieChartComponent from "./pie-chart";
+import DonutChartComponent from "./donut-chart";
+import FunnelChartComponent from "./funnel-chart";
+import TreemapChartComponent from "./treemap-chart";
 import RadarChartComponent from "./radar-chart";
 import ScatterChartComponent from "./scatter-chart";
 
@@ -20,12 +25,11 @@ interface ChartRendererProps {
 	onRemoveChart?: (chartId: string) => void;
 }
 
-/**
- * Chart component mapping
- * Maps chart types to their respective components
- */
-const CHART_COMPONENTS: Record<ChartType, React.FC<any>> = {
+const CHART_COMPONENTS: Record<ChartType, FC<any>> = {
 	pie: PieChartComponent,
+	donut: DonutChartComponent,
+	funnel: FunnelChartComponent,
+	treemap: TreemapChartComponent,
 	bar: BarChartComponent,
 	line: LineChartComponent,
 	scatter: ScatterChartComponent,
@@ -33,14 +37,9 @@ const CHART_COMPONENTS: Record<ChartType, React.FC<any>> = {
 	radar: RadarChartComponent,
 };
 
-/**
- * ChartRenderer - Renders the appropriate chart based on configuration
- * Handles different chart types and their specific data requirements
- */
-export const ChartRenderer: React.FC<ChartRendererProps> = React.memo(({ chartConfig }) => {
+const ChartRendererComponent: FC<ChartRendererProps> = memo(({ chartConfig }) => {
 	const { chartType, processedData, title, xAxisColumn, yAxisColumn } = chartConfig;
 
-	// Get the appropriate chart component based on type
 	const ChartComponent = CHART_COMPONENTS[chartType as ChartType];
 
 	if (!ChartComponent) {
@@ -57,8 +56,6 @@ export const ChartRenderer: React.FC<ChartRendererProps> = React.memo(({ chartCo
 		);
 	}
 
-	// Check if data is still processing (processedData might be undefined or empty array initially)
-	// Display a loading state
 	if (!processedData) {
 		return (
 			<Card className="h-[400px]">
@@ -76,12 +73,11 @@ export const ChartRenderer: React.FC<ChartRendererProps> = React.memo(({ chartCo
 		);
 	}
 
-	// --- Pass the full chartConfig to the specific component ---
-	// The specific component (e.g., BarChartComponent) will handle its props
 	return <ChartComponent chartConfig={chartConfig} />;
 });
 
-// Assign display name for better debugging
-ChartRenderer.displayName = "ChartRenderer";
+ChartRendererComponent.displayName = "ChartRenderer";
 
-export default ChartRenderer;
+export const ChartRenderer = ChartRendererComponent;
+
+export default ChartRendererComponent;

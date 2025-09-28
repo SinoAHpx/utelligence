@@ -1,3 +1,5 @@
+"use client";
+
 import { getChartColor } from "@/utils/constants/chart-colors";
 import {
 	Card,
@@ -7,78 +9,103 @@ import {
 	CardTitle,
 } from "@/components/ui/shadcn/card";
 import type { ChartConfig } from "@/types/chart-types";
-import React from "react";
-import {
-	CartesianGrid,
-	Legend,
-	Line,
-	LineChart,
-	ResponsiveContainer,
-	Tooltip,
-	XAxis,
-	YAxis,
-} from "recharts";
+import type { EChartsCoreOption } from "echarts";
+import { useMemo, type FC } from "react";
+import BaseEChart from "./base-echart";
 
 interface LineChartComponentProps {
 	chartConfig: ChartConfig;
 }
 
-export const LineChartComponent: React.FC<LineChartComponentProps> = React.memo(
-	({ chartConfig }) => {
-		const {
-			title = "Line Chart",
-			processedData = [],
-			xAxisColumn,
-			yAxisColumn,
-			yCategories = [],
-		} = chartConfig;
+const LineChartComponent: FC<LineChartComponentProps> = ({ chartConfig }) => {
+	const {
+		title = "Line Chart",
+		processedData = [],
+		xAxisColumn,
+		yAxisColumn,
+		yCategories = [],
+		numericYKey,
+		isTruncated = false,
+	} = chartConfig;
 
-		const isMultiLineTrend =
-			yCategories && yCategories.length > 0 && processedData && processedData.length > 0;
+	const isMultiLineTrend = yCategories && yCategories.length > 0 && processedData.length > 0;
 
-		const description = `X: ${xAxisColumn || "N/A"}${isMultiLineTrend ? `, Y: Count of ${yAxisColumn || "N/A"} Categories` : yAxisColumn ? `, Y: ${yAxisColumn}` : ""}`;
+	const description = `X: ${xAxisColumn || "N/A"}${isMultiLineTrend ? `, Y: Count of ${yAxisColumn || "N/A"} Categories` : yAxisColumn ? `, Y: ${yAxisColumn}` : ""}`;
 
-		return (
-			<Card className="h-[400px]">
-				<CardHeader className="pb-2">
-					<CardTitle className="text-sm">{title}</CardTitle>
-					<CardDescription className="text-xs">{description}</CardDescription>
-				</CardHeader>
-				<CardContent className="h-[340px]">
-					<ResponsiveContainer width="100%" height="100%">
-						<LineChart data={processedData} margin={{ top: 10, right: 30, left: 10, bottom: 30 }}>
-							<CartesianGrid strokeDasharray="3 3" />
-							<XAxis dataKey={xAxisColumn} angle={-45} textAnchor="end" interval={0} height={50} />
-							<YAxis />
-							<Tooltip />
-							<Legend />
-							{isMultiLineTrend ? (
-								yCategories.map((category, index) => (
-									<Line
-										key={category}
-										type="monotone"
-										dataKey={category}
-										stroke={getChartColor(index)}
-										activeDot={{ r: 6 }}
-										name={String(category)}
-									/>
-								))
-							) : (
-								<Line
-									type="monotone"
-									dataKey={yAxisColumn}
-									stroke={getChartColor(0)}
-									activeDot={{ r: 8 }}
-									name={yAxisColumn}
-								/>
-							)}
-						</LineChart>
-					</ResponsiveContainer>
-				</CardContent>
-			</Card>
-		);
-	}
-);
+	const option = useMemo<EChartsCoreOption>(() => {
+		const xField = xAxisColumn ?? "index";
+		const xCategories = processedData.map((item) => String(item[xField] ?? ""));
+
+		const series = isMultiLineTrend
+			? yCategories.map((category, index) => ({
+				name: category,
+				type: "line",
+				smooth: true,
+				showSymbol: true,
+				symbolSize: 6,
+				lineStyle: { width: 2 },
+				itemStyle: { color: getChartColor(index) },
+				data: processedData.map((row) => Number(row[category] ?? 0)),
+			}))
+			: [
+				{
+					name: yAxisColumn || numericYKey || "值",
+					type: "line",
+					smooth: true,
+					showSymbol: true,
+					symbolSize: 6,
+					itemStyle: { color: getChartColor(0) },
+					lineStyle: { width: 2 },
+					data: processedData.map((row) => Number(row[(numericYKey ?? yAxisColumn) ?? "value"] ?? 0)),
+				},
+			];
+
+		return {
+			tooltip: { trigger: "axis" },
+			legend: { top: 0 },
+			grid: { left: 56, right: 24, top: 40, bottom: 80 },
+			xAxis: {
+				type: "category",
+				data: xCategories,
+				axisLabel: { rotate: 45, align: "right" },
+			},
+			yAxis: {
+				type: "value",
+				splitLine: { lineStyle: { type: "dashed" } },
+				axisLine: { show: false },
+			},
+			series,
+		};
+	}, [isMultiLineTrend, numericYKey, processedData, xAxisColumn, yAxisColumn, yCategories]);
+
+	return (
+		<Card className="h-[400px]">
+			<CardHeader className="pb-2">
+				<CardTitle className="text-sm">{title}</CardTitle>
+				<CardDescription className="text-xs flex items-center">
+					{description}
+					{isTruncated && (
+						<span
+							className="ml-2 text-amber-600 dark:text-amber-400 flex items-center"
+							title="数据点过多，已截断显示"
+						>
+							(已截断)
+						</span>
+					)}
+				</CardDescription>
+			</CardHeader>
+			<CardContent className="h-[340px]">
+				{processedData.length === 0 ? (
+					<div className="flex items-center justify-center h-full text-muted-foreground">
+						暂无数据
+					</div>
+				) : (
+					<BaseEChart option={option} style={{ height: "100%" }} />
+				)}
+			</CardContent>
+		</Card>
+	);
+};
 
 LineChartComponent.displayName = "LineChartComponent";
 

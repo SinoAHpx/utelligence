@@ -21,22 +21,12 @@ import {
 } from "@/components/ui/shadcn/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcn/tabs";
 import { useOutliersStore } from "@/store";
+import BaseEChart from "./charts/base-echart";
+import type { EChartsCoreOption } from "echarts";
 import { Download, Filter, InfoIcon } from "lucide-react";
-import {
-	CartesianGrid,
-	Cell,
-	Legend,
-	ReferenceLine,
-	ResponsiveContainer,
-	Scatter,
-	ScatterChart,
-	Tooltip,
-	XAxis,
-	YAxis,
-} from "recharts";
+import { useMemo } from "react";
 
 export default function OutliersVisualization() {
-	// Use Zustand store directly
 	const {
 		data,
 		columnName,
@@ -49,7 +39,79 @@ export default function OutliersVisualization() {
 		chartData,
 	} = useOutliersStore();
 
-	// 格式化方法的详细信息
+	const chartOption = useMemo<EChartsCoreOption | null>(() => {
+		if (!chartData || chartData.length === 0) {
+			return null;
+		}
+
+		const safeColumnName = columnName || "值";
+		const normalPoints = chartData
+			.filter((entry: any) => !entry?.isOutlier)
+			.map((entry: any) => [Number(entry?.index ?? 0), Number(entry?.value ?? 0)]);
+		const outlierPoints = chartData
+			.filter((entry: any) => entry?.isOutlier)
+			.map((entry: any) => [Number(entry?.index ?? 0), Number(entry?.value ?? 0)]);
+
+		const markLineData: { yAxis: number; name: string }[] = [];
+		if (Number.isFinite(statistics.upperBound)) {
+			markLineData.push({ yAxis: Number(statistics.upperBound), name: "上边界" });
+		}
+		if (Number.isFinite(statistics.lowerBound)) {
+			markLineData.push({ yAxis: Number(statistics.lowerBound), name: "下边界" });
+		}
+
+		return {
+			tooltip: {
+				trigger: "item",
+				formatter: (params: any) => {
+					const [x, y] = params.value as [number, number];
+					return `索引: ${x}<br/>${safeColumnName}: ${y}`;
+				},
+			},
+			legend: { data: ["正常值", "异常值"], top: 0 },
+			grid: { left: 56, right: 24, top: 48, bottom: 50 },
+			xAxis: {
+				name: "索引",
+				type: "value",
+				axisLine: { lineStyle: { color: "var(--border)" } },
+				splitLine: { lineStyle: { type: "dashed" } },
+			},
+			yAxis: {
+				name: safeColumnName,
+				type: "value",
+				axisLine: { lineStyle: { color: "var(--border)" } },
+				splitLine: { lineStyle: { type: "dashed" } },
+			},
+			series: [
+				{
+					name: "正常值",
+					type: "scatter",
+					symbolSize: 10,
+					itemStyle: { color: "#8884d8" },
+					data: normalPoints,
+					markLine: markLineData.length
+						? {
+							symbol: "none",
+							data: markLineData,
+							lineStyle: { type: "dashed", color: "#f87171" },
+							label: {
+								formatter: (info: any) => `${info.name}: ${Number(info.value ?? info.yAxis ?? 0).toFixed(2)}`,
+								color: "#f87171",
+							},
+						}
+						: undefined,
+				},
+				{
+					name: "异常值",
+					type: "scatter",
+					symbolSize: 12,
+					itemStyle: { color: "#ff5252" },
+					data: outlierPoints,
+				},
+			],
+		};
+	}, [chartData, columnName, statistics.lowerBound, statistics.upperBound]);
+
 	const formatMethodDetails = () => {
 		const { methodDetails } = statistics;
 		if (!methodDetails) return [];
@@ -70,9 +132,8 @@ export default function OutliersVisualization() {
 		return details;
 	};
 
-	// 渲染散点图
 	const renderScatterPlot = () => {
-		if (chartData.length === 0) {
+		if (!chartOption) {
 			return (
 				<div className="flex items-center justify-center h-60">
 					<p className="text-gray-500">暂无数据可视化</p>
@@ -80,40 +141,9 @@ export default function OutliersVisualization() {
 			);
 		}
 
-		return (
-			<ResponsiveContainer width="100%" height={400}>
-				<ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-					<CartesianGrid strokeDasharray="3 3" />
-					<XAxis dataKey="index" name="索引" type="number" domain={[0, "dataMax"]} />
-					<YAxis dataKey="value" name={columnName} domain={["auto", "auto"]} />
-					<Tooltip
-						formatter={(value: any) => [value, columnName]}
-						labelFormatter={(label) => `索引: ${label}`}
-					/>
-					<Legend />
-					<ReferenceLine
-						y={statistics.upperBound}
-						stroke="red"
-						strokeDasharray="3 3"
-						label={{ value: `上边界: ${statistics.upperBound.toFixed(2)}`, position: "right" }}
-					/>
-					<ReferenceLine
-						y={statistics.lowerBound}
-						stroke="red"
-						strokeDasharray="3 3"
-						label={{ value: `下边界: ${statistics.lowerBound.toFixed(2)}`, position: "right" }}
-					/>
-					<Scatter name="数据点" data={chartData} fill="#8884d8">
-						{chartData.map((entry, index) => (
-							<Cell key={`cell-${index}`} fill={entry.isOutlier ? "#ff5252" : "#8884d8"} />
-						))}
-					</Scatter>
-				</ScatterChart>
-			</ResponsiveContainer>
-		);
+		return <BaseEChart option={chartOption} style={{ height: 400 }} />;
 	};
 
-	// 渲染表格数据
 	const renderTable = () => {
 		if (!data || data.length === 0) {
 			return (
@@ -123,7 +153,6 @@ export default function OutliersVisualization() {
 			);
 		}
 
-		// 仅显示异常值记录
 		const outliers = data.filter((item) => {
 			const value = Number(item[columnName]);
 			return value < statistics.lowerBound || value > statistics.upperBound;
@@ -137,7 +166,6 @@ export default function OutliersVisualization() {
 			);
 		}
 
-		// 获取数据的所有列
 		const columns = Object.keys(outliers[0]);
 
 		return (

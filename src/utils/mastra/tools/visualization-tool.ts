@@ -22,8 +22,8 @@ export const visualization = createTool({
 	id: "Create visualization charts",
 	inputSchema: z.object({
 		chartType: z
-			.enum(["bar", "line", "area", "pie", "scatter", "radar"])
-			.describe("Type of chart to create. Supported types: bar, line, area, pie, scatter, radar."),
+			.enum(["bar", "line", "area", "pie", "donut", "funnel", "treemap", "scatter", "radar"])
+			.describe("Type of chart to create. Supported types: bar, line, area, pie, donut, funnel, treemap, scatter, radar."),
 		title: z.string().optional().describe("Title of the chart."),
 		xAxisColumn: z.string().optional().describe("Name of the column to use for the X axis."),
 		yAxisColumn: z

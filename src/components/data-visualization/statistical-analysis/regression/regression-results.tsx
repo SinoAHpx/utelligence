@@ -6,17 +6,11 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
+import { getChartColor } from "@/utils/constants/chart-colors";
 import type { RegressionResult } from "@/utils/data/statistics/regression";
-import {
-	CartesianGrid,
-	Line,
-	ResponsiveContainer,
-	Scatter,
-	ScatterChart,
-	Tooltip,
-	XAxis,
-	YAxis,
-} from "recharts";
+import BaseEChart from "../../charts/base-echart";
+import type { EChartsCoreOption } from "echarts";
+import { useMemo } from "react";
 
 interface RegressionResultsProps {
 	regressionResult: RegressionResult;
@@ -41,9 +35,68 @@ export function RegressionResults({
 	additionalVars,
 	dataPointLimit,
 }: RegressionResultsProps) {
+	const chartOption = useMemo<EChartsCoreOption | null>(() => {
+		const scatterPoints = truncatedData.map((point) => [Number(point.x), Number(point.y)]);
+		const sortedLinePoints = [...linePoints]
+			.sort((a, b) => a.x - b.x)
+			.map((point) => [Number(point.x), Number(point.y)]);
+
+		if (scatterPoints.length === 0 && sortedLinePoints.length === 0) {
+			return null;
+		}
+
+		const series: EChartsCoreOption["series"] = [
+			{
+				name: "观测值",
+				type: "scatter",
+				symbolSize: 8,
+				itemStyle: { color: getChartColor(0) },
+				data: scatterPoints,
+			},
+		];
+
+		if (sortedLinePoints.length > 0) {
+			series.push({
+				name: "预测值",
+				type: "line",
+				smooth: true,
+				showSymbol: false,
+				lineStyle: { color: getChartColor(1), width: 2 },
+				itemStyle: { color: getChartColor(1) },
+				data: sortedLinePoints,
+			});
+		}
+
+		return {
+			tooltip: {
+				trigger: "item",
+				formatter: (params: any) => {
+					const [x, y] = params.value as [number, number];
+					return `${independentVar}: ${x}<br/>${dependentVar}: ${y}`;
+				},
+			},
+			legend: { data: series.map((s: any) => s.name), top: 0 },
+			grid: { left: 56, right: 24, top: 48, bottom: 56 },
+			xAxis: {
+				name: independentVar,
+				type: "value",
+				nameLocation: "middle",
+				nameGap: 30,
+				splitLine: { lineStyle: { type: "dashed" } },
+			},
+			yAxis: {
+				name: dependentVar,
+				type: "value",
+				nameLocation: "middle",
+				nameGap: 40,
+				splitLine: { lineStyle: { type: "dashed" } },
+			},
+			series,
+		};
+	}, [dependentVar, independentVar, linePoints, truncatedData]);
+
 	return (
 		<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-			{/* Visualization Card */}
 			<Card>
 				<CardHeader>
 					<CardTitle>回归分析可视化</CardTitle>
@@ -58,40 +111,16 @@ export function RegressionResults({
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="h-[350px]">
-					<ResponsiveContainer width="100%" height="100%">
-						<ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-							<CartesianGrid strokeDasharray="3 3" />
-							<XAxis
-								type="number"
-								dataKey="x"
-								name={independentVar}
-								label={{ value: independentVar, position: "bottom" }}
-							/>
-							<YAxis
-								type="number"
-								dataKey="y"
-								name={dependentVar}
-								label={{ value: dependentVar, angle: -90, position: "left" }}
-							/>
-							<Tooltip cursor={{ strokeDasharray: "3 3" }} />
-							<Scatter name="观测值" data={truncatedData} fill="#8884d8" />
-							{linePoints.length > 0 && (
-								<Line
-									type="monotone"
-									data={linePoints}
-									dataKey="y"
-									stroke="#ff7300"
-									name="预测值"
-									dot={false}
-									isAnimationActive={false}
-								/>
-							)}
-						</ScatterChart>
-					</ResponsiveContainer>
+					{chartOption ? (
+						<BaseEChart option={chartOption} style={{ height: "100%" }} />
+					) : (
+						<div className="flex items-center justify-center h-full text-muted-foreground">
+							暂无可视化数据
+						</div>
+					)}
 				</CardContent>
 			</Card>
 
-			{/* Statistics Card */}
 			<Card>
 				<CardHeader>
 					<CardTitle>回归模型统计</CardTitle>
@@ -139,7 +168,6 @@ export function RegressionResults({
 								<td className="py-2 font-medium">观测值</td>
 								<td className="py-2">{regressionResult.observations}</td>
 							</tr>
-							{/* Show Slope/Intercept only for simple linear regression */}
 							{regressionType === "simple" && (
 								<>
 									<tr>
@@ -152,7 +180,6 @@ export function RegressionResults({
 									</tr>
 								</>
 							)}
-							{/* Show coefficients for multiple linear regression */}
 							{regressionType === "multiple" && regressionResult.coefficients && (
 								<tr>
 									<td className="py-2 font-medium align-top">系数</td>

@@ -10,17 +10,24 @@ export interface ChartProps {
 }
 
 // Supported chart types
-export type ChartType = "bar" | "line" | "area" | "pie" | "scatter" | "radar";
+export type ChartType =
+	| "bar"
+	| "line"
+	| "area"
+	| "pie"
+	| "scatter"
+	| "radar"
+	| "donut"
+	| "funnel"
+	| "treemap";
 
 // Chart configuration type definitions
 export interface ChartConfig {
 	id: string;
-	// columns: string[]; // Keep track of originally selected columns if needed elsewhere
 	chartType: ChartType; // e.g., 'bar', 'line'
 	title: string;
 	xAxisColumn?: string; // Original selected X column name
 	yAxisColumn?: string; // Original selected Y column name (single)
-	// yAxisColumns?: string[]; // Keep single yAxisColumn for config simplicity
 
 	// Processed data and layout specific to this chart instance
 	processedData?: ChartDataItem[];
@@ -29,7 +36,6 @@ export interface ChartConfig {
 	yKey?: string; // Key for simple/grouped bar chart data
 
 	// Line/Area/Scatter specific fields based on single yAxisColumn analysis
-	// categories?: string[]; // Categories for multi-line/area trend -> Handled by yCategories now?
 	numericYKey?: string; // The dataKey for a single numeric Y line/area -> Use yAxisColumn directly?
 
 	// Performance flag
@@ -72,6 +78,27 @@ export const CHART_TYPES: ChartTypeDefinition[] = [
 		id: "pie",
 		name: "饼图",
 		description: "适合展示比例分布",
+		requiresColumns: 1,
+		requiresAxis: false,
+	},
+	{
+		id: "donut",
+		name: "环形图",
+		description: "凸显整体中各部分的占比",
+		requiresColumns: 1,
+		requiresAxis: false,
+	},
+	{
+		id: "funnel",
+		name: "漏斗图",
+		description: "展示流程各阶段的转化情况",
+		requiresColumns: 1,
+		requiresAxis: false,
+	},
+	{
+		id: "treemap",
+		name: "矩形树图",
+		description: "通过面积突出分类结构和占比",
 		requiresColumns: 1,
 		requiresAxis: false,
 	},

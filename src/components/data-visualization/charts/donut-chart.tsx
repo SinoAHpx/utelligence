@@ -1,6 +1,5 @@
 "use client";
 
-import { getChartColor } from "@/utils/constants/chart-colors";
 import {
 	Card,
 	CardContent,
@@ -12,17 +11,17 @@ import type { ChartConfig } from "@/types/chart-types";
 import type { EChartsCoreOption } from "echarts";
 import { useMemo, type FC } from "react";
 import BaseEChart from "./base-echart";
+import { getChartColor } from "@/utils/constants/chart-colors";
 
-interface PieChartComponentProps {
+interface DonutChartProps {
 	chartConfig: ChartConfig;
 }
 
-const PieChartComponent: FC<PieChartComponentProps> = ({ chartConfig }) => {
+const DonutChartComponent: FC<DonutChartProps> = ({ chartConfig }) => {
 	const {
-		title = "Pie Chart",
+		title = "Donut Chart",
 		processedData = [],
 		yAxisColumn,
-		isTruncated = false,
 	} = chartConfig;
 
 	const option = useMemo<EChartsCoreOption>(() => {
@@ -38,11 +37,12 @@ const PieChartComponent: FC<PieChartComponentProps> = ({ chartConfig }) => {
 			series: [
 				{
 					type: "pie",
-					radius: ["20%", "70%"],
+					radius: ["55%", "85%"],
 					center: ["50%", "45%"],
-					avoidLabelOverlap: true,
-					itemStyle: { borderRadius: 6, borderColor: "#fff", borderWidth: 1 },
-					label: { formatter: "{b}: {d}%" },
+					avoidLabelOverlap: false,
+					itemStyle: { borderRadius: 4, borderWidth: 2, borderColor: "#fff" },
+					label: { show: true, formatter: "{b}\n{d}%" },
+					labelLine: { length: 18, length2: 12 },
 					data,
 				},
 			],
@@ -54,13 +54,12 @@ const PieChartComponent: FC<PieChartComponentProps> = ({ chartConfig }) => {
 			<CardHeader className="pb-2">
 				<CardTitle className="text-sm">{title}</CardTitle>
 				<CardDescription className="text-xs">
-					Y: {yAxisColumn || "N/A"}
-					{isTruncated && " (已截断)"}
+					列: {yAxisColumn || "未选择"}
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="h-[340px]">
 				{processedData.length === 0 ? (
-					<div className="flex items-center justify-center h-full text-muted-foreground">暂无饼图数据</div>
+					<div className="flex items-center justify-center h-full text-muted-foreground">暂无环形图数据</div>
 				) : (
 					<BaseEChart option={option} style={{ height: "100%" }} />
 				)}
@@ -69,6 +68,6 @@ const PieChartComponent: FC<PieChartComponentProps> = ({ chartConfig }) => {
 	);
 };
 
-PieChartComponent.displayName = "PieChartComponent";
+DonutChartComponent.displayName = "DonutChartComponent";
 
-export default PieChartComponent;
+export default DonutChartComponent;

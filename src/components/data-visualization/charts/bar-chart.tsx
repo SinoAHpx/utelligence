@@ -1,3 +1,5 @@
+"use client";
+
 import { getChartColor } from "@/utils/constants/chart-colors";
 import {
 	Card,
@@ -8,23 +10,15 @@ import {
 } from "@/components/ui/shadcn/card";
 import type { ChartConfig } from "@/types/chart-types";
 import { AlertTriangle } from "lucide-react";
-import React from "react";
-import {
-	Bar,
-	BarChart,
-	CartesianGrid,
-	Legend,
-	ResponsiveContainer,
-	Tooltip,
-	XAxis,
-	YAxis,
-} from "recharts";
+import { useMemo } from "react";
+import BaseEChart from "./base-echart";
+import type { EChartsCoreOption } from "echarts";
 
 interface BarChartComponentProps {
 	chartConfig: ChartConfig;
 }
 
-const BarChartComponent: React.FC<BarChartComponentProps> = ({ chartConfig }) => {
+const BarChartComponent: FC<BarChartComponentProps> = ({ chartConfig }) => {
 	const {
 		title = "Bar Chart",
 		processedData = [],
@@ -39,6 +33,47 @@ const BarChartComponent: React.FC<BarChartComponentProps> = ({ chartConfig }) =>
 	const categoryDataKey = "name";
 
 	const description = `X: ${xAxisColumn || "N/A"}, Y: ${yAxisColumn || "N/A"} (${layout === "stacked" ? "Stacked" : "Simple"} Count)`;
+
+	const option = useMemo<EChartsCoreOption>(() => {
+		const xCategories = processedData.map((item) => String(item[categoryDataKey] ?? ""));
+
+		const series =
+			layout === "stacked"
+				? yCategories.map((category, index) => ({
+					name: category,
+					type: "bar",
+					stack: "total",
+					emphasis: { focus: "series" },
+					itemStyle: { color: getChartColor(index) },
+					data: processedData.map((row) => Number(row[category] ?? 0)),
+				}))
+				: [
+					{
+						name: yAxisColumn || yKey,
+						type: "bar",
+						itemStyle: { color: getChartColor(0) },
+						data: processedData.map((row) => Number(row[yKey] ?? 0)),
+						emphasis: { focus: "series" },
+					},
+				];
+
+		return {
+			tooltip: { trigger: "axis" },
+			legend: { top: 0 },
+			grid: { left: 56, right: 24, top: 40, bottom: 80 },
+			xAxis: {
+				type: "category",
+				data: xCategories,
+				axisLabel: { rotate: 45, align: "right" },
+			},
+			yAxis: {
+				type: "value",
+				axisLine: { show: false },
+				splitLine: { lineStyle: { type: "dashed" } },
+			},
+			series,
+		};
+	}, [layout, processedData, yCategories, yAxisColumn, yKey]);
 
 	if (!processedData || processedData.length === 0) {
 		return (
@@ -72,35 +107,7 @@ const BarChartComponent: React.FC<BarChartComponentProps> = ({ chartConfig }) =>
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="h-[340px]">
-				<ResponsiveContainer width="100%" height="100%">
-					<BarChart data={processedData} margin={{ top: 10, right: 30, left: 10, bottom: 50 }}>
-						<CartesianGrid strokeDasharray="3 3" />
-						<XAxis
-							dataKey={categoryDataKey}
-							type="category"
-							angle={-45}
-							textAnchor="end"
-							interval={0}
-							height={60}
-						/>
-						<YAxis type="number" />
-						<Tooltip />
-						<Legend />
-						{layout === "stacked" ? (
-							yCategories.map((category: string, index: number) => (
-								<Bar
-									key={category}
-									dataKey={category}
-									stackId="a"
-									fill={getChartColor(index)}
-									name={category}
-								/>
-							))
-						) : (
-							<Bar dataKey={yKey} fill={getChartColor(0)} name={yAxisColumn || yKey} />
-						)}
-					</BarChart>
-				</ResponsiveContainer>
+				<BaseEChart option={option} style={{ height: "100%" }} />
 			</CardContent>
 		</Card>
 	);
@@ -108,4 +115,4 @@ const BarChartComponent: React.FC<BarChartComponentProps> = ({ chartConfig }) =>
 
 BarChartComponent.displayName = "BarChartComponent";
 
-export default React.memo(BarChartComponent);
+export default BarChartComponent;

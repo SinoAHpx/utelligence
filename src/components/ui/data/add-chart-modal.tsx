@@ -203,7 +203,7 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 				return false;
 			}
 			if (statusItem.uniqueValues === 1) {
-				setValidationError(`列 "${yAxis}" 数据值单一，不适合生成饼图`);
+				setValidationError(`列 "${yAxis}" 数据值单一，不适合用于${currentChartType?.name || "该图表"}`);
 				return false;
 			}
 		}
@@ -254,7 +254,10 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 					});
 					break;
 				case "pie":
-					if (!yAxis) throw new Error("饼图需要一个数值列。");
+				case "donut":
+				case "funnel":
+				case "treemap":
+					if (!yAxis) throw new Error(`${currentChartType?.name || "该图表"} 需要一个数值列。`);
 					processedResult = processPieChartData(rawFileData, { valueColumn: yAxis });
 					break;
 				case "scatter":
@@ -272,7 +275,6 @@ export const AddChartModal: React.FC<AddChartModalProps> = ({ open, onOpenChange
 					console.warn(`Processing logic for chart type '${chartType}' not implemented.`);
 					processedResult = { processedData: [] };
 			}
-
 			if (processedResult.error) {
 				throw new Error(processedResult.error);
 			}

@@ -1,3 +1,5 @@
+"use client";
+
 import { getChartColor } from "@/utils/constants/chart-colors";
 import {
 	Card,
@@ -7,111 +9,105 @@ import {
 	CardTitle,
 } from "@/components/ui/shadcn/card";
 import type { ChartConfig } from "@/types/chart-types";
-import { AlertTriangle } from "lucide-react";
-import React from "react";
-import {
-	Area,
-	AreaChart,
-	CartesianGrid,
-	Legend,
-	ResponsiveContainer,
-	Tooltip,
-	XAxis,
-	YAxis,
-} from "recharts";
+import type { EChartsCoreOption } from "echarts";
+import { useMemo, type FC } from "react";
+import BaseEChart from "./base-echart";
 
 interface AreaChartComponentProps {
 	chartConfig: ChartConfig;
 }
 
-export const AreaChartComponent: React.FC<AreaChartComponentProps> = React.memo(
-	({ chartConfig }) => {
-		const {
-			title = "Area Chart",
-			processedData = [],
-			xAxisColumn,
-			yAxisColumn,
-			yCategories = [],
-			isTruncated = false,
-		} = chartConfig;
+const AreaChartComponent: FC<AreaChartComponentProps> = ({ chartConfig }) => {
+	const {
+		title = "Area Chart",
+		processedData = [],
+		xAxisColumn,
+		yAxisColumn,
+		yCategories = [],
+		numericYKey,
+		isTruncated = false,
+	} = chartConfig;
 
-		const isStackedArea = yCategories && yCategories.length > 0;
-		const isSingleNumericArea = !isStackedArea && yAxisColumn;
-		const primaryYAxisColumn = yAxisColumn || "value";
+	const isStackedArea = yCategories && yCategories.length > 0 && processedData.length > 0;
 
-		const description = `X: ${xAxisColumn || "N/A"}${isStackedArea ? `, Y: Stacked count of ${primaryYAxisColumn} Categories` : `, Y: Sum of ${primaryYAxisColumn}`}`;
+	const description = `X: ${xAxisColumn || "N/A"}${isStackedArea ? `, Y: Count of ${yAxisColumn || "N/A"} Categories` : yAxisColumn ? `, Y: ${yAxisColumn}` : ""}`;
 
-		if (!xAxisColumn || !yAxisColumn || !processedData || processedData.length === 0) {
-			return (
-				<Card className="h-[400px]">
-					<CardHeader className="pb-2">
-						<CardTitle className="text-sm">{title}</CardTitle>
-						<CardDescription className="text-xs">{description} - 正在等待数据...</CardDescription>
-					</CardHeader>
-					<CardContent className="flex items-center justify-center h-[340px]">
-						<p className="text-muted-foreground">没有可用于面积图的数据或配置不完整。</p>
-					</CardContent>
-				</Card>
-			);
-		}
+	const option = useMemo<EChartsCoreOption>(() => {
+		const xField = xAxisColumn ?? "index";
+		const xCategories = processedData.map((item) => String(item[xField] ?? ""));
 
-		return (
-			<Card className="h-[400px]">
-				<CardHeader className="pb-2">
-					<CardTitle className="text-sm">{title}</CardTitle>
-					<CardDescription className="text-xs flex items-center">
-						{description}
-						{isTruncated && (
-							<span
-								className="ml-2 flex items-center text-amber-600 dark:text-amber-400"
-								title="数据点过多，已截断显示"
-							>
-								<AlertTriangle size={12} className="mr-1" />
-								(已截断)
-							</span>
-						)}
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="h-[340px]">
-					<ResponsiveContainer width="100%" height="100%">
-						<AreaChart data={processedData} margin={{ top: 10, right: 30, left: 10, bottom: 30 }}>
-							<CartesianGrid strokeDasharray="3 3" />
-							<XAxis dataKey={xAxisColumn} angle={-45} textAnchor="end" interval={0} height={50} />
-							<YAxis />
-							<Tooltip />
-							<Legend />
-							{isStackedArea ? (
-								yCategories.map((category: string, index: number) => (
-									<Area
-										key={category}
-										type="monotone"
-										dataKey={category}
-										stackId="1"
-										stroke={getChartColor(index)}
-										fill={getChartColor(index)}
-										fillOpacity={0.6}
-										name={String(category)}
-										connectNulls
-									/>
-								))
-							) : isSingleNumericArea ? (
-								<Area
-									type="monotone"
-									dataKey={yAxisColumn}
-									stroke={getChartColor(0)}
-									fill={getChartColor(0)}
-									fillOpacity={0.3}
-									name={yAxisColumn}
-									connectNulls
-								/>
-							) : null}
-						</AreaChart>
-					</ResponsiveContainer>
-				</CardContent>
-			</Card>
-		);
-	}
-);
+		const series = isStackedArea
+			? yCategories.map((category, index) => ({
+				name: category,
+				type: "line",
+				stack: "total",
+				areaStyle: {},
+				smooth: true,
+				showSymbol: false,
+				lineStyle: { width: 1.5 },
+				itemStyle: { color: getChartColor(index) },
+				data: processedData.map((row) => Number(row[category] ?? 0)),
+			}))
+			: [
+				{
+					name: yAxisColumn || numericYKey || "值",
+					type: "line",
+					smooth: true,
+					showSymbol: false,
+					areaStyle: { opacity: 0.4 },
+					lineStyle: { width: 2 },
+					itemStyle: { color: getChartColor(0) },
+					data: processedData.map((row) => Number(row[(numericYKey ?? yAxisColumn) ?? "value"] ?? 0)),
+				},
+			];
+
+		return {
+			tooltip: { trigger: "axis" },
+			legend: { top: 0 },
+			grid: { left: 56, right: 24, top: 40, bottom: 80 },
+			xAxis: {
+				type: "category",
+				data: xCategories,
+				boundaryGap: false,
+				axisLabel: { rotate: 45, align: "right" },
+			},
+			yAxis: {
+				type: "value",
+				splitLine: { lineStyle: { type: "dashed" } },
+				axisLine: { show: false },
+			},
+			series,
+		};
+	}, [isStackedArea, numericYKey, processedData, xAxisColumn, yAxisColumn, yCategories]);
+
+	return (
+		<Card className="h-[400px]">
+			<CardHeader className="pb-2">
+				<CardTitle className="text-sm">{title}</CardTitle>
+				<CardDescription className="text-xs flex items-center">
+					{description}
+					{isTruncated && (
+						<span
+							className="ml-2 text-amber-600 dark:text-amber-400 flex items-center"
+							title="数据点过多，已截断显示"
+						>
+							(已截断)
+						</span>
+					)}
+				</CardDescription>
+			</CardHeader>
+			<CardContent className="h-[340px]">
+				{processedData.length === 0 ? (
+					<div className="flex items-center justify-center h-full text-muted-foreground">
+						暂无数据
+					</div>
+				) : (
+					<BaseEChart option={option} style={{ height: "100%" }} />
+				)}
+			</CardContent>
+		</Card>
+	);
+};
 
 AreaChartComponent.displayName = "AreaChartComponent";
 
