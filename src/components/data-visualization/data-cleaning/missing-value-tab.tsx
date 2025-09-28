@@ -13,8 +13,9 @@ import {
 	SelectValue,
 } from "@/components/ui/shadcn/select";
 import { useUnifiedDataStore } from "@/store/unified-data-store";
+import { downloadAsCSV, generateExportFilename, getDataStatistics } from "@/utils/data/export-utils";
 import { useToast } from "@/utils/hooks/use-toast";
-import { CheckIcon } from "lucide-react";
+import { CheckIcon, Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { MissingValuesTabProps } from "./types";
 
@@ -122,7 +123,7 @@ export default function MissingValuesTab({
 
 	// Handle missing values processing
 	const handleProcessMissingValues = async () => {
-		if (!file || !effectiveRawData || selectedColumns.length === 0) {
+		if (!effectiveRawData || selectedColumns.length === 0) {
 			toast({
 				title: "错误",
 				description: "请先选择要处理的列",
@@ -157,134 +158,85 @@ export default function MissingValuesTab({
 		onProcessingStart();
 
 		try {
-			const totalSteps = Object.keys(settings).length;
-			let currentStep = 0;
+			// Get store state
+			const store = useUnifiedDataStore.getState();
 
-			// Start from already-cleaned data if存在
-			const currentData =
-				cleanedData && cleanedData.headers.length > 0
-					? {
-							headers: [...cleanedData.headers],
-							rows: JSON.parse(JSON.stringify(cleanedData.rows)),
+			// Process missing values
+			await store.processMissingValues(settings, {
+				onProgress,
+				onComplete: () => {
+					// Auto export after processing
+					try {
+						console.log("开始导出处理...");
+						const currentStore = useUnifiedDataStore.getState();
+						const cleanedData = currentStore.cleanedData;
+
+						console.log("清理后的数据:", cleanedData);
+
+						if (cleanedData && cleanedData.headers && cleanedData.rows) {
+							// Generate filename
+							const filename = generateExportFilename(
+								file?.name,
+								"missing_values_cleaned"
+							);
+
+							console.log("生成的文件名:", filename);
+							console.log("准备导出的数据:", {
+								headers: cleanedData.headers,
+								rows: cleanedData.rows.slice(0, 3), // 只显示前3行用于调试
+								totalRows: cleanedData.rows.length
+							});
+
+							// Download the cleaned data
+							downloadAsCSV(
+								{
+									headers: cleanedData.headers,
+									rows: cleanedData.rows,
+								},
+								filename
+							);
+
+							console.log("下载函数调用完成");
+
+							// Get statistics
+							const stats = getDataStatistics(
+								{
+									headers: effectiveRawData.headers,
+									rows: effectiveRawData.rows,
+								},
+								cleanedData
+							);
+
+							console.log("统计信息:", stats);
+
+							toast({
+								title: "数据处理完成",
+								description: `清理数据已自动下载。原始数据: ${stats.originalRows} 行，清理后: ${stats.cleanedRows} 行。`,
+							});
+						} else {
+							console.error("清理后的数据无效:", cleanedData);
+							toast({
+								title: "导出失败",
+								description: "未找到清理后的数据",
+								variant: "destructive",
+							});
 						}
-					: {
-							headers: [...effectiveRawData.headers],
-							rows: JSON.parse(JSON.stringify(effectiveRawData.rows)),
-						};
-
-			for (const column of Object.keys(settings)) {
-				currentStep += 1;
-				onProgress(Math.round((currentStep / totalSteps) * 100));
-
-				const columnSetting = settings[column];
-				const colIndex = currentData.headers.indexOf(column);
-				if (colIndex === -1) continue;
-
-				// Helper to decide if cell is missing
-				const isCellMissing = (cell: any): boolean => {
-					return (
-						cell === null ||
-						cell === undefined ||
-						cell === "" ||
-						(typeof cell === "string" && cell.trim() === "") ||
-						(typeof cell === "string" &&
-							["na", "n/a", "null", "-"].includes(cell.trim().toLowerCase()))
-					);
-				};
-
-				if (columnSetting.strategy === "drop") {
-					// 直接删除包含缺失值的行
-					currentData.rows = currentData.rows.filter((row: any[]) => !isCellMissing(row[colIndex]));
-				} else if (columnSetting.strategy === "fill-value") {
-					// 用指定的值填充
-					const rawVal = columnSetting.value ?? "";
-					const numVal = Number(rawVal);
-					const fillVal = isNaN(numVal) ? rawVal : numVal;
-
-					currentData.rows = currentData.rows.map((row: any[]) => {
-						const newRow = [...row];
-						if (isCellMissing(row[colIndex])) {
-							newRow[colIndex] = fillVal;
-						}
-						return newRow;
-					});
-				} else if (columnSetting.strategy === "fill-method") {
-					// 统计列值用于计算替换值
-					const numericVals: number[] = [];
-					const stringVals: string[] = [];
-
-					currentData.rows.forEach((row: any[]) => {
-						const cell = row[colIndex];
-						if (!isCellMissing(cell)) {
-							const num = Number(cell);
-							if (!isNaN(num)) numericVals.push(num);
-							else stringVals.push(String(cell));
-						}
-					});
-
-					let replacement: any = null;
-					if (numericVals.length > 0) {
-						switch (columnSetting.value) {
-							case "mean":
-								replacement = numericVals.reduce((a, b) => a + b, 0) / numericVals.length;
-								break;
-							case "median": {
-								const sorted = [...numericVals].sort((a, b) => a - b);
-								const mid = Math.floor(sorted.length / 2);
-								replacement = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-								break;
-							}
-							case "min":
-								replacement = Math.min(...numericVals);
-								break;
-							case "max":
-								replacement = Math.max(...numericVals);
-								break;
-							default:
-								break;
-						}
+					} catch (exportError) {
+						console.error("Export error:", exportError);
+						toast({
+							title: "导出失败",
+							description: `数据处理完成，但导出文件时出错: ${exportError instanceof Error ? exportError.message : String(exportError)}`,
+							variant: "destructive",
+						});
 					}
 
-					if (replacement === null) {
-						// 计算众数（mode），适用于字符串列或数值列默认
-						const allValues = [...numericVals.map(String), ...stringVals];
-						const freq: Record<string, number> = {};
-
-						for (const val of allValues) {
-							freq[val] = (freq[val] || 0) + 1;
-						}
-
-						const modeEntry = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
-						replacement = modeEntry ? modeEntry[0] : "";
-
-						// 如果众数是数字字符串，转回数字
-						const numVal = Number(replacement);
-						if (!isNaN(numVal)) {
-							replacement = numVal;
-						}
-					}
-
-					currentData.rows = currentData.rows.map((row: any[]) => {
-						const newRow = [...row];
-						if (isCellMissing(row[colIndex])) {
-							newRow[colIndex] = replacement;
-						}
-						return newRow;
-					});
-				}
-			}
-
-			// Note: In the unified store, cleanedData is managed internally
-			// The processing is complete at this point
-
-			toast({
-				title: "缺失值处理完成",
-				description: "已成功完成所有缺失值处理操作",
+					// Call original onComplete
+					onComplete();
+				},
+				onError,
 			});
 
 			setCleaningComplete(true);
-			onComplete();
-			onProgress(100);
 		} catch (error) {
 			console.error("Error processing missing values:", error);
 			onError(`处理缺失值时出错: ${error}`);
@@ -461,14 +413,18 @@ export default function MissingValuesTab({
 					variant="default"
 					onClick={handleProcessMissingValues}
 					disabled={selectedColumns.length === 0}
+					size="lg"
 				>
 					{cleaningComplete ? (
 						<>
 							<CheckIcon className="mr-2 h-4 w-4" />
-							完成
+							已导出数据
 						</>
 					) : (
-						"处理数据"
+						<>
+							<Download className="mr-2 h-4 w-4" />
+							处理并导出数据
+						</>
 					)}
 				</Button>
 			</div>

@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/shadcn/button";
 import { Progress } from "@/components/ui/shadcn/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcn/tabs";
 import { useUnifiedDataStore } from "@/store/unified-data-store";
-import { exportCleanedData } from "@/utils/data/data-processing";
 import { useToast } from "@/utils/hooks/use-toast";
-import { AlertCircle, FileDown } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import DuplicatesTab from "./duplicates-tab";
 import MissingValuesTab from "./missing-value-tab";
@@ -122,31 +121,6 @@ export default function DataCleaning({ file }: DataCleaningProps) {
 		}
 	}, [duplicateSettings, activeTab]);
 
-	// Handle data export
-	const handleExport = async () => {
-		if (!file || !cleanedData) return;
-
-		try {
-			const originalFilename = file.name;
-			const baseName = originalFilename.substring(0, originalFilename.lastIndexOf("."));
-			const extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-			const cleanedFilename = `${baseName}_cleaned${extension}`;
-
-			await exportCleanedData(cleanedData, cleanedFilename);
-
-			toast({
-				title: "数据导出成功",
-				description: `清洗后的数据已成功导出到文件: ${cleanedFilename}`,
-			});
-		} catch (error) {
-			console.error("Error exporting data:", error);
-			toast({
-				title: "导出失败",
-				description: `导出数据时发生错误: ${error}`,
-				variant: "destructive",
-			});
-		}
-	};
 
 	// Common props for all tab components
 	const tabProps = {
@@ -249,14 +223,6 @@ export default function DataCleaning({ file }: DataCleaningProps) {
 							/>
 						</TabsContent>
 
-						<div className="flex justify-end mt-6">
-							{cleanedData && cleanedData.headers.length > 0 && cleaningComplete && (
-								<Button variant="outline" onClick={handleExport} className="ml-2">
-									<FileDown className="mr-2 h-4 w-4" />
-									导出清洗后的数据
-								</Button>
-							)}
-						</div>
 					</>
 				)}
 			</Tabs>
